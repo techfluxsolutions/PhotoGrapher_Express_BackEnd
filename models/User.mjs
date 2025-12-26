@@ -28,6 +28,11 @@ const userSchema = new mongoose.Schema(
     otpExpiresAt: {
       type: Date,
     },
+    userType: {
+      type: String,
+      enum: ["user", "photographer"],
+      default: "user",
+    },
   },
 
   {
@@ -39,5 +44,6 @@ const userSchema = new mongoose.Schema(
 // Index
 userSchema.index({ mobileNo: 1 });
 userSchema.index({ otp: 1 });
+userSchema.index({ userType: 1 });
 
 export default mongoose.model("User", userSchema);
