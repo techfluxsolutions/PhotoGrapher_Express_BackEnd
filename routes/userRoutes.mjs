@@ -3,7 +3,7 @@ const router = express.Router();
 import UserController from "../controllers/UserController.mjs";
 
 // Collection routes
-router.post("/create", (req, res, next) =>
+router.post("/", (req, res, next) =>
   UserController.create(req, res, next)
 );
 router.get("/", (req, res, next) => UserController.list(req, res, next));

@@ -6,43 +6,72 @@ const userSchema = new mongoose.Schema(
       type: String,
       trim: true,
     },
-    mobileNo: {
+
+    mobileNumber: {
       type: String,
       required: true,
       unique: true,
     },
-    avtar: {
+
+    avatar: {
       type: String,
       default: "",
     },
+
     password: {
       type: String,
     },
+
     otp: {
       type: String,
     },
-    isVerified: {
-      type: String,
-      default: "Unverified",
-    },
+
     otpExpiresAt: {
       type: Date,
     },
+
+    // Use boolean verified flag for simplicity
+    isVerified: {
+      type: Boolean,
+      default: false,
+    },
+
+    // Provider verification fields
+    verificationId: {
+      type: String,
+      default: null,
+    },
+
+    verificationExpiry: {
+      type: Date,
+      default: null,
+    },
+
+    // Admin flag (if needed for admin bypass flows)
+    isAdmin: {
+      type: Boolean,
+      default: false,
+    },
+
+    fcmToken: {
+      type: String,
+      default: null,
+    },
+
     userType: {
       type: String,
       enum: ["user", "photographer"],
       default: "user",
     },
   },
-
   {
     timestamps: true,
     collection: "users",
   }
 );
 
-// Index
-userSchema.index({ mobileNo: 1 });
+// Indexes
+userSchema.index({ mobileNumber: 1 });
 userSchema.index({ otp: 1 });
 userSchema.index({ userType: 1 });
 

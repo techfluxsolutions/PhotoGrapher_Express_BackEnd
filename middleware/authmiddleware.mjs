@@ -1,8 +1,17 @@
-import { verifyToken } from "../Config/jwtConfig.mjs";
+import { verifyToken } from "../utils/jwt.mjs";
 
 export default function authMiddleware(req, res, next) {
-  // ✅ Read token from cookies
-  const token = req.cookies?.token;
+  console.log("Auth Middleware Hit:", req.originalUrl);
+  let token;
+  // 1) Check if token exists in headers or cookies
+  if (
+    req.headers.authorization &&
+    req.headers.authorization.startsWith("Bearer")
+  ) {
+    token = req.headers.authorization.split(" ")[1];
+  } else if (req.cookies?.token) {
+    token = req.cookies.token;
+  }
 
   if (!token) {
     return res.status(401).json({ error: "Not authorized, token missing" });

@@ -2,12 +2,21 @@ import express from "express";
 import dotenv from "dotenv";
 import mongoose from "mongoose";
 import cors from "cors";
-import userRoutes from "./routes/userRoutes.mjs";
-import adminRoutes from "./routes/adminRoute.mjs";
-import photographerRoutes from "./routes/photographerRoutes.mjs";
-import authRoutes from "./routes/authRoutes.mjs";
-import enquiryRoutes from "./routes/enquiryRoutes.mjs";
-import quoteRoutes from "./routes/quoteRoutes.mjs";
+import {userRoutes,
+    adminRoutes,
+    photographerRoutes,
+    authRoutes,
+    enquiryRoutes,
+    quoteRoutes,
+    availabilityRoutes,
+    jobRoutes,
+    notificationRoutes,
+    packageRoutes,
+    paymentRoutes,
+    payoutRoutes,
+    reviewRoutes,
+    serviceRoutes,
+    subscriptionRoutes ,testinomialRoutes} from "./routes/index.js";
 import cookieParser from "cookie-parser";
 dotenv.config();
 
@@ -39,13 +48,24 @@ app.use("/api/users", userRoutes);
 // Mount auth routes
 app.use("/auth", authRoutes);
 // Mount enquiries
-app.use("/enquiries", enquiryRoutes);
+app.use("/api/enquiries", enquiryRoutes);
 // Quotes
-app.use("/quotes", quoteRoutes);
+app.use("/api/quotes", quoteRoutes);
 // Mount admin routes
 app.use("/api/admins", adminRoutes);
 // Mount photographer routes
 app.use("/api/photographers", photographerRoutes);
+// Mount new routes
+app.use("/api/availabilities", availabilityRoutes);
+app.use("/api/jobs", jobRoutes);
+app.use("/api/notifications", notificationRoutes);
+app.use("/api/packages", packageRoutes);
+app.use("/api/payments", paymentRoutes);
+app.use("/api/payouts", payoutRoutes);
+app.use("/api/reviews", reviewRoutes);
+app.use("/api/services", serviceRoutes);
+app.use("/api/subscriptions", subscriptionRoutes);
+app.use("/api/testimonials", testinomialRoutes);
 
 // Optional mongoose connection if MONGODB_URI is provided
 if (process.env.MONGODB_URI) {
@@ -60,18 +80,21 @@ app.get("/", (req, res) => {
   res.send("Hello World!");
 });
 
+// Simple error handler
+import globalErrorHandler from "./middleware/errorMiddleware.mjs";
+import AppError from "./utils/AppError.mjs";
+
+// Handle 404
+app.use((req, res, next) => {
+  next(new AppError(`Can't find ${req.originalUrl} on this server!`, 404));
+});
+
+// Global Error Handler
+app.use(globalErrorHandler);
+
 // Start the server
 app.listen(port, () => {
   console.log(`Server is running at http://localhost:${port}`);
-});
-
-// Simple error handler
-app.use((err, req, res, next) => {
-  // eslint-disable-next-line no-console
-  console.error(err);
-  res
-    .status(err.status || 500)
-    .json({ success: false, message: err.message || "Internal Server Error" });
 });
 
 export default app;
