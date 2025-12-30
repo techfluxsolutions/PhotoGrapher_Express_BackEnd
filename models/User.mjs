@@ -71,7 +71,8 @@ const userSchema = new mongoose.Schema(
 );
 
 // Indexes
-userSchema.index({ mobileNumber: 1 });
+// Note: `mobileNumber` is declared with `unique: true` in the schema field — avoid a duplicate single-field index.
+userSchema.index({ mobileNumber: 1, verificationId: 1 });
 userSchema.index({ otp: 1 });
 userSchema.index({ userType: 1 });
 
