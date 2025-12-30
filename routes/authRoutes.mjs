@@ -3,7 +3,7 @@ import { body } from "express-validator";
 import AuthController from "../controllers/AuthController.mjs";
 
 const router = express.Router();
-// user Routes
+// User Send OTP and Verify OTP routes
 router.post("/sendOTP", (req, res, next) =>
   AuthController.sendOTP(req, res, next)
 );
