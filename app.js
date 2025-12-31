@@ -16,8 +16,14 @@ import {userRoutes,
     payoutRoutes,
     reviewRoutes,
     serviceRoutes,
-    subscriptionRoutes ,testinomialRoutes} from "./routes/index.js";
+    subscriptionRoutes ,testinomialRoutes,otherPackagesRoutes} from "./routes/index.js";
 import cookieParser from "cookie-parser";
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
 dotenv.config();
 
 const app = express();
@@ -42,6 +48,7 @@ app.use(
 
 app.use(express.json());
 app.use(cookieParser());
+app.use('/uploads', express.static(path.join(__dirname, 'public/uploads')));
 
 // Mount user routes
 app.use("/api/users", userRoutes);
@@ -66,6 +73,7 @@ app.use("/api/reviews", reviewRoutes);
 app.use("/api/services", serviceRoutes);
 app.use("/api/subscriptions", subscriptionRoutes);
 app.use("/api/testimonials", testinomialRoutes);
+app.use("/api/otherPackages", otherPackagesRoutes);
 
 // Optional mongoose connection if MONGODB_URI is provided
 if (process.env.MONGODB_URI) {

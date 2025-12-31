@@ -14,6 +14,7 @@ import reviewRoutes from "./reviewRoutes.mjs";
 import serviceRoutes from "./serviceRoutes.mjs";
 import subscriptionRoutes from "./subscriptionRoutes.mjs";
 import testinomialRoutes from './testinomialRoutes.mjs'
+import otherPackagesRoutes from './OtherPackagesRoutes.mjs'
 
 
 export {
@@ -33,4 +34,5 @@ export {
     serviceRoutes,
     subscriptionRoutes,
     testinomialRoutes,
+    otherPackagesRoutes
 }

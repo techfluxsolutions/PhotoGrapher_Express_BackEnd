@@ -16,6 +16,12 @@ const testimonialSchema = new mongoose.Schema(
       ref: "Users",
       required: true,
     },
+    rating: {
+      type: Number,
+      max: 5,
+      min: 1,
+      required: true,
+    },
   },
 
   {

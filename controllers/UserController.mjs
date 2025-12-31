@@ -84,6 +84,11 @@ class UserController {
     try {
       const { id } = req.params;
       const payload = req.body;
+
+      if (req.file) {
+        payload.avatar = `/uploads/${req.file.filename}`;
+      }
+
       const user = await User.findByIdAndUpdate(id, payload, {
         new: true,
         runValidators: true,

@@ -3,6 +3,9 @@ import Service from "../models/Service.mjs";
 class ServiceController {
   async create(req, res, next) {
     try {
+      if (req.file) {
+        req.body.image = `/uploads/${req.file.filename}`;
+      }
       const data = await Service.create(req.body);
       res.status(201).json({ success: true, data });
     } catch (error) {
@@ -35,6 +38,9 @@ class ServiceController {
   async update(req, res, next) {
     try {
       const { id } = req.params;
+      if (req.file) {
+        req.body.image = `/uploads/${req.file.filename}`;
+      }
       const data = await Service.findByIdAndUpdate(id, req.body, { new: true });
       if (!data) {
         return res.status(404).json({ success: false, message: "Service not found" });
