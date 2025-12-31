@@ -1,0 +1,24 @@
+import express from "express";
+const router = express.Router();
+import PersonalizedQuoteController from "../controllers/PersonalizedQuoteController.mjs";
+
+// Collection routes
+router.post("/", (req, res, next) =>
+  PersonalizedQuoteController.create(req, res, next)
+);
+router.get("/", (req, res, next) =>
+  PersonalizedQuoteController.list(req, res, next)
+);
+
+// Item routes
+router.get("/:id", (req, res, next) =>
+  PersonalizedQuoteController.getById(req, res, next)
+);
+router.put("/:id", (req, res, next) =>
+  PersonalizedQuoteController.update(req, res, next)
+);
+router.delete("/:id", (req, res, next) =>
+  PersonalizedQuoteController.delete(req, res, next)
+);
+
+export default router;

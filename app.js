@@ -16,7 +16,12 @@ import {userRoutes,
     payoutRoutes,
     reviewRoutes,
     serviceRoutes,
-    subscriptionRoutes ,testinomialRoutes} from "./routes/index.js";
+    subscriptionRoutes,
+    testinomialRoutes,
+    serviceBookingRoutes,
+    personalizedQuoteRoutes,
+    faqRoutes,
+} from "./routes/index.js";
 import cookieParser from "cookie-parser";
 dotenv.config();
 
@@ -66,6 +71,9 @@ app.use("/api/reviews", reviewRoutes);
 app.use("/api/services", serviceRoutes);
 app.use("/api/subscriptions", subscriptionRoutes);
 app.use("/api/testimonials", testinomialRoutes);
+app.use("/api/service-bookings", serviceBookingRoutes);
+app.use("/api/personalized-quotes", personalizedQuoteRoutes);
+app.use("/api/faqs", faqRoutes);
 
 // Optional mongoose connection if MONGODB_URI is provided
 if (process.env.MONGODB_URI) {

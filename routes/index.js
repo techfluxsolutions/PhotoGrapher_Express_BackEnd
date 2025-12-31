@@ -14,6 +14,9 @@ import reviewRoutes from "./reviewRoutes.mjs";
 import serviceRoutes from "./serviceRoutes.mjs";
 import subscriptionRoutes from "./subscriptionRoutes.mjs";
 import testinomialRoutes from './testinomialRoutes.mjs'
+import serviceBookingRoutes from "./serviceBookingRoutes.mjs";
+import personalizedQuoteRoutes from "./personalizedQuoteRoutes.mjs";
+import faqRoutes from "./faqRoutes.mjs";
 
 
 export {
@@ -33,4 +36,7 @@ export {
     serviceRoutes,
     subscriptionRoutes,
     testinomialRoutes,
+    serviceBookingRoutes,
+    personalizedQuoteRoutes,
+    faqRoutes,
 }
