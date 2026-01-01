@@ -1,4 +1,3 @@
-import req from "express/lib/request";
 import mongoose from "mongoose";
 
 const quoteSchema = new mongoose.Schema(

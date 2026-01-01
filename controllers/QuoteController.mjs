@@ -23,6 +23,55 @@ class QuoteController {
       return next(err);
     }
   }
+
+  async getById(req, res, next) {
+    try {
+      const { id } = req.params;
+      const quote = await Quote.findById(id);
+      if (!quote) {
+        return res
+          .status(404)
+          .json({ success: false, message: "Quote not found" });
+      }
+      return res.json({ success: true, data: quote });
+    } catch (err) {
+      return next(err);
+    }
+  }
+
+  async update(req, res, next) {
+    try {
+      const { id } = req.params;
+      const payload = req.body;
+      const quote = await Quote.findByIdAndUpdate(id, payload, {
+        new: true,
+        runValidators: true,
+      });
+      if (!quote) {
+        return res
+          .status(404)
+          .json({ success: false, message: "Quote not found" });
+      }
+      return res.json({ success: true, data: quote });
+    } catch (err) {
+      return next(err);
+    }
+  }
+
+  async delete(req, res, next) {
+    try {
+      const { id } = req.params;
+      const quote = await Quote.findByIdAndDelete(id);
+      if (!quote) {
+        return res
+          .status(404)
+          .json({ success: false, message: "Quote not found" });
+      }
+      return res.json({ success: true, data: null });
+    } catch (err) {
+      return next(err);
+    }
+  }
 }
 
 export default new QuoteController();

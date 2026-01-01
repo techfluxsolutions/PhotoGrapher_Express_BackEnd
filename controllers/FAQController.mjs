@@ -1,4 +1,5 @@
 import FAQ from "../models/FAQs.mjs";
+import { sendErrorResponse } from "../utils/handleResponce.mjs";
 
 class FAQController {
   // Create a new FAQ
@@ -13,24 +14,18 @@ class FAQController {
   }
 
   // List FAQs with pagination
-  async list(req, res, next) {
+  async getAll(req, res, next) {
     try {
-      const page = Math.max(1, parseInt(req.query.page) || 1);
-      const limit = Math.max(1, parseInt(req.query.limit) || 20);
-      const skip = (page - 1) * limit;
-
-      const [items, total] = await Promise.all([
-        FAQ.find({}).skip(skip).limit(limit).sort({ createdAt: -1 }),
-        FAQ.countDocuments(),
-      ]);
-
+      const faqs = await FAQ.find({});
+      if(!faqs){
+        return res.status(404).json({ success: false, message: "FAQs not found" });
+      }
       return res.json({
         success: true,
-        data: items,
-        meta: { total, page, limit },
+        data: faqs,  
       });
     } catch (err) {
-      return next(err);
+      sendErrorResponse(res,err, 500)
     }
   }
 

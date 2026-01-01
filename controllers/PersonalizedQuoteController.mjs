@@ -13,7 +13,7 @@ class PersonalizedQuoteController {
   }
 
   // List personalized quotes with pagination
-  async list(req, res, next) {
+  async getAll(req, res, next) {
     try {
       const page = Math.max(1, parseInt(req.query.page) || 1);
       const limit = Math.max(1, parseInt(req.query.limit) || 20);

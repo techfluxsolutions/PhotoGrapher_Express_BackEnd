@@ -46,13 +46,6 @@ const userSchema = new mongoose.Schema(
       type: Date,
       default: null,
     },
-
-    // Admin flag (if needed for admin bypass flows)
-    isAdmin: {
-      type: Boolean,
-      default: false,
-    },
-
     fcmToken: {
       type: String,
       default: null,
@@ -60,7 +53,7 @@ const userSchema = new mongoose.Schema(
 
     userType: {
       type: String,
-      enum: ["user", "photographer"],
+      enum: ["user", "photographer", "admin"],
       default: "user",
     },
   },

@@ -2,34 +2,22 @@ import express from "express";
 import dotenv from "dotenv";
 import mongoose from "mongoose";
 import cors from "cors";
-import {userRoutes,
+import cookieParser from "cookie-parser"; 
+import {
+    userRoutes,
     adminRoutes,
     photographerRoutes,
     authRoutes,
-    enquiryRoutes,
-    quoteRoutes,
-    availabilityRoutes,
-    jobRoutes,
-    notificationRoutes,
-    packageRoutes,
-    paymentRoutes,
-    payoutRoutes,
-    reviewRoutes,
-    serviceRoutes,
-    subscriptionRoutes,
-    testinomialRoutes,
-    serviceBookingRoutes,
-    personalizedQuoteRoutes,
-    faqRoutes,
 } from "./routes/index.js";
-import cookieParser from "cookie-parser";
+
 dotenv.config();
 
 const app = express();
-const port = process.env.PORT;
+const port = process.env.PORT || 3000;
 
 // Middleware to parse JSON bodies
 app.use(express.json());
+app.use(cookieParser());
 app.use(
   cors({
     origin: [
@@ -43,37 +31,15 @@ app.use(
   })
 );
 
-// cookies
 
-app.use(express.json());
-app.use(cookieParser());
-
-// Mount user routes
-app.use("/api/users", userRoutes);
-// Mount auth routes
+// --- Main Route Mounting ---
 app.use("/auth", authRoutes);
-// Mount enquiries
-app.use("/api/enquiries", enquiryRoutes);
-// Quotes
-app.use("/api/quotes", quoteRoutes);
-// Mount admin routes
+
+// Detailed role-based routes
 app.use("/api/admins", adminRoutes);
-// Mount photographer routes
 app.use("/api/photographers", photographerRoutes);
-// Mount new routes
-app.use("/api/availabilities", availabilityRoutes);
-app.use("/api/jobs", jobRoutes);
-app.use("/api/notifications", notificationRoutes);
-app.use("/api/packages", packageRoutes);
-app.use("/api/payments", paymentRoutes);
-app.use("/api/payouts", payoutRoutes);
-app.use("/api/reviews", reviewRoutes);
-app.use("/api/services", serviceRoutes);
-app.use("/api/subscriptions", subscriptionRoutes);
-app.use("/api/testimonials", testinomialRoutes);
-app.use("/api/service-bookings", serviceBookingRoutes);
-app.use("/api/personalized-quotes", personalizedQuoteRoutes);
-app.use("/api/faqs", faqRoutes);
+app.use("/api/users", userRoutes);
+
 
 // Optional mongoose connection if MONGODB_URI is provided
 if (process.env.MONGODB_URI) {
@@ -88,7 +54,7 @@ app.get("/", (req, res) => {
   res.send("Hello World!");
 });
 
-// Simple error handler
+// Global Error Handler
 import globalErrorHandler from "./middleware/errorMiddleware.mjs";
 import AppError from "./utils/AppError.mjs";
 
@@ -97,7 +63,6 @@ app.use((req, res, next) => {
   next(new AppError(`Can't find ${req.originalUrl} on this server!`, 404));
 });
 
-// Global Error Handler
 app.use(globalErrorHandler);
 
 // Start the server
