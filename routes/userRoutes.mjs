@@ -6,11 +6,13 @@ import ServiceBookingController from "../controllers/ServiceBookingController.mj
 import PersonalizedQuoteController from "../controllers/PersonalizedQuoteController.mjs";
 import ServiceController from "../controllers/ServiceController.mjs";
 import FAQController from "../controllers/FAQController.mjs";
-import authMiddleware from "../middleware/authMiddleware.mjs";
-import AuthController from "../controllers/AuthController.mjs";
+import authMiddleware from "../middleware/authmiddleware.mjs";
 import QuoteController from "../controllers/QuoteController.mjs";
+import PackageController from "../controllers/PackageController.mjs";
 
 const router = express.Router();
+
+router.use(authMiddleware);
 
 // Public Routes (Optional, can be separate)
 router.get("/services", (req, res, next) => ServiceController.getAll(req, res, next));
@@ -58,7 +60,7 @@ router.get("/services", (req, res, next) => ServiceController.list(req, res, nex
 router.get("/services/:id", (req, res, next) => ServiceController.getById(req, res, next));
 
 // --- Packages ---
-router.get("/packages", (req, res, next) => PackageController.list(req, res, next));
+router.get("/packages", (req, res, next) => PackageController.getAll(req, res, next));
 router.get("/packages/:id", (req, res, next) => PackageController.getById(req, res, next));
 
 // ServiceBooking
