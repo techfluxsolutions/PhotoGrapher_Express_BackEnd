@@ -2,12 +2,12 @@ import express from "express";
 import dotenv from "dotenv";
 import mongoose from "mongoose";
 import cors from "cors";
-import cookieParser from "cookie-parser"; 
+import cookieParser from "cookie-parser";
 import {
-    userRoutes,
-    adminRoutes,
-    photographerRoutes,
-    authRoutes,
+  userRoutes,
+  adminRoutes,
+  photographerRoutes,
+  authRoutes,
 } from "./routes/index.js";
 
 dotenv.config();
@@ -31,15 +31,13 @@ app.use(
   })
 );
 
-
 // --- Main Route Mounting ---
-app.use("/auth", authRoutes);
+app.use("/api/auth", authRoutes);
 
 // Detailed role-based routes
 app.use("/api/admins", adminRoutes);
 app.use("/api/photographers", photographerRoutes);
 app.use("/api/users", userRoutes);
-
 
 // Optional mongoose connection if MONGODB_URI is provided
 if (process.env.MONGODB_URI) {

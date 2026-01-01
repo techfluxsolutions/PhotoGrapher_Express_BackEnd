@@ -321,8 +321,7 @@ class AuthController {
 
   async sendOTP(req, res, next) {
     try {
-      const { mobileNumber , role} = req.body;
-
+      const { mobileNumber, role } = req.body;
       /* 1️⃣ Validate mobile */
       if (!mobileNumber) {
         return res.status(400).json({
@@ -331,11 +330,11 @@ class AuthController {
         });
       }
       if (!roleModelMap[role]) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid role",
-      });
-    }
+        return res.status(400).json({
+          success: false,
+          message: "Invalid role",
+        });
+      }
 
       const cleanedMobile = mobileNumber.toString().replace(/\D/g, "");
       if (!/^[6-9]\d{9}$/.test(cleanedMobile)) {
@@ -345,7 +344,7 @@ class AuthController {
         });
       }
 
-       const Model = roleModelMap[role];
+      const Model = roleModelMap[role];
 
       const alreadyExistedUser = await Model.findOne({
         mobileNumber: cleanedMobile,
