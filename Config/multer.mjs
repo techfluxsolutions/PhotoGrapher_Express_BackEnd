@@ -1,5 +1,5 @@
-const multer = require('multer');
-const path = require('path');
+import multer from 'multer';
+import path from 'path';
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
@@ -22,4 +22,4 @@ const upload = multer({
     else cb(new Error('Invalid file type'));
   }
 });
-MediaSourceHandle.exports = upload;
+export default upload;

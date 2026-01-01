@@ -9,15 +9,12 @@ const adminSchema = new mongoose.Schema(
       trim: true,
       lowercase: true,
     },
-    password: {
+    mobileNumber: {
       type: String,
-      required: [true, "Password is required"],
-      minlength: [6, "Password must be at least 6 characters"],
-    },
-    name: {
-      type: String,
-      required: [true, "Name is required"],
+      required: [true, "Mobile number is required"],
+      unique: true,
       trim: true,
+      lowercase: true,
     },
     email: {
       type: String,
@@ -28,6 +25,19 @@ const adminSchema = new mongoose.Schema(
         /^\w+([.-]?\w+)*@\w+([.-]?\w+)*\.\w{2,}$/i,
         "Please enter a valid email",
       ],
+    },
+    avatar: {
+      type: String,
+      default: "",
+    },
+    isAdmin: {
+      type: Boolean,
+      default: true,
+    },
+    adminType: {
+      type: String,
+      enum: ["super_admin", "admin"],
+      default: "admin",
     },
     can_verify_photographer: { type: Boolean, default: false },
     can_build_quote: { type: Boolean, default: false },

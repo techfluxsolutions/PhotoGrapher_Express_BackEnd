@@ -1,6 +1,6 @@
 import User from "../models/User.mjs";
 import { signToken } from "../utils/jwt.mjs";
-import axios from "axios";
+import roleModelMap from "../utils/roleModelMap.mjs";
 
 const OTP_BYPASS_ENABLED = process.env.OTP_BYPASS_ENABLED === "true";
 const OTP_BYPASS_NUMBERS = (process.env.OTP_BYPASS_NUMBERS || "")
@@ -321,7 +321,7 @@ class AuthController {
 
   async sendOTP(req, res, next) {
     try {
-      const { mobileNumber } = req.body;
+      const { mobileNumber , role} = req.body;
 
       /* 1️⃣ Validate mobile */
       if (!mobileNumber) {
@@ -330,6 +330,12 @@ class AuthController {
           message: "Mobile number is required",
         });
       }
+      if (!roleModelMap[role]) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid role",
+      });
+    }
 
       const cleanedMobile = mobileNumber.toString().replace(/\D/g, "");
       if (!/^[6-9]\d{9}$/.test(cleanedMobile)) {
@@ -339,7 +345,9 @@ class AuthController {
         });
       }
 
-      const alreadyExistedUser = await User.findOne({
+       const Model = roleModelMap[role];
+
+      const alreadyExistedUser = await Model.findOne({
         mobileNumber: cleanedMobile,
       });
       if (alreadyExistedUser) {
@@ -348,7 +356,7 @@ class AuthController {
           message: "Use OTP 123456",
         });
       }
-      const user = await User.create({
+      const user = await Model.create({
         mobileNumber: cleanedMobile,
         userType: "user",
         verificationId: "1234",

@@ -4,11 +4,11 @@ import AuthController from "../controllers/AuthController.mjs";
 
 const router = express.Router();
 // User Send OTP and Verify OTP routes
-router.post("/sendOTP", (req, res, next) =>
+router.post("/login", (req, res, next) =>
   AuthController.sendOTP(req, res, next)
 );
 
-router.post("/checkOTP", (req, res, next) =>
+router.post("/verify", (req, res, next) =>
   AuthController.verifyOTP(req, res, next)
 );
 

@@ -9,20 +9,12 @@ const photographerSchema = new mongoose.Schema(
       trim: true,
       lowercase: true,
     },
-    password: {
+     mobileNumber: {
       type: String,
-      required: [true, "Password is required"],
-      minlength: [6, "Password must be at least 6 characters"],
-    },
-    name: {
-      type: String,
-      required: [true, "Name is required"],
+      required: [true, "Mobile number is required"],
+      unique: true,
       trim: true,
-    },
-    phone_number: {
-      type: String,
-      required: [true, "Phone number is required"],
-      match: [/^\+?[0-9]{10,15}$/, "Please enter a valid phone number"],
+      lowercase: true,
     },
     email: {
       type: String,
@@ -33,6 +25,10 @@ const photographerSchema = new mongoose.Schema(
         /^\w+([.-]?\w+)*@\w+([.-]?\w+)*\.\w{2,}$/i,
         "Please enter a valid email",
       ],
+    },
+    isPhotographer: {
+      type: Boolean,
+      default: true,
     },
     bank_account_holder: {
       type: String,

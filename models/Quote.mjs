@@ -2,34 +2,41 @@ import mongoose from "mongoose";
 
 const quoteSchema = new mongoose.Schema(
   {
-    service_name: {
-      type: String,
-      required: [true, "Service name is required"],
-      trim: true,
-    },
-    price: {
-      type: Number,
-      required: [true, "Price is required"],
-      min: 0,
-    },
-    work_preview_url: {
-      type: String,
-      match: [/^https?:\/\/.+/i, "Must be a valid URL"],
-    },
-    photographer_id: {
+    service_id: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Photographer",
-      required: [true, "Photographer ID is required"],
+      ref: "Service",
+      required: true,
     },
-    photographer_share: {
+    eventType: {
+      type: String,
+      required: true,
+    },
+    eventDate: {
+      type: Date,
+      required: true,
+    },
+    location: {
+      type: String,
+      required: true,
+    },
+    eventDuration: {
       type: Number,
-      required: [true, "Photographer share is required"],
-      min: 0,
-      max: 100,
+      required: true,
     },
-    job_id: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Job",
+    photographyRequirements: {
+      type: String,
+    },
+    clientName: {
+      type: String,
+      required: true,
+    },
+    phoneNumber: {
+      type: String,
+      required: true,
+    },
+    email: {
+      type: String,
+      required: true,
     },
   },
   {
