@@ -11,6 +11,7 @@ class PackageController {
   }
 
   async getAll(req, res, next) {
+    console.log(req.user)
     try {
       const data = await Package.find();
       res.status(200).json({ success: true, data });
