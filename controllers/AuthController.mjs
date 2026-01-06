@@ -350,10 +350,10 @@ class AuthController {
         mobileNumber: cleanedMobile,
       });
       if (alreadyExistedUser) {
-        return res.status(400).json({
-          success: false,
-          message: "Use OTP 123456",
-        });
+        return res.status(200).json({
+          success: true,
+          message: "YOUR OTP IS 1234",
+        })
       }
       const user = await Model.create({
         mobileNumber: cleanedMobile,
@@ -384,7 +384,7 @@ class AuthController {
 ======================= */
   async verifyOTP(req, res) {
     try {
-      const { mobileNumber, otp } = req.body;
+      const { mobileNumber, otp, role } = req.body;
 
       /* 1️⃣ Validate input */
       if (!mobileNumber || !otp) {
@@ -401,9 +401,11 @@ class AuthController {
           message: "Invalid Indian mobile number",
         });
       }
-      console.log(cleanedMobile, otp);
+      console.log(cleanedMobile, otp, role);
+
+      const Model = roleModelMap[role];
       /* 2️⃣ Find user */
-      const user = await User.findOne({
+      const user = await Model.findOne({
         mobileNumber: cleanedMobile,
       });
       if (!user) {
@@ -441,7 +443,7 @@ class AuthController {
     } catch (error) {
       return res.status(500).json({
         success: false,
-        message: "Internal server error",
+        message: error.message || "Internal server error",
       });
     }
   }
