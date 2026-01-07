@@ -1,35 +1,45 @@
+import User from "../models/User.mjs";
 import {
   sendErrorResponse,
   sendSuccessResponse,
 } from "../utils/handleResponce.mjs";
 
 class UserController {
-  // Create a new user (Google Auth flow kept as is for now, but logic moved)
+  // ✅ Create user
   async create(req, res, next) {
     try {
-      const { token } = req.body;
-      const { name, email, picture } = await UserService.verifyGoogleToken(token);
+      const payload = req.body;
 
-      let user = await UserService.findUserByEmail(email);
-
-      if (!user) {
-        user = await UserService.createGoogleUser(name, email, picture);
+      // Optional: prevent duplicate email
+      if (payload.email) {
+        const existingUser = await User.findOne({ email: payload.email });
+        if (existingUser) {
+          return sendErrorResponse(res, 409, "User already exists");
+        }
       }
-      sendSuccessResponse(res, user);
+
+      if (req.file) {
+        payload.avatar = `/uploads/${req.file.filename}`;
+      }
+
+      const user = await User.create(payload);
+      return sendSuccessResponse(res, user, "User created successfully");
     } catch (err) {
-      res
-        .status(401)
-        .json({ message: "Google authentication failed", err: err.message });
+      return next(err);
     }
   }
 
-  // List users with simple pagination
+  // ✅ List users with pagination
   async list(req, res, next) {
     try {
       const page = Math.max(1, parseInt(req.query.page) || 1);
       const limit = Math.max(1, parseInt(req.query.limit) || 20);
-      
-      const { items, total } = await UserService.getAllUsers(page, limit);
+      const skip = (page - 1) * limit;
+
+      const [items, total] = await Promise.all([
+        User.find().skip(skip).limit(limit).sort({ createdAt: -1 }),
+        User.countDocuments(),
+      ]);
 
       return res.json({
         success: true,
@@ -41,55 +51,88 @@ class UserController {
     }
   }
 
-  // Get single user by id
-  async getById(req, res, next) {
+  // ✅ Get user by ID
+  async getById(req, res) {
     try {
-      const { id } = req.params;
-      const user = await UserService.getUserById(id);
-      if (!user)
-        return res
-          .status(404)
-          .json({ success: false, message: "User not found" });
-      return res.json({ success: true, data: user });
+      const { id } = req.user;
+      console.log(id)
+      const user = await User.findById(id).lean();
+      console.log(user)
+      if (!user || user === null) {
+        return res.json({
+          success: true,
+          message: "User not found",
+        });
+      }
+
+      const userData = {
+        username: user.username,
+        mobileNumber: user.mobileNumber,
+        avtar: user.avatar === "" ? "" : `${process.env.BASE_URL}${user.avatar}`,
+        email: user.email,
+        dateOfBirth: user.dateOfBirth,
+        langugage: user.langugage,
+        userType: user.userType,
+      }
+
+      return res.json({
+        success: true,
+        data: userData,
+      });
     } catch (err) {
-      return next(err);
+      return res.json({
+        success: false,
+        error: err.message,
+      });
     }
   }
 
-  // Update user by id
-  async update(req, res, next) {
+  // ✅ Update user by ID
+  async update(req, res) {
     try {
-      const { id } = req.params;
-      const payload = req.body;
-
-      if (req.file) {
-        payload.avatar = `/uploads/${req.file.filename}`;
+      const { id } = req.user;
+      let updates = {};
+      for (const [key, value] of Object.entries(req.body)) {
+        if (value === "" || value === null || value === undefined) {
+          return sendErrorResponse(res, 400, "Invalid input");
+        }
+        updates[key] = value;
       }
 
-      const user = await User.findByIdAndUpdate(id, payload, {
+      if (req.file) {
+        updates.avatar = `/uploads/userProfile/${req.file.filename}`;
+      }
+
+
+      const user = await User.findByIdAndUpdate(id, updates, {
         new: true,
         runValidators: true,
       });
-      if (!user)
-        return res
-          .status(404)
-          .json({ success: false, message: "User not found" });
-      return res.json({ success: true, data: user });
+
+      if (!user) {
+        return sendErrorResponse(res, 404, "User not found");
+      }
+
+      return sendSuccessResponse(res, user, "User updated successfully");
     } catch (err) {
-      return next(err);
+      return res.json({
+        message: err.message,
+        success: false,
+      })
     }
   }
 
-  // Delete user by id
+  // ✅ Delete user by ID
   async delete(req, res, next) {
     try {
       const { id } = req.params;
-      const user = await UserService.deleteUser(id);
-      if (!user)
-        return res
-          .status(404)
-          .json({ success: false, message: "User not found" });
-      return res.json({ success: true, data: null });
+
+      const user = await User.findByIdAndDelete(id);
+      if (!user) {
+        return sendErrorResponse(res, 404, "User not found");
+      }
+
+      return sendSuccessResponse(res, null, "User deleted successfully");
     } catch (err) {
       return next(err);
     }
