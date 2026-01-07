@@ -24,9 +24,6 @@ const userSchema = new mongoose.Schema(
     otp: {
       type: String,
     },
-    email: {
-      type: String,
-    },
     dateOfBirth: {
       type: Date,
     },
