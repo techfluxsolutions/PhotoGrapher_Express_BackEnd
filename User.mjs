@@ -27,11 +27,6 @@ const userSchema = new mongoose.Schema(
     dateOfBirth: {
       type: Date,
     },
-    email: {
-      type: String,
-      unique: true,  // Enforce uniqueness
-      sparse: true,  // Allow multiple docs to skip this field (null/missing)
-    },
     state: {
       type: String,
     },
