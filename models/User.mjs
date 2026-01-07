@@ -24,7 +24,19 @@ const userSchema = new mongoose.Schema(
     otp: {
       type: String,
     },
-
+    email: {
+      type: String,
+      unique: true,
+    },
+    dateOfBirth: {
+      type: Date,
+    },
+    state: {
+      type: String,
+    },
+    city: {
+      type: String,
+    },
     otpExpiresAt: {
       type: Date,
     },

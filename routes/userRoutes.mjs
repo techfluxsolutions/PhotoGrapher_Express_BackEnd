@@ -9,10 +9,20 @@ import FAQController from "../controllers/FAQController.mjs";
 import authMiddleware from "../middleware/authmiddleware.mjs";
 import QuoteController from "../controllers/QuoteController.mjs";
 import PackageController from "../controllers/PackageController.mjs";
-
+import createUploader from "../Config/uploadCreate.js";
 const router = express.Router();
 
 router.use(authMiddleware);
+
+
+// multer image upload this function sets the path of the image and its directory 
+
+const uploadAvatar = createUploader({
+    folder: "uploads/userProfile",
+    maxSizeMB: 2,
+    allowedTypes: /jpeg|jpg|png/,
+});
+
 
 // Public Routes (Optional, can be separate)
 router.get("/services", (req, res, next) => ServiceController.getAll(req, res, next));
@@ -24,7 +34,7 @@ router.use(authMiddleware);
 
 // --- User Profile ---
 router.get("/me", (req, res, next) => UserController.getById(req, res, next));
-router.put("/me", (req, res, next) => UserController.update(req, res, next));
+router.put("/me", uploadAvatar.single("avatar"), (req, res, next) => UserController.update(req, res, next));
 
 // --- Enquiries ---
 router.post("/enquiries", (req, res, next) => EnquiryController.create(req, res, next));
