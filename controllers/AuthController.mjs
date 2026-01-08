@@ -319,9 +319,10 @@ class AuthController {
 
   // Developement Routes
 
-  async sendOTP(req, res, next) {
+  async sendOTP(req, res) {
     try {
-      const { mobileNumber, role } = req.body;
+      const { mobileNumber, role, email } = req.body;
+
       /* 1️⃣ Validate mobile */
       if (!mobileNumber) {
         return res.status(400).json({
@@ -329,13 +330,16 @@ class AuthController {
           message: "Mobile number is required",
         });
       }
-      if (!roleModelMap[role]) {
+
+      /* 2️⃣ Validate role */
+      if (!role || !roleModelMap[role]) {
         return res.status(400).json({
           success: false,
           message: "Invalid role",
         });
       }
 
+      /* 3️⃣ Clean & validate Indian mobile */
       const cleanedMobile = mobileNumber.toString().replace(/\D/g, "");
       if (!/^[6-9]\d{9}$/.test(cleanedMobile)) {
         return res.status(400).json({
@@ -344,40 +348,77 @@ class AuthController {
         });
       }
 
-      const Model = roleModelMap[role];
-
-      const alreadyExistedUser = await Model.findOne({
-        mobileNumber: cleanedMobile,
-      });
-      if (alreadyExistedUser) {
-        return res.status(200).json({
-          success: true,
-          message: "YOUR OTP IS 1234",
-        })
-      }
-      const user = await Model.create({
-        mobileNumber: cleanedMobile,
-        userType: "user",
-        verificationId: "1234",
-      });
-      if (user) {
-        return res.status(200).json({
-          success: true,
-          message: "YOUR OTP IS 1234",
+      /* 4️⃣ Optional email validation */
+      if (email && !/^\S+@\S+\.\S+$/.test(email)) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid email format",
         });
       }
-      res.status(400).json({
-        success: false,
-        message: "Failed to send OTP",
+
+      const Model = roleModelMap[role];
+
+      /* 5️⃣ Check existing user */
+      const existingUser = await Model.findOne({
+        mobileNumber: cleanedMobile,
       });
+
+      if (existingUser) {
+        // Update OTP only (DO NOT touch email)
+        await Model.updateOne(
+          { _id: existingUser._id },
+          {
+            otp: "1234",
+            otpExpiresAt: Date.now() + 5 * 60 * 1000,
+          }
+        );
+
+        return res.status(200).json({
+          success: true,
+          message: "OTP sent successfully",
+        });
+      }
+
+      /* 6️⃣ Build user payload safely */
+      const userData = {
+        mobileNumber: cleanedMobile,
+        userType: role,
+        otp: "1234",
+        otpExpiresAt: Date.now() + 5 * 60 * 1000,
+        verificationId: "1234",
+      };
+
+      // Add email ONLY if valid and present
+      if (email && typeof email === "string" && email.trim() !== "") {
+        userData.email = email.trim().toLowerCase();
+      }
+
+      /* 7️⃣ Create user */
+      await Model.create(userData);
+
+      return res.status(200).json({
+        success: true,
+        message: "OTP sent successfully",
+      });
+
     } catch (error) {
-      console.error("❌ Send OTP error:", error.message);
+      console.error("❌ Send OTP error:", error);
+
+      // Handle Mongo duplicate key cleanly
+      if (error.code === 11000) {
+        return res.status(409).json({
+          success: false,
+          message: "User already exists with provided details",
+        });
+      }
+
       return res.status(500).json({
         success: false,
-        message: error.message || "Internal server error",
+        message: "Internal server error",
       });
     }
   }
+
 
   /* =======================
    VERIFY OTP
