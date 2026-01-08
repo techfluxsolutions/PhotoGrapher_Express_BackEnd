@@ -319,10 +319,9 @@ class AuthController {
 
   // Developement Routes
 
-  async sendOTP(req, res) {
+  async sendOTP(req, res, next) {
     try {
-      const { mobileNumber, role, email } = req.body;
-
+      const { mobileNumber, role } = req.body;
       /* 1️⃣ Validate mobile */
       if (!mobileNumber) {
         return res.status(400).json({
@@ -330,16 +329,13 @@ class AuthController {
           message: "Mobile number is required",
         });
       }
-
-      /* 2️⃣ Validate role */
-      if (!role || !roleModelMap[role]) {
+      if (!roleModelMap[role]) {
         return res.status(400).json({
           success: false,
           message: "Invalid role",
         });
       }
 
-      /* 3️⃣ Clean & validate Indian mobile */
       const cleanedMobile = mobileNumber.toString().replace(/\D/g, "");
       if (!/^[6-9]\d{9}$/.test(cleanedMobile)) {
         return res.status(400).json({
@@ -348,82 +344,41 @@ class AuthController {
         });
       }
 
-      /* 4️⃣ Optional email validation */
-      if (email && !/^\S+@\S+\.\S+$/.test(email)) {
-        return res.status(400).json({
-          success: false,
-          message: "Invalid email format",
-        });
-      }
-
       const Model = roleModelMap[role];
 
-      /* 5️⃣ Check existing user */
-      const existingUser = await Model.findOne({
+      const alreadyExistedUser = await Model.findOne({
         mobileNumber: cleanedMobile,
       });
-
-      if (existingUser) {
-        // Update OTP only (DO NOT touch email)
-        await Model.updateOne(
-          { _id: existingUser._id },
-          {
-            otp: "1234",
-            otpExpiresAt: Date.now() + 5 * 60 * 1000,
-          }
-        );
-
+      if (alreadyExistedUser) {
         return res.status(200).json({
           success: true,
-          message: "OTP sent successfully",
-        });
-      }
-
-      /* 6️⃣ Build user payload safely */
-      const userData = {
-        mobileNumber: cleanedMobile,
-        userType: role,
-        otp: "1234",
-        otpExpiresAt: Date.now() + 5 * 60 * 1000,
-        verificationId: "1234",
-      };
-
-      // Add email ONLY if valid and present
-      if (email && typeof email === "string" && email.trim() !== "") {
-        userData.email = email.trim().toLowerCase();
-      }
-
-      /* 7️⃣ Create user */
-      const createdUser = await Model.create(userData);
-
-      if (!createdUser || createdUser === null) {
-        res.status(200).json({
-          message: "failed to create"
+          message: "YOUR OTP IS 1234",
         })
       }
-      return res.status(200).json({
-        success: true,
-        message: "OTP sent successfully",
+      const user = await Model.create({
+        mobileNumber: cleanedMobile,
+        userType: "user",
+        verificationId: "1234",
       });
-
-    } catch (error) {
-      console.error("❌ Send OTP error:", error);
-
-      // Handle Mongo duplicate key cleanly
-      if (error.code === 11000) {
-        return res.status(409).json({
-          success: false,
-          message: "User already exists with provided details",
+      console.log(user);
+      if (user) {
+        return res.status(200).json({
+          success: true,
+          message: "YOUR OTP IS 1234",
         });
       }
-
+      res.status(400).json({
+        success: false,
+        message: "Failed to send OTP",
+      });
+    } catch (error) {
+      console.error("❌ Send OTP error:", error.message);
       return res.status(500).json({
         success: false,
-        message: "Internal server error",
+        message: error.message || "Internal server error",
       });
     }
   }
-
 
   /* =======================
    VERIFY OTP
