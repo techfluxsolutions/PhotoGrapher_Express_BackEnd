@@ -2,26 +2,32 @@ import { verifyToken } from "../utils/jwt.mjs";
 
 export default function authMiddleware(req, res, next) {
   console.log("Auth Middleware Hit:", req.originalUrl);
+
   let token;
-  // 1) Check if token exists in headers or cookies
+
+  // ✅ Get token ONLY from Authorization header
   if (
     req.headers.authorization &&
-    req.headers.authorization.startsWith("Bearer")
+    req.headers.authorization.startsWith("Bearer ")
   ) {
     token = req.headers.authorization.split(" ")[1];
-  } else if (req.cookies?.token) {
-    token = req.cookies.token;
   }
 
   if (!token) {
-    return res.status(401).json({ error: "Not authorized, token missing" });
+    return res.status(401).json({
+      success: false,
+      message: "Not authorized, token missing",
+    });
   }
 
   try {
     const decoded = verifyToken(token);
-    req.user = decoded; // attach decoded user to request
+    req.user = decoded; // attach decoded user
     next();
   } catch (err) {
-    return res.status(403).json({ error: "Invalid or expired token" });
+    return res.status(403).json({
+      success: false,
+      message: "Invalid or expired token",
+    });
   }
 }
