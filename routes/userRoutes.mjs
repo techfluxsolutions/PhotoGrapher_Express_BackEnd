@@ -12,7 +12,7 @@ import PackageController from "../controllers/PackageController.mjs";
 import createUploader from "../Config/uploadCreate.js";
 const router = express.Router();
 
-router.use(authMiddleware);
+// router.use(authMiddleware); // Removed global auth middleware to allow public routes
 
 
 // multer image upload this function sets the path of the image and its directory 
