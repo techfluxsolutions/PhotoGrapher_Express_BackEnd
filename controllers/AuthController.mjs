@@ -355,11 +355,13 @@ class AuthController {
           message: "YOUR OTP IS 1234",
         })
       }
-      const user = await Model.create({
+
+      const newUserData ={
         mobileNumber: cleanedMobile,
         userType: "user",
         verificationId: "1234",
-      });
+      };
+      const user = await Model.create(newUserData);
       console.log(user);
       if (user) {
         return res.status(200).json({
