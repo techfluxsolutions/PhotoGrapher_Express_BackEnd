@@ -394,8 +394,13 @@ class AuthController {
       }
 
       /* 7️⃣ Create user */
-      await Model.create(userData);
+      const createdUser = await Model.create(userData);
 
+      if (!createdUser || createdUser === null) {
+        res.status(200).json({
+          message: "failed to create"
+        })
+      }
       return res.status(200).json({
         success: true,
         message: "OTP sent successfully",
