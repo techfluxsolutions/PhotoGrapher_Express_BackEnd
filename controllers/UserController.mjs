@@ -1,3 +1,4 @@
+
 import User from "../models/User.mjs";
 import {
   sendErrorResponse,
@@ -91,10 +92,11 @@ class UserController {
   async update(req, res) {
     try {
       const { id } = req.user;
+      console.log(req.body);
       let updates = {};
       for (const [key, value] of Object.entries(req.body)) {
         if (value === "" || value === null || value === undefined) {
-          return sendErrorResponse(res, 400, "Invalid input");
+          continue;;
         }
         updates[key] = value;
       }
@@ -103,19 +105,26 @@ class UserController {
         updates.avatar = `/uploads/userProfile/${req.file.filename}`;
       }
 
-
+      console.log(updates);
       const user = await User.findByIdAndUpdate(id, updates, {
         new: true,
         runValidators: true,
       });
 
       if (!user) {
-        return sendErrorResponse(res, 404, "User not found");
+        return res.status(404).json({
+          message: "User not found",
+          success: false,
+        });
       }
 
-      return sendSuccessResponse(res, user, "User updated successfully");
-    } catch (err) {
       return res.json({
+        message: "User updated successfully",
+        success: true,
+        data: user,
+      });
+    } catch (err) {
+      return res.status(500).json({
         message: err.message,
         success: false,
       })
