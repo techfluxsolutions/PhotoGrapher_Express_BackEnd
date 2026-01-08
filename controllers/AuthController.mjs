@@ -434,6 +434,7 @@ class AuthController {
         return res.status(200).json({
           success: true,
           message: "OTP verified successfully",
+          token: token
         });
       } else {
         return res.status(400).json({
