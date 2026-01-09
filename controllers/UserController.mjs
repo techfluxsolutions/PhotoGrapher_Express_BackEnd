@@ -65,13 +65,22 @@ class UserController {
           message: "User not found",
         });
       }
+      const formatDate = (date) => {
+        if (!date) return ''; // Handle null/undefined dates
 
+        const d = new Date(date);
+        const day = String(d.getDate()).padStart(2, '0');
+        const month = String(d.getMonth() + 1).padStart(2, '0'); // Months are 0-indexed
+        const year = String(d.getFullYear()).slice(-2); // Get last 2 digits of year
+
+        return `${day}/${month}/${year}`;
+      };
       const userData = {
         username: user.username,
         mobileNumber: user.mobileNumber,
         avtar: user.avatar === "" ? "" : `${process.env.BASE_URL}${user.avatar}`,
         email: user.email,
-        dateOfBirth: user.dateOfBirth,
+        dateOfBirth: formatDate(user.dateOfBirth),
         langugage: user.langugage,
         userType: user.userType,
       }
