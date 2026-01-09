@@ -319,6 +319,70 @@ class AuthController {
 
   // Developement Routes
 
+  // async sendOTP(req, res, next) {
+  //   try {
+  //     const { mobileNumber, role } = req.body;
+  //     /* 1️⃣ Validate mobile */
+  //     if (!mobileNumber) {
+  //       return res.status(400).json({
+  //         success: false,
+  //         message: "Mobile number is required",
+  //       });
+  //     }
+  //     if (!roleModelMap[role]) {
+  //       return res.status(400).json({
+  //         success: false,
+  //         message: "Invalid role",
+  //       });
+  //     }
+
+  //     const cleanedMobile = mobileNumber.toString().replace(/\D/g, "");
+  //     if (!/^[6-9]\d{9}$/.test(cleanedMobile)) {
+  //       return res.status(400).json({
+  //         success: false,
+  //         message: "Invalid Indian mobile number",
+  //       });
+  //     }
+
+  //     const Model = roleModelMap[role];
+
+  //     const alreadyExistedUser = await Model.findOne({
+  //       mobileNumber: cleanedMobile,
+  //     });
+  //     if (alreadyExistedUser) {
+  //       return res.status(200).json({
+  //         success: true,
+  //         message: "YOUR OTP IS 1234",
+  //       })
+  //     }
+
+  //     const newUserData ={
+  //       mobileNumber: cleanedMobile,
+  //       userType: "user",
+  //       verificationId: "1234",
+  //     };
+  //     const user = await Model.create(newUserData);
+  //     console.log(user);
+  //     if (user) {
+  //       return res.status(200).json({
+  //         success: true,
+  //         message: "YOUR OTP IS 1234",
+  //       });
+  //     }
+  //     res.status(400).json({
+  //       success: false,
+  //       message: "Failed to send OTP",
+  //     });
+  //   } catch (error) {
+  //     console.error("❌ Send OTP error:", error.message);
+  //     return res.status(500).json({
+  //       success: false,
+  //       message: error.message || "Internal server error",
+  //     });
+  //   }
+  // }
+
+
   async sendOTP(req, res, next) {
     try {
       const { mobileNumber, role } = req.body;
