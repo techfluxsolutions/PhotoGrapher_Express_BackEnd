@@ -356,7 +356,7 @@ class AuthController {
         })
       }
 
-      const newUserData ={
+      const newUserData = {
         mobileNumber: cleanedMobile,
         userType: "user",
         verificationId: "1234",
