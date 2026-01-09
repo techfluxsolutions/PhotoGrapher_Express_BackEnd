@@ -71,7 +71,7 @@ class UserController {
         const d = new Date(date);
         const day = String(d.getDate()).padStart(2, '0');
         const month = String(d.getMonth() + 1).padStart(2, '0'); // Months are 0-indexed
-        const year = String(d.getFullYear()).slice(-2); // Get last 2 digits of year
+        const year = d.getFullYear(); // Full 4-digit year
 
         return `${day}/${month}/${year}`;
       };
@@ -105,7 +105,7 @@ class UserController {
       let updates = {};
       for (const [key, value] of Object.entries(req.body)) {
         if (value === "" || value === null || value === undefined) {
-          continue;;
+          continue;
         }
         updates[key] = value;
       }
