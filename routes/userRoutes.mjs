@@ -52,6 +52,7 @@ router.get("/quotes/:id", (req, res, next) => QuoteController.getById(req, res, 
 router.put("/quotes/:id", (req, res, next) => QuoteController.update(req, res, next));
 router.delete("/quotes/:id", (req, res, next) => QuoteController.delete(req, res, next));
 router.get("/quotes/status/:status", (req, res) => QuoteController.getByStatus(req, res));
+router.put("/quotes/changeStatus/:id", (req, res, next) => QuoteController.changeStatus(req, res, next));
 
 
 // Personalized Quotes
