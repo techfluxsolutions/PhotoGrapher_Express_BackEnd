@@ -65,6 +65,19 @@ class QuoteController {
     }
   }
 
+
+  // getQoutes by status
+
+  async getByStatus(req, res) {
+    try {
+      const { status } = req.params;
+
+      const items = await Quote.find({ quoteStatus: status }).sort({ createdAt: -1 });
+      return res.json({ success: true, data: items });
+    } catch (err) {
+      res.status(500).json({ success: false, message: err.message });
+    }
+  }
   async update(req, res, next) {
     try {
       const { id } = req.params;
