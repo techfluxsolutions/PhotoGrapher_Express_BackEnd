@@ -1,3 +1,5 @@
+import AdminDB from "../models/Admin.mjs";
+
 import {
   sendErrorResponse,
   sendSuccessResponse,
@@ -11,11 +13,11 @@ class AdminController {
         payload.avatar = req.file.path;
       }
       const { email } = payload;
-      const isEmailExist = await AdminService.findByEmail(email);
+      const isEmailExist = await AdminDB.findOne({ email: email });
       if (isEmailExist) {
         return sendErrorResponse(res, "Email already exist", 400);
       }
-      const admin = await AdminService.createAdmin(payload);
+      const admin = await AdminDB.create(payload);
       return sendSuccessResponse(res, admin, "Admin created", 201);
     } catch (err) {
       return sendErrorResponse(res, err.message, 500);

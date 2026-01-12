@@ -11,6 +11,14 @@ const quoteSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
+    startDate: {
+      type: Date,
+      required: true,
+    },
+    endDate: {
+      type: Date,
+      required: true,
+    },
     eventDate: {
       type: Date,
       required: true,
@@ -28,6 +36,11 @@ const quoteSchema = new mongoose.Schema(
     },
     clientName: {
       type: String,
+      required: true,
+    },
+    clientId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
       required: true,
     },
     phoneNumber: {

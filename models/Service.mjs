@@ -16,10 +16,14 @@ const serviceSchema = new mongoose.Schema(
       required: true,
       index: true, // useful for filtering/sorting
     },
-    image: {
-      type: String,
-      required: true,
+    isAdditionalServices: {
+      type: Boolean,
+      default: false
     },
+    additionalServices: {
+      type: [Object],
+      default: []
+    }
   },
   { timestamps: true }
 );
