@@ -50,6 +50,8 @@ class QuoteController {
   async getById(req, res, next) {
     try {
       const { id } = req.params;
+      // return res.json({ success: true, data: id });
+      console.log("paramsß", req.params)
       const quote = await Quote.findById(id);
       if (!quote) {
         return res
