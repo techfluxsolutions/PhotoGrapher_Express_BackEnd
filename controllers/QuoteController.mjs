@@ -11,7 +11,7 @@ class QuoteController {
     }
   }
 
-  async list(req, res, next) {
+  async getAll(req, res, next) {
     try {
       const { enquiryId, photographerId } = req.query;
       const filter = {};
