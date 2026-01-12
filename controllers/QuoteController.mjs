@@ -66,6 +66,27 @@ class QuoteController {
   }
 
 
+  //
+
+  async changeStatus(req, res) {
+    try {
+      const { id } = req.params;
+      const { status } = req.body;
+      const quote = await Quote.findByIdAndUpdate(id, { quoteStatus: status }, {
+        new: true,
+        runValidators: true,
+      });
+      if (!quote) {
+        return res
+          .status(404)
+          .json({ success: false, message: "Quote not found" });
+      }
+      return res.json({ success: true, data: quote });
+    } catch (err) {
+      return next(err);
+    }
+  }
+
   // getQoutes by status
 
   async getByStatus(req, res) {
