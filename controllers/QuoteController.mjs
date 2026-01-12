@@ -3,13 +3,36 @@ import Quote from "../models/Quote.mjs";
 class QuoteController {
   async create(req, res, next) {
     try {
-      const payload = req.body;
+      const { id } = req.user;
+      const payload = { ...req.body };
+
+      // Helper to convert DD-MM-YYYY → Date
+      const parseDDMMYYYY = (dateStr) => {
+        if (!dateStr) return dateStr;
+        const [day, month, year] = dateStr.split("-");
+        return new Date(`${year}-${month}-${day}`);
+      };
+
+      // Convert date fields
+      payload.startDate = parseDDMMYYYY(payload.startDate);
+      payload.endDate = parseDDMMYYYY(payload.endDate);
+      payload.eventDate = parseDDMMYYYY(payload.eventDate);
+      payload.clientId = id;
+
       const quote = await Quote.create(payload);
-      return res.status(201).json({ success: true, data: quote });
+
+      return res.status(201).json({
+        success: true,
+        data: quote,
+      });
     } catch (err) {
-      return next(err);
+      return res.status(400).json({
+        success: false,
+        message: err.message,
+      });
     }
   }
+
 
   async getAll(req, res, next) {
     try {
