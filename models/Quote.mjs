@@ -53,6 +53,11 @@ const quoteSchema = new mongoose.Schema(
     },
     budget: {
       type: String,
+    },
+    quoteStatus: {
+      type: String,
+      enum: ["yourQuotes", "upcommingBookings", "previousBookings"],
+      default: "yourQuotes"
     }
   },
   {

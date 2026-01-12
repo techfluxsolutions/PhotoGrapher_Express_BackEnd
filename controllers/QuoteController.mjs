@@ -36,11 +36,12 @@ class QuoteController {
 
   async getAll(req, res, next) {
     try {
-      const { enquiryId, photographerId } = req.query;
-      const filter = {};
-      if (enquiryId) filter.job_id = enquiryId;
-      if (photographerId) filter.photographer_id = photographerId;
-      const items = await Quote.find(filter).sort({ createdAt: -1 });
+      const id = req.user.id;
+      // const { enquiryId, photographerId } = req.query;
+      // const filter = {};
+      // if (enquiryId) filter.job_id = enquiryId;
+      // if (photographerId) filter.photographer_id = photographerId;
+      const items = await Quote.find({ clientId: id }).sort({ createdAt: -1 });
       return res.json({ success: true, data: items });
     } catch (err) {
       return next(err);
