@@ -51,6 +51,9 @@ const quoteSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
+    budget: {
+      type: String,
+    }
   },
   {
     timestamps: true,
