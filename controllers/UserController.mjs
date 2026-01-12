@@ -83,6 +83,9 @@ class UserController {
         dateOfBirth: formatDate(user.dateOfBirth),
         langugage: user.langugage,
         userType: user.userType,
+        city: user.city,
+        state: user.state,
+        country: user.country,
       }
 
       return res.json({
