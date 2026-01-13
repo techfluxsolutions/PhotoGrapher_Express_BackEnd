@@ -490,17 +490,11 @@ class AuthController {
         });
         await user.save();
 
-        res.cookie("token", token, {
-          httpOnly: true,
-          secure: process.env.NODE_ENV === "production",
-          sameSite: "strict",
-          maxAge: 7 * 24 * 60 * 60 * 1000,
-        });
-
         return res.status(200).json({
           success: true,
           message: "OTP verified successfully",
-          token: token
+          token: token,
+          id: user._id,
         });
       } else {
         return res.status(400).json({

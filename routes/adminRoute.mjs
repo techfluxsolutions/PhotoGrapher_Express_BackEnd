@@ -12,7 +12,7 @@ const router = express.Router();
 
 // Apply Auth and Admin check to all 
 
-// router.use(authMiddleware ,isAdmin);
+router.use(authMiddleware, isAdmin);
 
 // --- Admin Management ---
 router.post("/", upload.single("avatar"), (req, res, next) => AdminController.create(req, res, next));
