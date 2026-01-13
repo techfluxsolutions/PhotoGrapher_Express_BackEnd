@@ -1,5 +1,5 @@
 import Service from "../models/Service.mjs";
-
+import AdditionalServices from "../models/AdditionalServices.mjs";
 class ServiceController {
   // POST /services
   async create(req, res, next) {
@@ -37,13 +37,17 @@ class ServiceController {
   async getById(req, res, next) {
     try {
       const { id } = req.params;
-      const data = await Service.findById(id);
+      const data = await Service.findById(id).lean();
 
       if (!data) {
         return res.status(404).json({
           success: false,
           message: "Service not found",
         });
+      }
+      if (data && data.isAdditionalServices) {
+        const additionalServices = await AdditionalServices.find({ serviceId: data._id }).lean();
+        data.additionalServices = additionalServices;
       }
 
       res.status(200).json({

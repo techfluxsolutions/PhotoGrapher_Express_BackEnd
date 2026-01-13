@@ -10,6 +10,7 @@ import authMiddleware from "../middleware/authmiddleware.mjs";
 import QuoteController from "../controllers/QuoteController.mjs";
 import PackageController from "../controllers/PackageController.mjs";
 import createUploader from "../Config/uploadCreate.js";
+import AdditionalServicesController from "../controllers/AdditionalServicesController.mjs";
 const router = express.Router();
 
 // router.use(authMiddleware); // Removed global auth middleware to allow public routes
@@ -71,6 +72,12 @@ router.get("/reviews/:id", (req, res, next) => ReviewController.getById(req, res
 router.get("/services", (req, res, next) => ServiceController.list(req, res, next));
 router.get("/services/:id", (req, res, next) => ServiceController.getById(req, res, next));
 router.get("/servicename", (req, res, next) => ServiceController.getServiceNameOnly(req, res, next))
+
+// additional services
+
+router.post("/createadditionalServices", (req, res, next) => AdditionalServicesController.create(req, res, next));
+router.put("/updateadditionalServices/:id", (req, res, next) => AdditionalServicesController.update(req, res, next));
+router.delete("/deleteadditionalServices/:id", (req, res, next) => AdditionalServicesController.delete(req, res, next));
 
 // --- Packages ---
 router.get("/packages", (req, res, next) => PackageController.getAll(req, res, next));
