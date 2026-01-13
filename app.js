@@ -8,6 +8,7 @@ import {
   adminRoutes,
   photographerRoutes,
   authRoutes,
+
 } from "./routes/index.js";
 
 dotenv.config();
@@ -38,6 +39,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/admins", adminRoutes);
 app.use("/api/photographers", photographerRoutes);
 app.use("/api/users", userRoutes);
+
 
 // Optional mongoose connection if MONGODB_URI is provided
 if (process.env.MONGODB_URI) {

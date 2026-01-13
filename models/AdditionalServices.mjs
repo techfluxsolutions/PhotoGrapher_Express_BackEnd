@@ -1,4 +1,4 @@
-import mongoose from mongoose
+import mongoose from "mongoose"
 
 
 const AdditionalServicesSchema = new mongoose.Schema({
@@ -24,6 +24,8 @@ const AdditionalServicesSchema = new mongoose.Schema({
     }
 });
 
-AdditionalServicesSchema.Index({ serviceId: 1 });
+// AdditionalServicesSchema.Index({ serviceId: 1 });
+
+AdditionalServicesSchema.index({ username: 1, email: 1 });
 
 export default mongoose.model("AdditionalServices", AdditionalServicesSchema);

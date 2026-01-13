@@ -4,7 +4,16 @@ class ServiceBookingController {
   // Create a new service booking
   async create(req, res, next) {
     try {
+
+      const parseDDMMYYYY = (dateStr) => {
+        if (!dateStr) return dateStr;
+        const [day, month, year] = dateStr.split("-");
+        return new Date(`${year}-${month}-${day}`);
+      };
+
+
       const payload = req.body;
+      payload.bookingDate = parseDDMMYYYY(payload.bookingDate);
       const booking = await ServiceBooking.create(payload);
       return res.status(201).json({ success: true, data: booking });
     } catch (err) {
