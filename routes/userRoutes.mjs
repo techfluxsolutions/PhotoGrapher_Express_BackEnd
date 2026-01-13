@@ -70,6 +70,7 @@ router.get("/reviews/:id", (req, res, next) => ReviewController.getById(req, res
 // --- Services ---
 router.get("/services", (req, res, next) => ServiceController.list(req, res, next));
 router.get("/services/:id", (req, res, next) => ServiceController.getById(req, res, next));
+router.get("/servicename", (req, res, next) => ServiceController.getServiceNameOnly(req, res, next))
 
 // --- Packages ---
 router.get("/packages", (req, res, next) => PackageController.getAll(req, res, next));
