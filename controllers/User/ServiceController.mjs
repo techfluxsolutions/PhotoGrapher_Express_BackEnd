@@ -1,5 +1,5 @@
-import Service from "../models/Service.mjs";
-import AdditionalServices from "../models/AdditionalServices.mjs";
+import Service from "../../models/Service.mjs";
+import AdditionalServices from "../../models/AdditionalServices.mjs";
 class ServiceController {
   // POST /services
   async create(req, res, next) {

@@ -1,8 +1,8 @@
 import express from "express";
-import PhotographerController from "../controllers/PhotographerController.mjs";
-import AvailabilityController from "../controllers/AvailabilityController.mjs";
-import JobController from "../controllers/JobController.mjs";
-import PayoutController from "../controllers/PayoutController.mjs";
+import PhotographerController from "../controllers/User/PhotographerController.mjs";
+import AvailabilityController from "../controllers/User/AvailabilityController.mjs";
+import JobController from "../controllers/User/JobController.mjs";
+import PayoutController from "../controllers/User/PayoutController.mjs";
 import authMiddleware from "../middleware/authMiddleware.mjs";
 import { isPhotographer } from "../middleware/isValid.Middleware.mjs";
 

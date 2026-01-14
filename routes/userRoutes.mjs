@@ -1,16 +1,16 @@
 import express from "express";
-import UserController from "../controllers/UserController.mjs";
-import EnquiryController from "../controllers/EnquiryController.mjs";
-import ReviewController from "../controllers/ReviewController.mjs";
-import ServiceBookingController from "../controllers/ServiceBookingController.mjs";
-import PersonalizedQuoteController from "../controllers/PersonalizedQuoteController.mjs";
-import ServiceController from "../controllers/ServiceController.mjs";
-import FAQController from "../controllers/FAQController.mjs";
+import UserController from "../controllers/User/UserController.mjs";
+import EnquiryController from "../controllers/User/EnquiryController.mjs";
+import ReviewController from "../controllers/User/ReviewController.mjs";
+import ServiceBookingController from "../controllers/User/ServiceBookingController.mjs";
+import PersonalizedQuoteController from "../controllers/User/PersonalizedQuoteController.mjs";
+import ServiceController from "../controllers/User/ServiceController.mjs";
+import FAQController from "../controllers/User/FAQController.mjs";
 import authMiddleware from "../middleware/authmiddleware.mjs";
-import QuoteController from "../controllers/QuoteController.mjs";
-import PackageController from "../controllers/PackageController.mjs";
+import QuoteController from "../controllers/User/QuoteController.mjs";
+import PackageController from "../controllers/User/PackageController.mjs";
 import createUploader from "../Config/uploadCreate.js";
-import AdditionalServicesController from "../controllers/AdditionalServicesController.mjs";
+import AdditionalServicesController from "../controllers/User/AdditionalServicesController.mjs";
 const router = express.Router();
 
 // router.use(authMiddleware); // Removed global auth middleware to allow public routes

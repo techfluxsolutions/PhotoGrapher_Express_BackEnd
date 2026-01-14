@@ -1,4 +1,4 @@
-import Notification from "../models/Notification.mjs";
+import Notification from "../../models/Notification.mjs";
 
 class NotificationController {
   async create(req, res, next) {

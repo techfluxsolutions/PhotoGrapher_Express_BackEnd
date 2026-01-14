@@ -1,5 +1,5 @@
 import express from "express";
-import ChatController from "../controllers/ChatController.mjs";
+import ChatController from "../controllers/User/ChatController.mjs";
 import authMiddleware from "../middleware/authmiddleware.mjs";
 
 import { chatRoleCheck } from "../middleware/chatRoleCheck.mjs";

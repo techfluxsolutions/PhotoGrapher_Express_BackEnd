@@ -1,4 +1,4 @@
-import Testimonials from "../models/Testimonials.mjs";
+import Testimonials from "../../models/Testimonials.mjs";
 
 class TestimonialController {
    async addTestimonial(req, res) {

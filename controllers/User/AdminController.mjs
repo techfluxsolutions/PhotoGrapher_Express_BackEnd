@@ -1,9 +1,9 @@
-import AdminDB from "../models/Admin.mjs";
+import AdminDB from "../../models/Admin.mjs";
 
 import {
   sendErrorResponse,
   sendSuccessResponse,
-} from "../utils/handleResponce.mjs";
+} from "../../utils/handleResponce.mjs";
 
 class AdminController {
   async create(req, res, next) {

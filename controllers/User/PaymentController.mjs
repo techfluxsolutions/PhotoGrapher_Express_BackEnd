@@ -1,4 +1,4 @@
-import Payment from "../models/Payment.mjs";
+import Payment from "../../models/Payment.mjs";
 
 class PaymentController {
   async create(req, res, next) {

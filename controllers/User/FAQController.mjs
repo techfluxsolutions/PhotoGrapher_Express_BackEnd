@@ -1,5 +1,5 @@
-import FAQ from "../models/FAQs.mjs";
-import { sendErrorResponse } from "../utils/handleResponce.mjs";
+import FAQ from "../../models/FAQs.mjs";
+import { sendErrorResponse } from "../../utils/handleResponce.mjs";
 
 class FAQController {
   // Create a new FAQ

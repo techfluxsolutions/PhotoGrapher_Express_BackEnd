@@ -1,5 +1,5 @@
 import express from "express";
-import AuthController from "../controllers/AuthController.mjs";
+import AuthController from "../controllers/User/AuthController.mjs";
 
 const router = express.Router();
 // User Send OTP and Verify OTP routes

@@ -1,5 +1,5 @@
 import express from "express";
-import AdminEmailAuthController from "../controllers/AdminEmailAuthController.mjs";
+import AdminEmailAuthController from "../controllers/User/AdminEmailAuthController.mjs";
 
 const router = express.Router();
 
