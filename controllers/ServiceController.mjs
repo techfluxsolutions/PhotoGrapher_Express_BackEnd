@@ -134,6 +134,28 @@ class ServiceController {
       return res.status(500).json({ success: false, message: err.message })
     }
   }
+
+  async getServicePrice(req, res) {
+    try {
+      const { serviceId, additionalServicesId } = req.body;
+      const servicePrice = await AdditionalServices.findOne({ _id: additionalServicesId, serviceId: serviceId, }).select('serviceCost');
+      if (!servicePrice) {
+        res.status(404).json({
+          success: true,
+          message: "No Service are listed"
+        })
+      }
+      return res.status(200).json({
+        message: "Service are fetched successfully",
+        success: true,
+        data: servicePrice
+
+      })
+
+    } catch (err) {
+      return res.status(500).json({ success: false, message: err.message })
+    }
+  }
 }
 
 export default new ServiceController();

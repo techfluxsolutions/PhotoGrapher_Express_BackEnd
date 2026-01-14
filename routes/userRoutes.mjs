@@ -78,6 +78,9 @@ router.get("/servicename", (req, res, next) => ServiceController.getServiceNameO
 router.post("/createadditionalServices", (req, res, next) => AdditionalServicesController.create(req, res, next));
 router.put("/updateadditionalServices/:id", (req, res, next) => AdditionalServicesController.update(req, res, next));
 router.delete("/deleteadditionalServices/:id", (req, res, next) => AdditionalServicesController.delete(req, res, next));
+// service price
+
+router.get("/serviceprice", (req, res, next) => ServiceController.getServicePrice(req, res, next));
 
 // --- Packages ---
 router.get("/packages", (req, res, next) => PackageController.getAll(req, res, next));
