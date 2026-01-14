@@ -100,10 +100,34 @@ class ServiceBookingController {
       return next(err);
     }
   }
+
   async cancelBooking(req, res, next) {
     try {
       const { id } = req.params;
       const booking = await ServiceBooking.findByIdAndUpdate(id, { status: "canceled" });
+      if (!booking) {
+        return res
+          .status(404)
+          .json({ success: false, message: "ServiceBooking not found" });
+      }
+      return res.json({ success: true, data: booking });
+    } catch (err) {
+      return next(err);
+    }
+  }
+
+  // update bookings
+  async updatePaymentStatusBooking(req, res, next) {
+    try {
+      const { id } = req.params;
+      const payload = req.body;
+      if (payload.bookingDate) {
+        payload.bookingDate = parseDDMMYYYY(payload.bookingDate);
+      }
+      const booking = await ServiceBooking.findByIdAndUpdate(id, payload, {
+        new: true,
+        runValidators: true,
+      });
       if (!booking) {
         return res
           .status(404)
