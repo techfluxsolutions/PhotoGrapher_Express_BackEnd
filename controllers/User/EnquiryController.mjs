@@ -1,4 +1,4 @@
-import User from "../models/User.mjs";
+import User from "../../models/User.mjs";
 
 class EnquiryController {
   async create(req, res, next) {

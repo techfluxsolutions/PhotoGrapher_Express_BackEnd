@@ -1,7 +1,7 @@
-import Conversation from "../models/Conversation.mjs";
-import Message from "../models/Message.mjs";
-import ServiceBooking from "../models/ServiceBookings.mjs";
-import Quote from "../models/Quote.mjs";
+import Conversation from "../../models/Conversation.mjs";
+import Message from "../../models/Message.mjs";
+import ServiceBooking from "../../models/ServiceBookings.mjs";
+import Quote from "../../models/Quote.mjs";
 
 class ChatController {
 
@@ -44,8 +44,8 @@ class ChatController {
                 return res.json({ success: true, data: [], meta: { total: 0, page, limit } });
             }
 
-            // Check access? (Middleware usually handles auth, but checking participation is good)
-            if (!conversation.participants.includes(req.user.id) && !req.user.isAdmin) {
+            const isParticipant = conversation.participants.some((p) => p.toString() === req.user.id);
+            if (!isParticipant && !req.user.isAdmin) {
                 return res.status(403).json({ success: false, message: "Access denied" });
             }
 

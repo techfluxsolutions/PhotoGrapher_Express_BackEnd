@@ -1,9 +1,9 @@
 
-import User from "../models/User.mjs";
+import User from "../../models/User.mjs";
 import {
   sendErrorResponse,
   sendSuccessResponse,
-} from "../utils/handleResponce.mjs";
+} from "../../utils/handleResponce.mjs";
 
 class UserController {
   // ✅ Create user

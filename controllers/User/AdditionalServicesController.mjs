@@ -1,4 +1,4 @@
-import AdditionalServices from "../models/AdditionalServices.mjs";
+import AdditionalServices from "../../models/AdditionalServices.mjs";
 
 class AdditionalServicesController {
     // POST /additional-services

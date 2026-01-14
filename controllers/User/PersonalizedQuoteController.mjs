@@ -1,4 +1,4 @@
-import PersonalizedQuote from "../models/PersonalizedQuotes.mjs";
+import PersonalizedQuote from "../../models/PersonalizedQuotes.mjs";
 
 class PersonalizedQuoteController {
   // Create a new personalized quote

@@ -1,4 +1,4 @@
-import Quote from "../models/Quote.mjs";
+import Quote from "../../models/Quote.mjs";
 
 class QuoteController {
   async create(req, res, next) {

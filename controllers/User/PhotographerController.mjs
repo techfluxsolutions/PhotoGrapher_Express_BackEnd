@@ -2,7 +2,7 @@
 import {
     sendErrorResponse,
     sendSuccessResponse,
-  } from "../utils/handleResponce.mjs";
+  } from "../../utils/handleResponce.mjs";
 
 class PhotographerController {
     // get all photographers

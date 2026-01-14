@@ -1,9 +1,9 @@
-import Review from "../models/Review.mjs";
+import Package from "../../models/Package.mjs";
 
-class ReviewController {
+class PackageController {
   async create(req, res, next) {
     try {
-      const data = await Review.create(req.body);
+      const data = await Package.create(req.body);
       res.status(201).json({ success: true, data });
     } catch (error) {
       next(error);
@@ -11,8 +11,9 @@ class ReviewController {
   }
 
   async getAll(req, res, next) {
+    console.log(req.user)
     try {
-      const data = await Review.find();
+      const data = await Package.find();
       res.status(200).json({ success: true, data });
     } catch (error) {
       next(error);
@@ -22,9 +23,9 @@ class ReviewController {
   async getOne(req, res, next) {
     try {
       const { id } = req.params;
-      const data = await Review.findById(id);
+      const data = await Package.findById(id);
       if (!data) {
-        return res.status(404).json({ success: false, message: "Review not found" });
+        return res.status(404).json({ success: false, message: "Package not found" });
       }
       res.status(200).json({ success: true, data });
     } catch (error) {
@@ -35,9 +36,9 @@ class ReviewController {
   async update(req, res, next) {
     try {
       const { id } = req.params;
-      const data = await Review.findByIdAndUpdate(id, req.body, { new: true });
+      const data = await Package.findByIdAndUpdate(id, req.body, { new: true });
       if (!data) {
-        return res.status(404).json({ success: false, message: "Review not found" });
+        return res.status(404).json({ success: false, message: "Package not found" });
       }
       res.status(200).json({ success: true, data });
     } catch (error) {
@@ -48,15 +49,15 @@ class ReviewController {
   async delete(req, res, next) {
     try {
       const { id } = req.params;
-      const data = await Review.findByIdAndDelete(id);
+      const data = await Package.findByIdAndDelete(id);
       if (!data) {
-        return res.status(404).json({ success: false, message: "Review not found" });
+        return res.status(404).json({ success: false, message: "Package not found" });
       }
-      res.status(200).json({ success: true, message: "Review deleted successfully" });
+      res.status(200).json({ success: true, message: "Package deleted successfully" });
     } catch (error) {
       next(error);
     }
   }
 }
 
-export default new ReviewController();
+export default new PackageController();

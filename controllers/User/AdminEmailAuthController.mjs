@@ -1,9 +1,9 @@
-import AdminEmailAuthDB from "../models/AdminEmailAuth.mjs";
-import { signToken } from "../utils/jwt.mjs";
+import AdminEmailAuthDB from "../../models/AdminEmailAuth.mjs";
+import { signToken } from "../../utils/jwt.mjs";
 import {
   sendErrorResponse,
   sendSuccessResponse,
-} from "../utils/handleResponce.mjs";
+} from "../../utils/handleResponce.mjs";
 
 // Hardcoded admin credentials
 const ADMIN_EMAIL = "admin@techflux.in";

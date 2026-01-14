@@ -1,4 +1,4 @@
-import ServiceBooking from "../models/ServiceBookings.mjs";
+import ServiceBooking from "../../models/ServiceBookings.mjs";
 
 class ServiceBookingController {
   // Create a new service booking

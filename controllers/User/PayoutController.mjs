@@ -1,9 +1,9 @@
-import Job from "../models/Job.mjs";
+import Payout from "../../models/Payout.mjs";
 
-class JobController {
+class PayoutController {
   async create(req, res, next) {
     try {
-      const data = await Job.create(req.body);
+      const data = await Payout.create(req.body);
       res.status(201).json({ success: true, data });
     } catch (error) {
       next(error);
@@ -12,7 +12,7 @@ class JobController {
 
   async getAll(req, res, next) {
     try {
-      const data = await Job.find();
+      const data = await Payout.find();
       res.status(200).json({ success: true, data });
     } catch (error) {
       next(error);
@@ -22,9 +22,9 @@ class JobController {
   async getOne(req, res, next) {
     try {
       const { id } = req.params;
-      const data = await Job.findById(id);
+      const data = await Payout.findById(id);
       if (!data) {
-        return res.status(404).json({ success: false, message: "Job not found" });
+        return res.status(404).json({ success: false, message: "Payout not found" });
       }
       res.status(200).json({ success: true, data });
     } catch (error) {
@@ -35,9 +35,9 @@ class JobController {
   async update(req, res, next) {
     try {
       const { id } = req.params;
-      const data = await Job.findByIdAndUpdate(id, req.body, { new: true });
+      const data = await Payout.findByIdAndUpdate(id, req.body, { new: true });
       if (!data) {
-        return res.status(404).json({ success: false, message: "Job not found" });
+        return res.status(404).json({ success: false, message: "Payout not found" });
       }
       res.status(200).json({ success: true, data });
     } catch (error) {
@@ -48,15 +48,15 @@ class JobController {
   async delete(req, res, next) {
     try {
       const { id } = req.params;
-      const data = await Job.findByIdAndDelete(id);
+      const data = await Payout.findByIdAndDelete(id);
       if (!data) {
-        return res.status(404).json({ success: false, message: "Job not found" });
+        return res.status(404).json({ success: false, message: "Payout not found" });
       }
-      res.status(200).json({ success: true, message: "Job deleted successfully" });
+      res.status(200).json({ success: true, message: "Payout deleted successfully" });
     } catch (error) {
       next(error);
     }
   }
 }
 
-export default new JobController();
+export default new PayoutController();
