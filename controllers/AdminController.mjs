@@ -24,11 +24,16 @@ class AdminController {
     }
   }
 
-  async list(req, res, next) {
+  async getAll(req, res, next) {
     try {
       const page = Math.max(1, parseInt(req.query.page) || 1);
       const limit = Math.max(1, parseInt(req.query.limit) || 20);
-      const { items, total } = await AdminService.getAllAdmins(page, limit);
+      const skip = (page - 1) * limit;
+
+      const [items, total] = await Promise.all([
+        AdminDB.find({}).skip(skip).limit(limit).sort({ createdAt: -1 }),
+        AdminDB.countDocuments(),
+      ]);
 
       return res.json({
         success: true,
@@ -43,7 +48,7 @@ class AdminController {
   async getById(req, res, next) {
     try {
       const { id } = req.params;
-      const admin = await AdminService.getAdminById(id);
+      const admin = await AdminDB.findById(id);
       if (!admin)
         return res
           .status(404)
@@ -58,7 +63,10 @@ class AdminController {
     try {
       const { id } = req.params;
       const payload = req.body;
-      const admin = await AdminService.updateAdmin(id, payload);
+      const admin = await AdminDB.findByIdAndUpdate(id, payload, {
+        new: true,
+        runValidators: true,
+      });
       if (!admin)
         return res
           .status(404)
@@ -72,7 +80,7 @@ class AdminController {
   async delete(req, res, next) {
     try {
       const { id } = req.params;
-      const admin = await AdminService.deleteAdmin(id);
+      const admin = await AdminDB.findByIdAndDelete(id);
       if (!admin)
         return res
           .status(404)
