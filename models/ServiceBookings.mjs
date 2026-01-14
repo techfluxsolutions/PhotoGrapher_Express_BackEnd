@@ -6,6 +6,11 @@ const serviceBookingSchema = new mongoose.Schema(
       ref: "Service",
       required: true,
     },
+    additionalServicesId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "AdditionalServices",
+      required: false,
+    },
     client_id: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
