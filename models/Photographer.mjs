@@ -9,7 +9,7 @@ const photographerSchema = new mongoose.Schema(
       trim: true,
       lowercase: true,
     },
-     mobileNumber: {
+    mobileNumber: {
       type: String,
       required: [true, "Mobile number is required"],
       unique: true,
@@ -71,7 +71,7 @@ photographerSchema.virtual("fullName").get(function () {
 });
 
 // Index
-photographerSchema.index({ username: 1, email: 1, phone_number: 1 });
+// photographerSchema.index({ username: 1, email: 1, phone_number: 1 });
 photographerSchema.index({ status: 1 });
 
 export default mongoose.model("Photographer", photographerSchema);

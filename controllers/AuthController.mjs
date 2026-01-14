@@ -1,7 +1,7 @@
 import User from "../models/User.mjs";
 import { signToken } from "../utils/jwt.mjs";
 import roleModelMap from "../utils/roleModelMap.mjs";
-
+import jwt from "jsonwebtoken";
 const OTP_BYPASS_ENABLED = process.env.OTP_BYPASS_ENABLED === "true";
 const OTP_BYPASS_NUMBERS = (process.env.OTP_BYPASS_NUMBERS || "")
   .split(",")
@@ -453,6 +453,7 @@ class AuthController {
     try {
       const { mobileNumber, otp, role } = req.body;
 
+
       /* 1️⃣ Validate input */
       if (!mobileNumber || !otp) {
         return res.status(400).json({
@@ -489,7 +490,7 @@ class AuthController {
           userType: user.userType,
         });
         await user.save();
-
+        console.log("token Created", token);
         return res.status(200).json({
           success: true,
           message: "OTP verified successfully",
