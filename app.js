@@ -3,18 +3,25 @@ import dotenv from "dotenv";
 import mongoose from "mongoose";
 import cors from "cors";
 import cookieParser from "cookie-parser";
+import http from "http";
+import { initSocket } from "./services/SocketService.mjs";
 import {
   userRoutes,
   adminRoutes,
   photographerRoutes,
   authRoutes,
   adminEmailAuthRoutes,
+  chatRoutes,
 } from "./routes/index.js";
 
 dotenv.config();
 
 const app = express();
+const server = http.createServer(app); // Create HTTP server
 const port = process.env.PORT || 5002;
+
+// Initialize Socket.IO
+initSocket(server);
 
 // Middleware to parse JSON bodies
 app.use(express.json());
@@ -40,6 +47,7 @@ app.use("/api/admin-auth", adminEmailAuthRoutes);
 app.use("/api/admins", adminRoutes);
 app.use("/api/photographers", photographerRoutes);
 app.use("/api/users", userRoutes);
+app.use("/api/chat", chatRoutes); // Mount Chat Routes
 
 
 // Optional mongoose connection if MONGODB_URI is provided
@@ -67,7 +75,7 @@ app.use((req, res, next) => {
 app.use(globalErrorHandler);
 
 // Start the server
-app.listen(port, () => {
+server.listen(port, () => {
   console.log(`Server is running at http://localhost:${port}`);
 });
 

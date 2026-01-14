@@ -31,7 +31,7 @@ router.get("/faqs", (req, res, next) => FAQController.getAll(req, res, next));
 router.get("/reviews", (req, res, next) => ReviewController.getAll(req, res, next));
 
 // Protected Routes
-//router.use(authMiddleware);
+router.use(authMiddleware);
 
 // --- User Profile ---
 router.get("/me", (req, res, next) => UserController.getById(req, res, next));

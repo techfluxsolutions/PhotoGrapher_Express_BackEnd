@@ -11,6 +11,11 @@ const serviceBookingSchema = new mongoose.Schema(
       ref: "User",
       required: true,
     },
+    photographer_id: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Photographer", // Assuming Photographer model is used for photographer roles or User if unified
+      default: null,
+    },
     bookingDate: {
       type: Date,
       required: true,
