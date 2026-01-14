@@ -81,7 +81,7 @@ router.delete("/deleteadditionalServices/:id", (req, res, next) => AdditionalSer
 // service price
 
 router.get("/serviceprice", (req, res, next) => ServiceController.getServicePrice(req, res, next));
-
+router.get("/personalized/serviceprice/:serviceId", (req, res) => ServiceController.getServicePriceByServiceId(req, res));
 // --- Packages ---
 router.get("/packages", (req, res, next) => PackageController.getAll(req, res, next));
 router.get("/packages/:id", (req, res, next) => PackageController.getById(req, res, next));
