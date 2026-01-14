@@ -100,6 +100,20 @@ class ServiceBookingController {
       return next(err);
     }
   }
+  async cancelBooking(req, res, next) {
+    try {
+      const { id } = req.params;
+      const booking = await ServiceBooking.findByIdAndUpdate(id, { status: "canceled" });
+      if (!booking) {
+        return res
+          .status(404)
+          .json({ success: false, message: "ServiceBooking not found" });
+      }
+      return res.json({ success: true, data: booking });
+    } catch (err) {
+      return next(err);
+    }
+  }
 }
 
 export default new ServiceBookingController();

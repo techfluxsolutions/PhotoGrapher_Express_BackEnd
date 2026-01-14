@@ -52,6 +52,14 @@ const serviceBookingSchema = new mongoose.Schema(
     totalAmount: {
       type: Number,
     },
+    isPaid: {
+      type: Boolean,
+      default: false,
+    },
+    paymentId: {
+      type: String,
+      required: false,
+    },
   },
   { timestamps: true }
 );

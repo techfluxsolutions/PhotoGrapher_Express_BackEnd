@@ -54,6 +54,7 @@ router.put("/quotes/:id", (req, res, next) => QuoteController.update(req, res, n
 router.delete("/quotes/:id", (req, res, next) => QuoteController.delete(req, res, next));
 router.get("/quotes/status/:status", (req, res) => QuoteController.getByStatus(req, res));
 router.put("/quotes/changeStatus/:id", (req, res, next) => QuoteController.changeStatus(req, res, next));
+router.post("/quotes/convertToBooking/:quoteId", (req, res, next) => QuoteController.QuoteConverToBookings(req, res, next));
 
 
 // Personalized Quotes
@@ -71,7 +72,7 @@ router.get("/reviews/:id", (req, res, next) => ReviewController.getById(req, res
 // --- Services ---
 router.get("/services", (req, res, next) => ServiceController.list(req, res, next));
 router.get("/services/:id", (req, res, next) => ServiceController.getById(req, res, next));
-router.get("/servicename", (req, res, next) => ServiceController.getServiceNameOnly(req, res, next))
+router.get("/servicename", (req, res, next) => ServiceController.getServiceNameOnly(req, res, next));
 
 // additional services
 
@@ -90,6 +91,7 @@ router.get("/packages/:id", (req, res, next) => PackageController.getById(req, r
 router.post("/servicebookings", (req, res, next) => ServiceBookingController.create(req, res, next));
 router.get("/servicebookings", (req, res, next) => ServiceBookingController.list(req, res, next));
 router.get("/servicebookings/:id", (req, res, next) => ServiceBookingController.getById(req, res, next));
+router.put("/servicebookings/:id", (req, res, next) => ServiceBookingController.cancelBooking(req, res, next));
 
 
 

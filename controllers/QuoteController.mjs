@@ -1,5 +1,5 @@
 import Quote from "../models/Quote.mjs";
-
+import ServiceBooking from "../models/ServiceBookings.mjs";
 class QuoteController {
   async create(req, res, next) {
     try {
@@ -132,6 +132,69 @@ class QuoteController {
       return next(err);
     }
   }
+  async QuoteConverToBookings(req, res) {
+
+    try {
+      const { quoteId } = req.params;
+      const { clientId, flatOrHouseNo, streetName, city, state, postalCode } = req.body; // or from req.user._id if using auth
+
+      // 🔎 Step 1: Find quote by _id AND clientId
+      const quote = await Quote.findOne({
+        _id: quoteId,
+        clientId: clientId,
+      });
+
+      if (!quote) {
+        return res.status(404).json({
+          success: false,
+          message: "Quote not found or does not belong to this client",
+        });
+      }
+
+      // 🧠 Step 2: Create booking using quote details
+      const booking = await ServiceBooking.create({
+        service_id: quote.service_id,
+        client_id: quote.clientId,
+        bookingDate: quote.eventDate,
+
+        // Address mapping (can be updated later)
+        flatOrHouseNo: flatOrHouseNo,
+        streetName: streetName,
+        city: city,
+        state: state,
+        postalCode: postalCode,
+
+        totalAmount: quote.budget || 0,
+
+        quoteId: quote._id,
+        bookingSource: "quote",
+      });
+
+      // 🔄 Step 3: Update quote status
+      quote.quoteStatus = "upcommingBookings";
+      await quote.save();
+
+      return res.status(201).json({
+        success: true,
+        message: "Booking created successfully from quote",
+        data: booking,
+      });
+
+    } catch (error) {
+      console.error("Create booking from quote error:", error);
+      res.status(500).json({
+        success: false,
+        message: "Internal server error",
+      });
+    }
+  }
+
 }
 
 export default new QuoteController();
+
+
+
+
+
+
