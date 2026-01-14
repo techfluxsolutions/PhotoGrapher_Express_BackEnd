@@ -36,6 +36,14 @@ const paymentSchema = new mongoose.Schema(
       enum: ["pending", "paid", "failed", "refunded"],
       default: "pending",
     },
+    invoice_number: {
+      type: String,
+      unique: true,
+      sparse: true, // Allow null/undefined values
+    },
+    invoice_file: {
+      type: String, // URL or file path to invoice PDF
+    },
   },
   {
     timestamps: true,
