@@ -1,71 +1,126 @@
-import Conversation from "../models/Conversation.mjs";
-import Message from "../models/Message.mjs";
-import ServiceBooking from "../models/ServiceBookings.mjs";
-import Quote from "../models/Quote.mjs";
+// import Conversation from "../models/Conversation.mjs";
+// import Message from "../models/Message.mjs";
+// import ServiceBooking from "../models/ServiceBookings.mjs";
+// import Quote from "../models/Quote.mjs";
+// import Admin from "../models/Admin.mjs";
 
-class ChatController {
 
-    // Get all conversations for the logged-in user
-    async getConversations(req, res, next) {
-        try {
-            const userId = req.user.id;
+// class ChatController {
 
-            // Find conversations where user is a participant
-            const conversations = await Conversation.find({ participants: userId })
-                .populate("bookingId", "status bookingDate") // Populate booking details if needed
-                .populate("participants", "username avatar") // Populate participant details
-                .sort({ lastMessageAt: -1 });
+//     // Get all conversations for the logged-in user
+//     async getConversations(req, res, next) {
+//         try {
+//             const userId = req.user.id;
 
-            return res.json({ success: true, data: conversations });
-        } catch (err) {
-            next(err);
-        }
-    }
+//             // Find conversations where user is a participant
+//             const conversations = await Conversation.find({ participants: userId })
+//                 .populate("bookingId", "status bookingDate")
+//                 .populate("quoteId", "eventType eventDate location") // Populate quote details
+//                 .populate("participants", "username avatar")
+//                 .sort({ lastMessageAt: -1 });
 
-    // Get messages for a specific booking (Chat History)
-    async getMessages(req, res, next) {
-        try {
-            const { bookingId } = req.params;
-            const page = parseInt(req.query.page) || 1;
-            const limit = parseInt(req.query.limit) || 50;
-            const skip = (page - 1) * limit;
+//             return res.json({ success: true, data: conversations });
+//         } catch (err) {
+//             next(err);
+//         }
+//     }
 
-            const conversation = await Conversation.findOne({ bookingId });
+//     // Get messages for a specific booking or quote (Chat History)
+//     async getMessages(req, res, next) {
+//         try {
+//             const { bookingId } = req.params; // This can be bookingId or quoteId depending on how it's called
+//             const page = parseInt(req.query.page) || 1;
+//             const limit = parseInt(req.query.limit) || 50;
+//             const skip = (page - 1) * limit;
 
-            if (!conversation) {
-                // If no conversation exists yet, return empty array instead of 404 for valid bookings/quotes
-                const booking = await ServiceBooking.findById(bookingId);
-                const quote = !booking ? await Quote.findById(bookingId) : null;
+//             // Try to find by bookingId first, then by quoteId
+//             let conversation = await Conversation.findOne({
+//                 $or: [{ bookingId }, { quoteId: bookingId }]
+//             });
 
-                if (!booking && !quote) {
-                    return res.status(404).json({ success: false, message: "Booking/Quote not found" });
-                }
+//             if (!conversation) {
+//                 // If no conversation exists yet, return empty array instead of 404 for valid bookings/quotes
+//                 const booking = await ServiceBooking.findById(bookingId);
+//                 const quote = !booking ? await Quote.findById(bookingId) : null;
 
-                return res.json({ success: true, data: [], meta: { total: 0, page, limit } });
-            }
+//                 if (!booking && !quote) {
+//                     return res.status(404).json({ success: false, message: "Booking/Quote not found" });
+//                 }
 
-            // Check access? (Middleware usually handles auth, but checking participation is good)
-            if (!conversation.participants.includes(req.user.id) && !req.user.isAdmin) {
-                return res.status(403).json({ success: false, message: "Access denied" });
-            }
+//                 return res.json({ success: true, data: [], meta: { total: 0, page, limit } });
+//             }
 
-            const total = await Message.countDocuments({ conversationId: conversation._id });
+//             // Check access? (Middleware usually handles auth, but checking participation is good)
+//             if (!conversation.participants.includes(req.user.id) && !req.user.isAdmin) {
+//                 return res.status(403).json({ success: false, message: "Access denied" });
+//             }
 
-            const messages = await Message.find({ conversationId: conversation._id })
-                .sort({ createdAt: -1 }) // Get latest first
-                .skip(skip)
-                .limit(limit)
-                .populate("senderId", "username avatar"); // To show sender details
+//             const total = await Message.countDocuments({ conversationId: conversation._id });
 
-            return res.json({
-                success: true,
-                data: messages.reverse(), // Client usually expects chronological order for chat
-                meta: { total, page, limit },
-            });
-        } catch (err) {
-            next(err);
-        }
-    }
-}
+//             const messages = await Message.find({ conversationId: conversation._id })
+//                 .sort({ createdAt: -1 }) // Get latest first
+//                 .skip(skip)
+//                 .limit(limit)
+//                 .populate("senderId", "username avatar"); // To show sender details
 
-export default new ChatController();
+//             return res.json({
+//                 success: true,
+//                 data: messages.reverse(), // Client usually expects chronological order for chat
+//                 meta: { total, page, limit },
+//             });
+//         } catch (err) {
+//             next(err);
+//         }
+//     }
+
+//     // Create a conversation between the user and all admins for a specific quote
+//     async createConversation(req, res, next) {
+//         try {
+//             const userId = req.user.id;
+//             const { quoteId } = req.body;
+
+//             if (!quoteId) {
+//                 return res.status(400).json({ success: false, message: "quoteId is required" });
+//             }
+
+//             // Verify the quote exists
+//             const quote = await Quote.findById(quoteId);
+//             if (!quote) {
+//                 return res.status(404).json({ success: false, message: "Quote not found" });
+//             }
+
+//             // Fetch all admin IDs from the admin table
+//             const admins = await Admin.find({}, "_id");
+//             const adminIds = admins.map(admin => admin._id);
+
+//             if (adminIds.length === 0) {
+//                 return res.status(404).json({ success: false, message: "No admins found to start a conversation" });
+//             }
+
+//             // Participants include the user and all admins
+//             const participants = [userId, ...adminIds];
+
+//             // Check if a conversation already exists for this quoteId
+//             let conversation = await Conversation.findOne({ quoteId });
+
+//             if (!conversation) {
+//                 conversation = await Conversation.create({
+//                     quoteId,
+//                     participants: participants
+//                 });
+//             } else {
+//                 // Ensure the user is in the participants list if the conversation already exists
+//                 if (!conversation.participants.includes(userId)) {
+//                     conversation.participants.push(userId);
+//                     await conversation.save();
+//                 }
+//             }
+
+//             return res.json({ success: true, data: conversation });
+//         } catch (err) {
+//             next(err);
+//         }
+//     }
+// }
+
+// export default new ChatController();

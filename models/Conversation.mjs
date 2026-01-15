@@ -2,11 +2,12 @@ import mongoose from "mongoose";
 
 const conversationSchema = new mongoose.Schema(
     {
-        bookingId: {
+        quoteId: {
             type: mongoose.Schema.Types.ObjectId,
-            ref: "ServiceBooking",
-            required: true,
-            unique: true, // One conversation per booking
+            ref: "Quote",
+            required: false,
+            unique: true,
+            sparse: true,
         },
         participants: [
             {

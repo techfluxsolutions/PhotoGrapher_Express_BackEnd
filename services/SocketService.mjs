@@ -5,7 +5,12 @@ import Message from "../models/Message.mjs";
 import ServiceBooking from "../models/ServiceBookings.mjs";
 import Quote from "../models/Quote.mjs";
 import User from "../models/User.mjs";
+import Admin from "../models/Admin.mjs";
 import { socketAuthMiddleware } from "../middleware/socketAuthMiddleware.mjs";
+
+
+// const ADMIN_USER_ID = "6964a646eadb53313fb11881"; // Deprecated in favor of fetching all admins
+
 
 let io;
 
@@ -57,26 +62,30 @@ export const initSocket = (server) => {
                     isParticipant = context.clientId.toString() === socket.user.id;
                 }
 
-                // Check access
-                if (!isParticipant && socket.user.userType !== 'admin') {
+                if (!isParticipant && socket.user.userType !== "admin") {
                     return socket.emit("error", "Unauthorized access to this chat");
                 }
 
-                // Find or create conversation
-                let conversation = await Conversation.findOne({ bookingId });
+                let conversation = await Conversation.findOne({
+                    $or: [{ bookingId: bookingId }, { quoteId: bookingId }]
+                });
+
                 if (!conversation) {
                     const participants = [];
-                    if (type === 'booking') {
+                    const createData = { participants };
+
+                    if (type === "booking") {
+                        createData.bookingId = bookingId;
                         participants.push(context.client_id);
                         if (context.photographer_id) participants.push(context.photographer_id);
                     } else {
+                        createData.quoteId = bookingId;
                         participants.push(context.clientId);
+                        const admins = await Admin.find({}, "_id");
+                        participants.push(...admins.map(a => a._id));
                     }
-                    
-                    conversation = await Conversation.create({
-                        bookingId,
-                        participants
-                    });
+
+                    conversation = await Conversation.create(createData);
                 }
 
                 const roomName = `booking_${bookingId}`;
@@ -92,17 +101,60 @@ export const initSocket = (server) => {
             }
         });
 
-        // Send Message
         socket.on("send_message", async ({ bookingId, message, type = "text" }) => {
             console.log(`Socket Event: send_message. User: ${socket.user.id}, Booking: ${bookingId}, Type: ${type}`);
             try {
                 const roomName = `booking_${bookingId}`;
 
-                // 1. Get Conversation
-                const conversation = await Conversation.findOne({ bookingId });
-                if (!conversation) return socket.emit("error", "Conversation not found");
+                let conversation = await Conversation.findOne({
+                    $or: [{ bookingId: bookingId }, { quoteId: bookingId }]
+                });
 
-                // 2. Create Message
+                if (!conversation) {
+                    let context = await ServiceBooking.findById(bookingId);
+                    let ctxType = "booking";
+
+                    if (!context) {
+                        context = await Quote.findById(bookingId);
+                        ctxType = "quote";
+                    }
+
+                    if (!context) {
+                        return socket.emit("error", "Booking/Quote not found");
+                    }
+
+                    let isParticipant = false;
+                    if (ctxType === "booking") {
+                        isParticipant =
+                            context.client_id.toString() === socket.user.id ||
+                            (context.photographer_id &&
+                                context.photographer_id.toString() === socket.user.id);
+                    } else {
+                        isParticipant = context.clientId.toString() === socket.user.id;
+                    }
+
+                    if (!isParticipant && socket.user.userType !== "admin") {
+                        return socket.emit("error", "Unauthorized access to this chat");
+                    }
+
+                    const participants = [];
+                    const createData = { participants };
+
+                    if (ctxType === "booking") {
+                        createData.bookingId = bookingId;
+                        participants.push(context.client_id);
+                        if (context.photographer_id) participants.push(context.photographer_id);
+                    } else {
+                        createData.quoteId = bookingId;
+                        participants.push(context.clientId);
+                        const admins = await Admin.find({}, "_id");
+                        participants.push(...admins.map(a => a._id));
+                    }
+
+                    conversation = await Conversation.create(createData);
+                }
+
+
                 const newMessage = await Message.create({
                     conversationId: conversation._id,
                     senderId: socket.user.id,
@@ -110,14 +162,12 @@ export const initSocket = (server) => {
                     messageType: type,
                 });
 
-                // 3. Update Conversation (last message)
                 conversation.lastMessage = message;
                 conversation.lastMessageAt = new Date();
                 await conversation.save();
 
-                // 4. Populate sender details and Emit to Room
                 await newMessage.populate("senderId", "username avatar");
-                
+
                 io.to(roomName).emit("receive_message", newMessage);
                 console.log(`Message sent to room ${roomName}`);
 

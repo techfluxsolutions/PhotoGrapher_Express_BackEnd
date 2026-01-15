@@ -12,6 +12,8 @@ router.use(authMiddleware);
 router.use(chatRoleCheck);
 
 router.get("/conversations", (req, res, next) => ChatController.getConversations(req, res, next));
+router.post("/create-conversation", (req, res, next) => ChatController.createConversation(req, res, next));
+router.post("/send-message", (req, res, next) => ChatController.sendMessage(req, res, next));
 router.get("/messages/:bookingId", (req, res, next) => ChatController.getMessages(req, res, next));
 
 export default router;

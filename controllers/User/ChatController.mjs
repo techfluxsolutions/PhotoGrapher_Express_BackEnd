@@ -2,6 +2,10 @@ import Conversation from "../../models/Conversation.mjs";
 import Message from "../../models/Message.mjs";
 import ServiceBooking from "../../models/ServiceBookings.mjs";
 import Quote from "../../models/Quote.mjs";
+import Admin from "../../models/Admin.mjs";
+import { getIO } from "../../services/SocketService.mjs";
+
+
 
 class ChatController {
 
@@ -12,8 +16,9 @@ class ChatController {
 
             // Find conversations where user is a participant
             const conversations = await Conversation.find({ participants: userId })
-                .populate("bookingId", "status bookingDate") // Populate booking details if needed
-                .populate("participants", "username avatar") // Populate participant details
+                .populate("bookingId", "status bookingDate")
+                .populate("quoteId", "eventType eventDate location") // Populate quote details
+                .populate("participants", "username avatar")
                 .sort({ lastMessageAt: -1 });
 
             return res.json({ success: true, data: conversations });
@@ -22,15 +27,18 @@ class ChatController {
         }
     }
 
-    // Get messages for a specific booking (Chat History)
+    // Get messages for a specific booking or quote (Chat History)
     async getMessages(req, res, next) {
         try {
-            const { bookingId } = req.params;
+            const { bookingId } = req.params; // This can be bookingId or quoteId depending on how it's called
             const page = parseInt(req.query.page) || 1;
             const limit = parseInt(req.query.limit) || 50;
             const skip = (page - 1) * limit;
 
-            const conversation = await Conversation.findOne({ bookingId });
+            // Try to find by bookingId first, then by quoteId
+            let conversation = await Conversation.findOne({
+                $or: [{ bookingId }, { quoteId: bookingId }]
+            });
 
             if (!conversation) {
                 // If no conversation exists yet, return empty array instead of 404 for valid bookings/quotes
@@ -62,6 +70,111 @@ class ChatController {
                 data: messages.reverse(), // Client usually expects chronological order for chat
                 meta: { total, page, limit },
             });
+        } catch (err) {
+            next(err);
+        }
+    }
+
+    // Create a conversation between the user and all admins for a specific quote
+    async createConversation(req, res, next) {
+        try {
+            const userId = req.user.id;
+            const { quoteId } = req.body;
+
+            if (!quoteId) {
+                return res.status(400).json({ success: false, message: "quoteId is required" });
+            }
+
+            // Verify the quote exists and belongs to the user
+            const quote = await Quote.findById(quoteId);
+            if (!quote) {
+                return res.status(404).json({ success: false, message: "Quote not found" });
+            }
+
+            // Fetch all admin IDs from the admin table
+            const admins = await Admin.find({}, "_id");
+            const adminIds = admins.map(admin => admin._id);
+
+            if (adminIds.length === 0) {
+                return res.status(404).json({ success: false, message: "No admins found to start a conversation" });
+            }
+
+            // Participants include the user and all admins
+            const participants = [userId, ...adminIds];
+
+            // Check if a conversation already exists for this quoteId
+            let conversation = await Conversation.findOne({ quoteId });
+
+            if (!conversation) {
+                conversation = await Conversation.create({
+                    quoteId,
+                    participants: participants
+                });
+            } else {
+                // Ensure the user is in the participants list if the conversation already exists
+                if (!conversation.participants.includes(userId)) {
+                    conversation.participants.push(userId);
+                    await conversation.save();
+                }
+            }
+
+            return res.json({ success: true, data: conversation });
+        } catch (err) {
+            res.status(500).json({ success: false, message: err.message });
+        }
+    }
+
+    // Send a message via REST API
+    async sendMessage(req, res, next) {
+        try {
+            const { quoteId, message, type = "text" } = req.body;
+            const userId = req.user.id;
+
+            if (!quoteId || !message) {
+                return res.status(400).json({ success: false, message: "quoteId and message are required" });
+            }
+
+            // Find the conversation
+            let conversation = await Conversation.findOne({
+                $or: [{ bookingId: quoteId }, { quoteId: quoteId }]
+            });
+
+            if (!conversation) {
+                return res.status(404).json({ success: false, message: "Conversation not found" });
+            }
+
+            // Check if user is a participant
+            if (!conversation.participants.includes(userId) && !req.user.isAdmin) {
+                return res.status(403).json({ success: false, message: "Access denied" });
+            }
+
+            // Create the message
+            const newMessage = await Message.create({
+                conversationId: conversation._id,
+                senderId: userId,
+                message,
+                messageType: type,
+            });
+
+            // Update conversation last message info
+            conversation.lastMessage = message;
+            conversation.lastMessageAt = new Date();
+            await conversation.save();
+
+            // Populate sender details for the response
+            await newMessage.populate("senderId", "username avatar");
+
+            // Notify others via socket
+            try {
+                const io = getIO();
+                const roomName = `booking_${String(quoteId)}`;
+                console.log(`📡 Emitting message to room: ${roomName}`);
+                io.to(roomName).emit("receive_message", newMessage);
+            } catch (socketErr) {
+                console.error("❌ Socket notification failed:", socketErr.message);
+            }
+
+            return res.status(201).json({ success: true, data: newMessage });
         } catch (err) {
             next(err);
         }
