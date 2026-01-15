@@ -69,13 +69,31 @@ const serviceBookingSchema = new mongoose.Schema(
     totalAmount: {
       type: Number,
     },
-    isPaid: {
+    partial_Payment: {
       type: Boolean,
-      default: false,
+      default: false
     },
-    paymentId: {
+    full_Payment: {
+      type: Boolean,
+      default: false
+    },
+    outStandingAmount: {
+      type: Number,
+      default: 0
+    },
+    paymentStatus: {
       type: String,
-      required: false,
+      enum: ["pending", "paid", "partially paid", "fully paid"],
+      default: "pending"
+    },
+    paymentDate: {
+      type: String,
+      default: ""
+    },
+    paymentMode: {
+      type: String,
+      enum: ["cash", "online", "other"],
+      default: "other"
     },
   },
   { timestamps: true }
