@@ -10,7 +10,6 @@ import {
   adminRoutes,
   photographerRoutes,
   authRoutes,
-  adminEmailAuthRoutes,
   chatRoutes,
 } from "./routes/index.js";
 
@@ -41,7 +40,6 @@ app.use(
 
 // --- Main Route Mounting ---
 app.use("/api/auth", authRoutes);
-app.use("/api/admin-auth", adminEmailAuthRoutes);
 
 // Detailed role-based routes
 app.use("/api/admins", adminRoutes);
