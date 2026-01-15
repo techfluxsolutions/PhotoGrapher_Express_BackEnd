@@ -18,7 +18,11 @@ class TicketController {
                 data: ticket,
             });
         } catch (error) {
-            next(error);
+            res.status(500).json({
+                success: false,
+                message: "Failed to create ticket",
+                error: error.message,
+            });
         }
     }
 
@@ -114,7 +118,7 @@ class TicketController {
             const { id } = req.params;
             const payload = req.body;
             if (req.file) {
-                payload.attachment = `/uploads/ticketAttachments/${req.file.filename}`;
+                payload.attachment = `${BASE_URL}/uploads/ticketAttachments/${req.file.filename}`;
             }
 
             const ticket = await Ticket.findByIdAndUpdate(

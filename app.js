@@ -1,5 +1,5 @@
+import 'dotenv/config';
 import express from "express";
-import dotenv from "dotenv";
 import mongoose from "mongoose";
 import cors from "cors";
 import cookieParser from "cookie-parser";
@@ -12,8 +12,6 @@ import {
   authRoutes,
   chatRoutes,
 } from "./routes/index.js";
-
-dotenv.config();
 
 const app = express();
 const server = http.createServer(app); // Create HTTP server
