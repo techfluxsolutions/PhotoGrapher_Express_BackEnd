@@ -143,7 +143,7 @@ class TicketController {
                 data: ticket,
             });
         } catch (error) {
-            next(error);
+            next(error.message);
         }
     }
 

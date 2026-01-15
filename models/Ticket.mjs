@@ -4,22 +4,26 @@ const ticketSchema = new mongoose.Schema({
     serviceId: {
         type: mongoose.Schema.Types.ObjectId,
         ref: "Service",
-        required: true
+        required: true,
+        immutable: true
     },
     bookingId: {
         type: mongoose.Schema.Types.ObjectId,
         ref: "ServiceBooking",
-        required: true
+        required: true,
+        immutable: true
     },
     clientId: {
         type: mongoose.Schema.Types.ObjectId,
         ref: "User",
-        required: true
+        required: true,
+        immutable: true
     },
     photographerId: {
         type: mongoose.Schema.Types.ObjectId,
         ref: "Photographer",
-        sparse: true
+        sparse: true,
+        immutable: true
     },
     issue: {
         type: String,
