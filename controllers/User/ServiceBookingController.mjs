@@ -1,17 +1,14 @@
 import ServiceBooking from "../../models/ServiceBookings.mjs";
+const parseDDMMYYYY = (dateStr) => {
+  if (!dateStr) return dateStr;
+  const [day, month, year] = dateStr.split("-");
+  return new Date(`${year}-${month}-${day}`);
+};
 
 class ServiceBookingController {
   // Create a new service booking
   async create(req, res, next) {
     try {
-
-      const parseDDMMYYYY = (dateStr) => {
-        if (!dateStr) return dateStr;
-        const [day, month, year] = dateStr.split("-");
-        return new Date(`${year}-${month}-${day}`);
-      };
-
-
       const payload = req.body;
       payload.bookingDate = parseDDMMYYYY(payload.bookingDate);
       const booking = await ServiceBooking.create(payload);
@@ -100,7 +97,6 @@ class ServiceBookingController {
       return next(err);
     }
   }
-
   async cancelBooking(req, res, next) {
     try {
       const { id } = req.params;
@@ -115,7 +111,6 @@ class ServiceBookingController {
       return next(err);
     }
   }
-
   // update bookings
   async updatePaymentStatusBooking(req, res, next) {
     try {
