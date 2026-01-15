@@ -1,5 +1,9 @@
 import express from "express";
+<<<<<<< HEAD
 import ChatController from "../controllers/User/ChatController.mjs";
+=======
+import ChatController from "../controllers/ChatController.mjs";
+>>>>>>> 0ab2d67 (chatting feature)
 import authMiddleware from "../middleware/authmiddleware.mjs";
 
 import { chatRoleCheck } from "../middleware/chatRoleCheck.mjs";

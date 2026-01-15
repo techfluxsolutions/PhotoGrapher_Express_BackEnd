@@ -1,6 +1,12 @@
+<<<<<<< HEAD:controllers/User/AuthController.mjs
 import User from "../../models/User.mjs";
 import { signToken } from "../../utils/jwt.mjs";
 import roleModelMap from "../../utils/roleModelMap.mjs";
+=======
+import User from "../models/User.mjs";
+import { signToken } from "../utils/jwt.mjs";
+import roleModelMap from "../utils/roleModelMap.mjs";
+>>>>>>> 0ab2d67 (chatting feature):controllers/AuthController.mjs
 import jwt from "jsonwebtoken";
 const OTP_BYPASS_ENABLED = process.env.OTP_BYPASS_ENABLED === "true";
 const OTP_BYPASS_NUMBERS = (process.env.OTP_BYPASS_NUMBERS || "")
