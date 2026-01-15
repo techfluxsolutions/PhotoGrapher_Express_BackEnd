@@ -12,6 +12,7 @@ import PackageController from "../controllers/User/PackageController.mjs";
 import createUploader from "../Config/uploadCreate.js";
 import AdditionalServicesController from "../controllers/User/AdditionalServicesController.mjs";
 import TicketController from "../controllers/User/TicketController.mjs";
+import ReviewAndRatingController from "../controllers/User/ReviewAndRating.mjs";
 const router = express.Router();
 
 // router.use(authMiddleware); // Removed global auth middleware to allow public routes
@@ -111,7 +112,9 @@ router.delete("/deleteTicket/:id", (req, res, next) => TicketController.delete(r
 
 router.get("/getPreviousTickets/:clientId", (req, res, next) => TicketController.getPreviousTickets(req, res, next));
 
-
+//Review And Rating
+router.post("/reviewAndRating", (req, res, next) => ReviewAndRatingController.create(req, res, next));
+router.get("/getReviewAndRating", (req, res, next) => ReviewAndRatingController.getAll(req, res, next));
 
 
 
