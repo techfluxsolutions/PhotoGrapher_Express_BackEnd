@@ -109,6 +109,8 @@ router.get("/getTicket/:id", (req, res, next) => TicketController.getById(req, r
 router.put("/updateTicket/:id", uploadTicketAttachment.single("attachment"), (req, res, next) => TicketController.update(req, res, next));
 router.delete("/deleteTicket/:id", (req, res, next) => TicketController.delete(req, res, next));
 
+router.get("/getPreviousTickets/:clientId", (req, res, next) => TicketController.getPreviousTickets(req, res, next));
+
 
 
 

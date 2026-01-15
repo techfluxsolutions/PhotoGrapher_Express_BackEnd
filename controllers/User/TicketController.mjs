@@ -77,7 +77,25 @@ class TicketController {
         }
     }
 
-
+    async getPreviousTickets(req, res, next) {
+        try {
+            const { clientId } = req.params;
+            const previousTickets = await Ticket.find({ clientId, status: "closed" });
+            if (!previousTickets) {
+                return res.status(404).json({
+                    success: false,
+                    message: "No previous tickets found"
+                })
+            }
+            return res.status(200).json({
+                success: true,
+                data: previousTickets
+            })
+        }
+        catch (error) {
+            next(error);
+        }
+    }
     // ✅ GET SINGLE TICKET BY ID
     async getById(req, res, next) {
         try {

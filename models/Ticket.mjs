@@ -48,4 +48,8 @@ const ticketSchema = new mongoose.Schema({
     }
 })
 
+ticketSchema.index({ clientId: 1 });
+ticketSchema.index({ clientId: 1, status: "closed" });
+ticketSchema.index({ clientId: 1, _id: 1 });
+
 export default mongoose.model("Ticket", ticketSchema);
