@@ -1,5 +1,4 @@
 import ServiceBooking from "../../models/ServiceBookings.mjs";
-
 const parseDDMMYYYY = (dateStr) => {
   if (!dateStr) return dateStr;
   const [day, month, year] = dateStr.split("-");
@@ -98,6 +97,20 @@ class ServiceBookingController {
       return next(err);
     }
   }
+  async cancelBooking(req, res, next) {
+    try {
+      const { id } = req.params;
+      const booking = await ServiceBooking.findByIdAndUpdate(id, { status: "canceled" });
+      if (!booking) {
+        return res
+          .status(404)
+          .json({ success: false, message: "ServiceBooking not found" });
+      }
+      return res.json({ success: true, data: booking });
+    } catch (err) {
+      return next(err);
+    }
+  }
   // update bookings
   async updatePaymentStatusBooking(req, res, next) {
     try {
@@ -117,7 +130,7 @@ class ServiceBookingController {
       }
       return res.json({ success: true, data: booking });
     } catch (err) {
-      return res.status(500).json({ success: false, message: err.message });
+      return next(err);
     }
   }
 }

@@ -1,5 +1,4 @@
 import mongoose from "mongoose";
-
 const quoteSchema = new mongoose.Schema(
   {
     service_id: {
