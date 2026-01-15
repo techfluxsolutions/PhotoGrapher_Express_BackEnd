@@ -22,6 +22,7 @@ class ServiceBookingController {
   async list(req, res, next) {
     try {
       const { id } = req.user;
+      //  console.log(req.user)
       const page = Math.max(1, parseInt(req.query.page) || 1);
       const limit = Math.max(1, parseInt(req.query.limit) || 20);
       const skip = (page - 1) * limit;
