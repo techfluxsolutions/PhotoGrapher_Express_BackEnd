@@ -1,17 +1,15 @@
 import ServiceBooking from "../../models/ServiceBookings.mjs";
 
+const parseDDMMYYYY = (dateStr) => {
+  if (!dateStr) return dateStr;
+  const [day, month, year] = dateStr.split("-");
+  return new Date(`${year}-${month}-${day}`);
+};
+
 class ServiceBookingController {
   // Create a new service booking
   async create(req, res, next) {
     try {
-
-      const parseDDMMYYYY = (dateStr) => {
-        if (!dateStr) return dateStr;
-        const [day, month, year] = dateStr.split("-");
-        return new Date(`${year}-${month}-${day}`);
-      };
-
-
       const payload = req.body;
       payload.bookingDate = parseDDMMYYYY(payload.bookingDate);
       const booking = await ServiceBooking.create(payload);
@@ -98,6 +96,28 @@ class ServiceBookingController {
       return res.json({ success: true, data: null });
     } catch (err) {
       return next(err);
+    }
+  }
+  // update bookings
+  async updatePaymentStatusBooking(req, res, next) {
+    try {
+      const { id } = req.params;
+      const payload = req.body;
+      if (payload.bookingDate) {
+        payload.bookingDate = parseDDMMYYYY(payload.bookingDate);
+      }
+      const booking = await ServiceBooking.findByIdAndUpdate(id, payload, {
+        new: true,
+        runValidators: true,
+      });
+      if (!booking) {
+        return res
+          .status(404)
+          .json({ success: false, message: "ServiceBooking not found" });
+      }
+      return res.json({ success: true, data: booking });
+    } catch (err) {
+      return res.status(500).json({ success: false, message: err.message });
     }
   }
 }

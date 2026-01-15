@@ -46,6 +46,8 @@ router.post("/bookings", (req, res, next) => ServiceBookingController.create(req
 router.get("/bookings", (req, res, next) => ServiceBookingController.list(req, res, next));
 router.get("/bookings/:id", (req, res, next) => ServiceBookingController.getById(req, res, next));
 
+// booking payment
+router.post('/updatePaymentStatusBooking/:id', (req, res, next) => ServiceBookingController.updatePaymentStatusBooking(req, res, next));
 // --- Quotes ---
 router.post("/quotes", (req, res, next) => QuoteController.create(req, res, next));
 router.get("/quotes", (req, res, next) => QuoteController.getAll(req, res, next));
