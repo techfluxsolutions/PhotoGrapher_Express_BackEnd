@@ -51,14 +51,7 @@ const paymentSchema = new mongoose.Schema(
   }
 );
 
-// Pre-save hook: validate amounts
-paymentSchema.pre("validate", function (next) {
-  if (this.upfront_amount < 0 || this.outstanding_amount < 0) {
-    next(new Error("Amounts cannot be negative"));
-  } else {
-    next();
-  }
-});
+// Validation is handled by schema constraints (min: 0)
 
 // Virtual: Total Paid
 paymentSchema.virtual("totalPaid").get(function () {

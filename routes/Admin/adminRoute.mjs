@@ -10,13 +10,17 @@ import ServiceBookingController from "../../controllers/Admin/ServiceBookingCont
 import QuoteController from "../../controllers/Admin/QuoteController.mjs";
 import PaymentController from "../../controllers/Admin/PaymentController.mjs";
 import CustomerController from "../../controllers/Admin/CustomerController.mjs";
+import AdminEmailAuthController from "../../controllers/Admin/AdminEmailAuthController.mjs";
 import upload from "../../Config/multer.mjs";
 import authMiddleware from "../../middleware/authmiddleware.mjs";
 import { isAdmin } from "../../middleware/isValid.Middleware.mjs";
 
 const router = express.Router();
 
-// Apply Auth and Admin check to all routes
+// --- Admin Authentication (No middleware required) ---
+router.post("/auth/login", (req, res, next) => AdminEmailAuthController.login(req, res, next));
+
+// Apply Auth and Admin check to all routes below
 router.use(authMiddleware, isAdmin);
 
 // --- Package Management ---
