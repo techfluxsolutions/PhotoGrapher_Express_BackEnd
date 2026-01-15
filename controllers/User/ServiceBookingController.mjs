@@ -24,16 +24,17 @@ class ServiceBookingController {
   // List service bookings with pagination
   async list(req, res, next) {
     try {
+      const { id } = req.user;
       const page = Math.max(1, parseInt(req.query.page) || 1);
       const limit = Math.max(1, parseInt(req.query.limit) || 20);
       const skip = (page - 1) * limit;
 
       const [items, total] = await Promise.all([
-        ServiceBooking.find({})
+        ServiceBooking.find({ client_id: id })
           .skip(skip)
           .limit(limit)
           .sort({ createdAt: -1 }),
-        ServiceBooking.countDocuments(),
+        ServiceBooking.countDocuments({ client_id: id }),
       ]);
 
       return res.json({
