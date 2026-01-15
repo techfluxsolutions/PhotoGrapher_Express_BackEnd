@@ -10,10 +10,6 @@ import {
   adminRoutes,
   photographerRoutes,
   authRoutes,
-<<<<<<< HEAD
-=======
-  adminEmailAuthRoutes,
->>>>>>> 0ab2d67 (chatting feature)
   chatRoutes,
 } from "./routes/index.js";
 
