@@ -101,17 +101,51 @@ class ServiceBookingController {
   async cancelBooking(req, res, next) {
     try {
       const { id } = req.params;
-      const booking = await ServiceBooking.findByIdAndUpdate(id, { status: "canceled" });
+
+      // fields allowed to update
+      const allowedFields = [
+        "status",
+        "cancellationCharge",
+        "cancellationDate",
+        "cancellationReason",
+      ];
+
+      // pick only allowed fields from payload
+      const updates = {};
+      allowedFields.forEach((field) => {
+        if (req.body[field] !== undefined) {
+          updates[field] = req.body[field];
+        }
+      });
+
+      if (Object.keys(updates).length === 0) {
+        return res.status(400).json({
+          success: false,
+          message: "No valid fields provided for update",
+        });
+      }
+
+      const booking = await ServiceBooking.findByIdAndUpdate(
+        id,
+        { $set: updates },
+        {
+          new: true,
+          runValidators: true,
+        }
+      );
+
       if (!booking) {
         return res
           .status(404)
           .json({ success: false, message: "ServiceBooking not found" });
       }
+
       return res.json({ success: true, data: booking });
     } catch (err) {
       return next(err);
     }
   }
+
   // update bookings
   async updatePaymentStatusBooking(req, res, next) {
     try {

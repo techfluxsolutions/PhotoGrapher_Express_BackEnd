@@ -95,6 +95,18 @@ const serviceBookingSchema = new mongoose.Schema(
       enum: ["cash", "online", "other"],
       default: "other"
     },
+    cancellationCharge: {
+      type: String,
+      default: ""
+    },
+    cancellationDate: {
+      type: String,
+      default: ""
+    },
+    cancellationReason: {
+      type: String,
+      default: ""
+    },
   },
   { timestamps: true }
 );

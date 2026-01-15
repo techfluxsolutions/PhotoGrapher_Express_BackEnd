@@ -11,6 +11,7 @@ import QuoteController from "../controllers/User/QuoteController.mjs";
 import PackageController from "../controllers/User/PackageController.mjs";
 import createUploader from "../Config/uploadCreate.js";
 import AdditionalServicesController from "../controllers/User/AdditionalServicesController.mjs";
+import TicketController from "../controllers/User/TicketController.mjs";
 const router = express.Router();
 
 // router.use(authMiddleware); // Removed global auth middleware to allow public routes
@@ -22,6 +23,12 @@ const uploadAvatar = createUploader({
     folder: "uploads/userProfile",
     maxSizeMB: 2,
     allowedTypes: /jpeg|jpg|png/,
+});
+
+const uploadTicketAttachment = createUploader({
+    folder: "uploads/ticketAttachments",
+    maxSizeMB: 5,
+    allowedTypes: /jpeg|jpg|png|gif|pdf|doc|docx|xls|xlsx|txt|zip|rar/,
 });
 
 
@@ -94,6 +101,13 @@ router.post("/servicebookings", (req, res, next) => ServiceBookingController.cre
 router.get("/servicebookings", (req, res, next) => ServiceBookingController.list(req, res, next));
 router.get("/servicebookings/:id", (req, res, next) => ServiceBookingController.getById(req, res, next));
 router.put("/servicebookings/:id", (req, res, next) => ServiceBookingController.cancelBooking(req, res, next));
+
+//Ticket Routes
+router.post("/raiseTicket", uploadTicketAttachment.single("attachment"), (req, res, next) => TicketController.create(req, res, next));
+router.get("/allTickets", (req, res, next) => TicketController.getAll(req, res, next));
+router.get("/getTicket/:id", (req, res, next) => TicketController.getById(req, res, next));
+router.put("/updateTicket/:id", uploadTicketAttachment.single("attachment"), (req, res, next) => TicketController.update(req, res, next));
+router.delete("/deleteTicket/:id", (req, res, next) => TicketController.delete(req, res, next));
 
 
 
