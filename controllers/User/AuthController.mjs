@@ -1,5 +1,5 @@
-import { signToken } from "../utils/jwt.mjs";
-import roleModelMap from "../utils/roleModelMap.mjs";
+import { signToken } from "../../utils/jwt.mjs";
+import roleModelMap from "../../utils/roleModelMap.mjs";
 
 const OTP_BYPASS_ENABLED = process.env.OTP_BYPASS_ENABLED === "true";
 const OTP_BYPASS_NUMBERS = (process.env.OTP_BYPASS_NUMBERS || "")
