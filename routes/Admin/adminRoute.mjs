@@ -20,6 +20,14 @@ const router = express.Router();
 // --- Admin Authentication (No middleware required) ---
 router.post("/auth/login", (req, res, next) => AdminEmailAuthController.login(req, res, next));
 
+// Handle OPTIONS preflight requests for CORS (before authentication)
+router.use((req, res, next) => {
+  if (req.method === "OPTIONS") {
+    return res.status(200).end();
+  }
+  next();
+});
+
 // Apply Auth and Admin check to all routes below
 router.use(authMiddleware, isAdmin);
 
