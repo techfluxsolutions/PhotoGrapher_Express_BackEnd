@@ -80,6 +80,7 @@ class TicketController {
     async getPreviousTickets(req, res, next) {
         try {
             const { clientId } = req.params;
+            console.log("ClientId", clientId)
             const previousTickets = await Ticket.find({ clientId, status: "closed" });
             if (!previousTickets) {
                 return res.status(404).json({
