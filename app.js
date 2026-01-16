@@ -1,5 +1,5 @@
-import 'dotenv/config';
 import express from "express";
+import dotenv from "dotenv";
 import mongoose from "mongoose";
 import cors from "cors";
 import cookieParser from "cookie-parser";
@@ -12,6 +12,8 @@ import {
   authRoutes,
   chatRoutes,
 } from "./routes/index.js";
+
+dotenv.config();
 
 const app = express();
 const server = http.createServer(app); // Create HTTP server
@@ -29,6 +31,7 @@ app.use(
       "http://localhost:3000",
       "http://127.0.0.1:3000",
       "http://localhost:5173",
+      "https://api-photographer.techfluxsolutions.com",
     ],
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
