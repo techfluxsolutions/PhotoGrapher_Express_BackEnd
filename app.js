@@ -14,7 +14,7 @@ import {
   chatRoutes,
 } from "./routes/index.js";
 
-//check
+
 
 
 dotenv.config();
