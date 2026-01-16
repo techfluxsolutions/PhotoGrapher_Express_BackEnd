@@ -13,7 +13,6 @@ import CustomerController from "../../controllers/Admin/CustomerController.mjs";
 import AdminEmailAuthController from "../../controllers/Admin/AdminEmailAuthController.mjs";
 import upload from "../../Config/multer.mjs";
 import authMiddleware from "../../middleware/authmiddleware.mjs";
-import { isAdmin } from "../../middleware/isValid.Middleware.mjs";
 
 const router = express.Router();
 
@@ -29,7 +28,7 @@ router.post("/auth/login", (req, res, next) => AdminEmailAuthController.login(re
 // });
 
 // Apply Auth and Admin check to all routes below
-router.use(authMiddleware, isAdmin);
+router.use(authMiddleware);
 
 // --- Package Management ---
 router.post("/packages", (req, res, next) => PackageController.create(req, res, next));
