@@ -31,14 +31,31 @@ app.use(express.json());
 app.use(cookieParser());
 app.use(
   cors({
-    origin: [
-      "http://localhost:3000",
-      "http://127.0.0.1:3000",
-      "http://localhost:5173",
-      "https://api-photographer.techfluxsolutions.com",
-    ],
+    origin: (origin, callback) => {
+      // Allow requests with no origin (like mobile apps or curl requests)
+      if (!origin) return callback(null, true);
+
+      const allowedOrigins = [
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+        "http://localhost:5173",
+        "http://localhost:5174",
+        "https://api-photographer.techfluxsolutions.com",
+        "https://photographer.techfluxsolutions.com",
+        "https://admin-photographer.techfluxsolutions.com",
+      ];
+
+      const isLocalhost = origin.startsWith("http://localhost:") || origin.startsWith("http://127.0.0.1:");
+      const isTechFlux = origin.endsWith(".techfluxsolutions.com");
+
+      if (allowedOrigins.indexOf(origin) !== -1 || isLocalhost || isTechFlux) {
+        callback(null, true);
+      } else {
+        callback(new Error("Not allowed by CORS"));
+      }
+    },
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization"],
+    allowedHeaders: ["Content-Type", "Authorization", "Accept", "X-Requested-With", "Origin"],
     credentials: true,
   })
 );
