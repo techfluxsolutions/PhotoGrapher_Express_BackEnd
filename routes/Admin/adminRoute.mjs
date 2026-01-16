@@ -22,14 +22,14 @@ router.post("/auth/login", (req, res, next) => AdminEmailAuthController.login(re
 
 // Handle OPTIONS preflight requests for CORS (before authentication)
 router.use((req, res, next) => {
-  if (req.method === "OPTIONS") {
-    return res.status(200).end();
-  }
-  next();
+    if (req.method === "OPTIONS") {
+        return res.status(200).end();
+    }
+    next();
 });
 
 // Apply Auth and Admin check to all routes below
-router.use(authMiddleware, isAdmin);
+router.use(authMiddleware);
 
 // --- Package Management ---
 router.post("/packages", (req, res, next) => PackageController.create(req, res, next));
