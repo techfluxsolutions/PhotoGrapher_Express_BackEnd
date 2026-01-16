@@ -8,7 +8,7 @@ class PaymentController {
   async create(req, res, next) {
     try {
       const payload = req.body;
-      
+
       // Parse payment date if provided in DD-MM-YYYY format
       if (payload.payment_date && typeof payload.payment_date === 'string') {
         const parseDDMMYYYY = (dateStr) => {
@@ -23,14 +23,14 @@ class PaymentController {
       }
 
       const payment = await Payment.create(payload);
-      
+
       // Populate after creation
       const populatedPayment = await Payment.findById(payment._id)
         .populate("user_id quote_id job_id");
-      
-      return res.status(201).json({ 
-        success: true, 
-        data: populatedPayment 
+
+      return res.status(201).json({
+        success: true,
+        data: populatedPayment
       });
     } catch (err) {
       return next(err);
@@ -73,20 +73,20 @@ class PaymentController {
   async getById(req, res, next) {
     try {
       const { id } = req.params;
-      
+
       const payment = await Payment.findById(id)
         .populate("user_id quote_id job_id");
-      
+
       if (!payment) {
-        return res.status(404).json({ 
-          success: false, 
-          message: "Payment not found" 
+        return res.status(404).json({
+          success: false,
+          message: "Payment not found"
         });
       }
-      
-      return res.json({ 
-        success: true, 
-        data: payment 
+
+      return res.json({
+        success: true,
+        data: payment
       });
     } catch (err) {
       return next(err);
@@ -101,7 +101,7 @@ class PaymentController {
     try {
       const { id } = req.params;
       const payload = req.body;
-      
+
       // Parse payment date if provided in DD-MM-YYYY format
       if (payload.payment_date && typeof payload.payment_date === 'string') {
         const parseDDMMYYYY = (dateStr) => {
@@ -119,17 +119,17 @@ class PaymentController {
         new: true,
         runValidators: true,
       }).populate("user_id quote_id job_id");
-      
+
       if (!payment) {
-        return res.status(404).json({ 
-          success: false, 
-          message: "Payment not found" 
+        return res.status(404).json({
+          success: false,
+          message: "Payment not found"
         });
       }
-      
-      return res.json({ 
-        success: true, 
-        data: payment 
+
+      return res.json({
+        success: true,
+        data: payment
       });
     } catch (err) {
       return next(err);
@@ -143,20 +143,20 @@ class PaymentController {
   async delete(req, res, next) {
     try {
       const { id } = req.params;
-      
+
       const payment = await Payment.findByIdAndDelete(id);
-      
+
       if (!payment) {
-        return res.status(404).json({ 
-          success: false, 
-          message: "Payment not found" 
+        return res.status(404).json({
+          success: false,
+          message: "Payment not found"
         });
       }
-      
-      return res.json({ 
-        success: true, 
+
+      return res.json({
+        success: true,
         message: "Payment deleted successfully",
-        data: null 
+        data: null
       });
     } catch (err) {
       return next(err);

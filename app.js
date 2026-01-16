@@ -16,13 +16,13 @@ import {
 
 
 
+
 dotenv.config();
 console.log(process.env);
 const app = express();
 const server = http.createServer(app); // Create HTTP server
 const port = process.env.PORT || 5002;
 
-// Initialize Socket.IO
 initSocket(server);
 
 // Middleware to parse JSON bodies
