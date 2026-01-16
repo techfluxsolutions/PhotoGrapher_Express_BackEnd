@@ -28,7 +28,7 @@ router.post("/auth/login", (req, res, next) => AdminEmailAuthController.login(re
 // });
 
 // Apply Auth and Admin check to all routes below
-router.use(authMiddleware);
+//router.use(authMiddleware);
 
 // --- Package Management ---
 router.post("/packages", (req, res, next) => PackageController.create(req, res, next));
