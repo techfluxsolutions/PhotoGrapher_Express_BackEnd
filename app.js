@@ -35,8 +35,6 @@ app.use(
     credentials: true,
   })
 );
-app.use(cors(corsOptions));
-app.options("*", cors(corsOptions));
 
 // --- Main Route Mounting ---
 app.use("/api/auth", authRoutes);

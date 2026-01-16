@@ -13,24 +13,14 @@ import CustomerController from "../../controllers/Admin/CustomerController.mjs";
 import AdminEmailAuthController from "../../controllers/Admin/AdminEmailAuthController.mjs";
 import upload from "../../Config/multer.mjs";
 import authMiddleware from "../../middleware/authmiddleware.mjs";
-import { isAdmin } from "../../middleware/isValid.Middleware.mjs";
-import adminAuthMiddleware from "../../middleware/adminAuthMiddleware.mjs";
 
 const router = express.Router();
 
 // --- Admin Authentication (No middleware required) ---
 router.post("/auth/login", (req, res, next) => AdminEmailAuthController.login(req, res, next));
 
-// Handle OPTIONS preflight requests for CORS (before authentication)
-router.use((req, res, next) => {
-    if (req.method === "OPTIONS") {
-        return res.status(200).end();
-    }
-    next();
-});
-
 // Apply Auth and Admin check to all routes below
-router.use(adminAuthMiddleware);
+router.use(authMiddleware);
 
 // --- Package Management ---
 router.post("/packages", (req, res, next) => PackageController.create(req, res, next));
