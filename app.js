@@ -2,6 +2,7 @@ import express from "express";
 import dotenv from "dotenv";
 import mongoose from "mongoose";
 import cors from "cors";
+import jwt from "jsonwebtoken";
 import cookieParser from "cookie-parser";
 import http from "http";
 import { initSocket } from "./services/SocketService.mjs";
@@ -13,8 +14,10 @@ import {
   chatRoutes,
 } from "./routes/index.js";
 
-dotenv.config();
 
+
+dotenv.config();
+console.log(process.env);
 const app = express();
 const server = http.createServer(app); // Create HTTP server
 const port = process.env.PORT || 5002;
