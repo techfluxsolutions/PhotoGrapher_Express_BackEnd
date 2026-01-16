@@ -3,13 +3,13 @@ import PhotographerController from "../controllers/User/PhotographerController.m
 import AvailabilityController from "../controllers/User/AvailabilityController.mjs";
 import JobController from "../controllers/User/JobController.mjs";
 import PayoutController from "../controllers/User/PayoutController.mjs";
-//import authmiddleware from "../middleware/authmiddleware.mjs";
+//import authMiddleware from "../middleware/authMiddleware.mjs";
 import { isPhotographer } from "../middleware/isValid.Middleware.mjs";
 
 const router = express.Router();
 
 // Apply Auth and Photographer check
-//router.use(authmiddleware, isPhotographer);
+//router.use(authMiddleware, isPhotographer);
 
 // --- Profile & Self ---
 // Note: Photographer management (CRUD) is mostly Admin, but Photographers can update themselves
