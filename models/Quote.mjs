@@ -20,7 +20,7 @@ const quoteSchema = new mongoose.Schema(
     },
     eventDate: {
       type: Date,
-      required: true,
+      sparse: true,
     },
     location: {
       type: String,
@@ -28,14 +28,14 @@ const quoteSchema = new mongoose.Schema(
     },
     eventDuration: {
       type: Number,
-      required: true,
+      sparse: true,
     },
     photographyRequirements: {
       type: String,
     },
     clientName: {
       type: String,
-      required: true,
+      sparse: true,
     },
     clientId: {
       type: mongoose.Schema.Types.ObjectId,
@@ -44,11 +44,11 @@ const quoteSchema = new mongoose.Schema(
     },
     phoneNumber: {
       type: String,
-      required: true,
+      sparse: true,
     },
     email: {
       type: String,
-      required: true,
+      sparse: true,
     },
     budget: {
       type: String,
