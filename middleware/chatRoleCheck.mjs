@@ -1,6 +1,7 @@
 import Admin from "../models/Admin.mjs";
 
 export const chatRoleCheck = async (req, res, next) => {
+    console.log("req.user", req.user);
     try {
         // 1. If User (Customer), access allow
         if (req.user.userType === "user") {

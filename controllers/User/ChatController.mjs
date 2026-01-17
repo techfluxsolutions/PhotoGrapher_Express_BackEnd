@@ -2,7 +2,8 @@ import Conversation from "../../models/Conversation.mjs";
 import Message from "../../models/Message.mjs";
 import ServiceBooking from "../../models/ServiceBookings.mjs";
 import Quote from "../../models/Quote.mjs";
-import Admin from "../../models/Admin.mjs";
+//import Admin from "../../models/Admin.mjs";
+import AdminEmailAuth from "../../models/AdminEmailAuth.mjs";
 import { getIO } from "../../services/SocketService.mjs";
 
 
@@ -12,6 +13,7 @@ class ChatController {
     // Get all conversations for the logged-in user
     async getConversations(req, res, next) {
         try {
+            console.log("req.user", req.user);
             const userId = req.user.id;
 
             // Find conversations where user is a participant
@@ -92,7 +94,7 @@ class ChatController {
             }
 
             // Fetch all admin IDs from the admin table
-            const admins = await Admin.find({}, "_id");
+            const admins = await AdminEmailAuth.find({}, "_id");
             const adminIds = admins.map(admin => admin._id);
 
             if (adminIds.length === 0) {

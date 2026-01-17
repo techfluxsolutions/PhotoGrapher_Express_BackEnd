@@ -9,7 +9,7 @@ const router = express.Router();
 // Apply auth middleware to all chat routes
 router.use(authMiddleware);
 // Apply role check middleware
-router.use(chatRoleCheck);
+// router.use(chatRoleCheck);
 
 router.get("/conversations", (req, res, next) => ChatController.getConversations(req, res, next));
 router.post("/create-conversation", (req, res, next) => ChatController.createConversation(req, res, next));
