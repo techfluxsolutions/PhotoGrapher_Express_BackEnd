@@ -175,6 +175,15 @@ class ServiceBookingController {
       return next(err);
     }
   }
+  async getPreviousBookings(req, res, next) {
+    try {
+      const { id } = req.user;
+      const bookings = await ServiceBooking.find({ client_id: id, status: "completed" }).populate("service_id");
+      return res.json({ success: true, data: bookings });
+    } catch (err) {
+      return next(err);
+    }
+  }
 }
 
 export default new ServiceBookingController();
