@@ -81,7 +81,7 @@ class TicketController {
         try {
             const { clientId } = req.params;
             console.log("ClientId", clientId)
-            const previousTickets = await Ticket.find({ clientId, status: "closed" });
+            const previousTickets = await Ticket.find({ clientId });
             if (!previousTickets) {
                 return res.status(404).json({
                     success: false,

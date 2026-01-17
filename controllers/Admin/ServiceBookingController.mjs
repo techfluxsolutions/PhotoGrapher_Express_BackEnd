@@ -98,7 +98,7 @@ class ServiceBookingController {
         ServiceBooking.find(filter)
           .skip(skip)
           .limit(limit)
-          .sort({ bookingDate: 1 })
+          .sort({ createdAt: -1 })
           .populate("service_id client_id photographer_id"),
         ServiceBooking.countDocuments(filter),
       ]);
@@ -111,7 +111,8 @@ class ServiceBookingController {
         teamStudio: booking.team || "",
         shootType: booking.shootType || "",
         note: booking.notes || "",
-        statu_s: booking.status
+        status: booking.status,
+        date: booking.bookingDate
       }));
 
       return res.json({

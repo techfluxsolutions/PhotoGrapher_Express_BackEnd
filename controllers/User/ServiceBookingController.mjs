@@ -31,13 +31,20 @@ class ServiceBookingController {
         ServiceBooking.find({ client_id: id })
           .skip(skip)
           .limit(limit)
-          .sort({ createdAt: -1 }),
+          .sort({ createdAt: -1 })
+          .populate("service_id", "serviceName"),
         ServiceBooking.countDocuments({ client_id: id }),
       ]);
 
+      const formattedItems = items.map((item) => {
+        const doc = item.toObject();
+        doc.eventType = item.shootType || item.service_id?.serviceName || "";
+        return doc;
+      });
+
       return res.json({
         success: true,
-        data: items,
+        data: formattedItems,
         meta: { total, page, limit },
       });
     } catch (err) {
