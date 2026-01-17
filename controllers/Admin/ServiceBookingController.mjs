@@ -104,12 +104,12 @@ class ServiceBookingController {
       ]);
 
       const formattedItems = items.map(booking => ({
-        shootId: booking._id,
-        clientId: booking.client_id ? booking.client_id._id : null,
-        clientName: booking.client_id ? booking.client_id.username : "",
-        assignedPhotographer: booking.photographer_id ? booking.photographer_id.username : "",
-        teamStudio: booking.team || "",
-        shootType: booking.shootType || "",
+        shoot_id: booking._id,
+        client_id: booking.client_id ? booking.client_id._id : null,
+        client_name: booking.client_id ? booking.client_id.username : "",
+        assigned_photographer: booking.photographer_id ? booking.photographer_id.username : "",
+        team_studio: booking.team || "",
+        shoot_type: booking.shootType || "",
         note: booking.notes || "",
         status: booking.status,
         date: booking.bookingDate
