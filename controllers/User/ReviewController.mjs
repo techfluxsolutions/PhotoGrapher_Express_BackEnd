@@ -16,7 +16,7 @@ class ReviewController {
       const existingReview = await ReviewAndRating.findOne({
         clientId,
         bookingId,
-        serviceId
+        serviceId,
       });
 
       if (existingReview) {
@@ -42,16 +42,16 @@ class ReviewController {
     }
   }
 
-  async getOne(req, res, next) {
+  async getById(req, res, next) {
     try {
       const { id } = req.params;
-      const data = await ReviewAndRating.findById(id);
+      const data = await ReviewAndRating.find({ bookingId: id });
       if (!data) {
-        return res.status(404).json({ success: false, message: "Review not found" });
+        return res.status(404).json({ success: false, message: "Review not foundd" });
       }
       res.status(200).json({ success: true, data });
     } catch (error) {
-      next(error);
+      res.status(500).json({ success: false, message: "Internal server error" });
     }
   }
 
