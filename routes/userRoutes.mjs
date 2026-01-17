@@ -40,6 +40,7 @@ router.get("/reviews", (req, res, next) => ReviewController.getAll(req, res, nex
 // service name 
 
 router.get("/servicename", (req, res, next) => ServiceController.getServiceNameOnly(req, res, next));
+router.get("/services/:id", (req, res, next) => ServiceController.getById(req, res, next));
 
 
 // Protected Routes
@@ -85,8 +86,8 @@ router.get("/reviews/:id", (req, res, next) => ReviewController.getById(req, res
 
 // --- Services ---
 router.get("/services", (req, res, next) => ServiceController.list(req, res, next));
-router.get("/services/:id", (req, res, next) => ServiceController.getById(req, res, next));
-router.get("/servicename", (req, res, next) => ServiceController.getServiceNameOnly(req, res, next));
+
+
 
 // additional services
 
