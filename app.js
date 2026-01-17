@@ -39,6 +39,8 @@ app.use(
         "http://localhost:5173",
         "http://localhost:5174",
         "https://api-photographer.techfluxsolutions.com",
+        "https://photographer-admin-6nit.vercel.app",
+        "https://photo-grapher-user-website.vercel.app",
         "https://photographer.techfluxsolutions.com",
         "https://admin-photographer.techfluxsolutions.com",
       ];
