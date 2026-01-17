@@ -1,5 +1,5 @@
 import Quote from "../../models/Quote.mjs";
-
+import ServiceBooking from "../../models/ServiceBookings.mjs";
 class QuoteController {
   async create(req, res, next) {
     try {
