@@ -13,12 +13,10 @@ class ChatController {
     // Get all conversations for the logged-in user
     async getConversations(req, res, next) {
         try {
-            console.log("req.user", req.user);
             const userId = req.user.id;
 
             // Find conversations where user is a participant
             const conversations = await Conversation.find({ participants: userId })
-                .populate("bookingId", "status bookingDate")
                 .populate("quoteId", "eventType eventDate location") // Populate quote details
                 .populate("participants", "username avatar")
                 .sort({ lastMessageAt: -1 });

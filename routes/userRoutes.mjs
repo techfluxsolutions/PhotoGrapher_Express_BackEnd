@@ -37,6 +37,10 @@ const uploadTicketAttachment = createUploader({
 router.get("/services", (req, res, next) => ServiceController.getAll(req, res, next));
 router.get("/faqs", (req, res, next) => FAQController.getAll(req, res, next));
 router.get("/reviews", (req, res, next) => ReviewController.getAll(req, res, next));
+// service name 
+
+router.get("/servicename", (req, res, next) => ServiceController.getServiceNameOnly(req, res, next));
+
 
 // Protected Routes
 router.use(authMiddleware);

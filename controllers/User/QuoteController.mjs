@@ -37,6 +37,7 @@ class QuoteController {
   async getAll(req, res, next) {
     try {
       const id = req.user.id;
+      console.log("id", id)
       // const { enquiryId, photographerId } = req.query;
       // const filter = {};
       // if (enquiryId) filter.job_id = enquiryId;
