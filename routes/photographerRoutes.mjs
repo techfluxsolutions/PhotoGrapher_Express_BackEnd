@@ -11,6 +11,7 @@ const router = express.Router();
 // Apply Auth and Photographer check
 //router.use(authMiddleware, isPhotographer);
 
+
 // --- Profile & Self ---
 // Note: Photographer management (CRUD) is mostly Admin, but Photographers can update themselves
 router.get("/me", (req, res, next) => PhotographerController.getPhotographerById(req, res, next));

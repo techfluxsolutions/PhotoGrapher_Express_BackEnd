@@ -13,6 +13,7 @@ import CustomerController from "../../controllers/Admin/CustomerController.mjs";
 import AdminEmailAuthController from "../../controllers/Admin/AdminEmailAuthController.mjs";
 import upload from "../../Config/multer.mjs";
 import authMiddleware from "../../middleware/authmiddleware.mjs";
+import { downloadInvoice } from "../../controllers/Admin/InvoiceController.mjs";
 
 const router = express.Router();
 
@@ -107,5 +108,8 @@ router.get("/", (req, res, next) => AdminController.getAll(req, res, next));
 router.get("/:id", (req, res, next) => AdminController.getById(req, res, next));
 router.put("/:id", (req, res, next) => AdminController.update(req, res, next));
 router.delete("/:id", (req, res, next) => AdminController.delete(req, res, next));
+
+// --- Invoice Management ---
+router.get("/invoices/:bookingId", (req, res, next) => downloadInvoice(req, res, next));
 
 export default router;
