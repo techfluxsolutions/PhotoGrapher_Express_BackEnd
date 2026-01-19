@@ -25,6 +25,7 @@ const globalErrorHandler = (err, req, res, next) => {
         success: false,
         status: "error",
         message: "Something went very wrong!",
+        err: err.message
       });
     }
   }
