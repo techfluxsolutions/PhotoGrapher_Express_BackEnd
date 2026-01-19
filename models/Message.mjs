@@ -18,9 +18,31 @@ const messageSchema = new mongoose.Schema(
         },
         messageType: {
             type: String,
-            enum: ["text", "image", "file"],
+            enum: ["text", "image", "file", "paymentCard"],
             default: "text",
         },
+        eventType: {
+            type: String,
+            sparse: true,
+
+        },
+        startDate: {
+            type: String,
+            sparse: true,
+        },
+        endDate: {
+            type: String,
+            sparse: true,
+        },
+        location: {
+            type: String,
+            sparse: true,
+        },
+        budget: {
+            type: String,
+            sparse: true,
+        },
+
         attachmentUrl: {
             type: String,
             default: null,
