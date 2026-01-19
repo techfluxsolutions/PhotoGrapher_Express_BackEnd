@@ -28,6 +28,8 @@ export const initSocket = (server) => {
                     "https://api-photographer.techfluxsolutions.com",
                     "https://photographer.techfluxsolutions.com",
                     "https://admin-photographer.techfluxsolutions.com",
+                    "https://photo-grapher-user-website.vercel.app",
+                    "https://photographer-admin-6nit.vercel.app",
                 ];
                 const isLocalhost = origin.startsWith("http://localhost:") || origin.startsWith("http://127.0.0.1:");
                 const isTechFlux = origin.endsWith(".techfluxsolutions.com");

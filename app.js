@@ -2,7 +2,6 @@ import express from "express";
 import dotenv from "dotenv";
 import mongoose from "mongoose";
 import cors from "cors";
-import jwt from "jsonwebtoken";
 import cookieParser from "cookie-parser";
 import http from "http";
 import { initSocket } from "./services/SocketService.mjs";
@@ -41,6 +40,8 @@ app.use(
         "https://api-photographer.techfluxsolutions.com",
         "https://photographer.techfluxsolutions.com",
         "https://admin-photographer.techfluxsolutions.com",
+        "https://photo-grapher-user-website.vercel.app",
+        "https://photographer-admin-6nit.vercel.app",
       ];
 
       const isLocalhost = origin.startsWith("http://localhost:") || origin.startsWith("http://127.0.0.1:");
