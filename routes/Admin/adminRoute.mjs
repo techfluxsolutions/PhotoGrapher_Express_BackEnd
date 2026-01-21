@@ -68,6 +68,7 @@ router.get("/bookings/previous", (req, res, next) => ServiceBookingController.ge
 router.get("/bookings/:id", (req, res, next) => ServiceBookingController.getById(req, res, next));
 router.put("/bookings/:id", (req, res, next) => ServiceBookingController.update(req, res, next));
 router.delete("/bookings/:id", (req, res, next) => ServiceBookingController.delete(req, res, next));
+router.get("/completelyPaidBookings", (req, res, next) => ServiceBookingController.getCompletedBookings(req, res, next));
 
 // --- ServiceBooking (alternative endpoint) ---
 router.post("/servicebookings", (req, res, next) => ServiceBookingController.create(req, res, next));
