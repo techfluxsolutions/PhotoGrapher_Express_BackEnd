@@ -127,7 +127,7 @@ class ChatController {
     // Send a message via REST API
     async sendMessage(req, res, next) {
         try {
-            const { quoteId, message, type = "text" } = req.body;
+            const { quoteId, message, type = "text", messageType, budget, startDate, endDate, location, eventType } = req.body;
             const userId = req.user.id;
 
             if (!quoteId || !message) {
@@ -153,7 +153,13 @@ class ChatController {
                 conversationId: conversation._id,
                 senderId: userId,
                 message,
-                messageType: type,
+                messageType: messageType || type,
+                budget,
+                startDate,
+                endDate,
+                location,
+                quoteId,
+                eventType
             });
 
             // Update conversation last message info

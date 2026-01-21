@@ -119,8 +119,8 @@ export const initSocket = (server) => {
             }
         });
 
-        socket.on("send_message", async ({ bookingId, message, type = "text" }) => {
-            console.log(`Socket Event: send_message. User: ${socket.user.id}, Booking: ${bookingId}, Type: ${type}`);
+        socket.on("send_message", async ({ bookingId, message, type = "text", messageType, budget, startDate, endDate, location, quoteId, eventType }) => {
+            console.log(`Socket Event: send_message. User: ${socket.user.id}, Booking: ${bookingId}, Type: ${messageType || type}`);
             try {
                 const roomName = `booking_${bookingId}`;
 
@@ -177,7 +177,13 @@ export const initSocket = (server) => {
                     conversationId: conversation._id,
                     senderId: socket.user.id,
                     message,
-                    messageType: type,
+                    messageType: messageType || type,
+                    budget,
+                    startDate,
+                    endDate,
+                    location,
+                    quoteId: quoteId || bookingId, // Use quoteId if provided, else bookingId
+                    eventType
                 });
 
                 conversation.lastMessage = message;

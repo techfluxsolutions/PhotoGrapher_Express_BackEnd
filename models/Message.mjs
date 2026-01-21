@@ -41,6 +41,11 @@ const messageSchema = new mongoose.Schema(
             type: String,
             sparse: true,
         },
+        quoteId: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "Quote",
+            sparse: true,
+        },
         attachmentUrl: {
             type: String,
             default: null,
