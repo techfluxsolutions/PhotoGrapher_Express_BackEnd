@@ -32,7 +32,7 @@ class ServiceBookingController {
           .skip(skip)
           .limit(limit)
           .sort({ createdAt: -1 })
-          .populate("service_id"),
+          .populate("service_id", "serviceName"),
         ServiceBooking.countDocuments({ client_id: id }),
       ]);
 
@@ -178,7 +178,7 @@ class ServiceBookingController {
   async getPreviousBookings(req, res, next) {
     try {
       const { id } = req.user;
-      const bookings = await ServiceBooking.find({ client_id: id, status: "completed" }).populate("service_id");
+      const bookings = await ServiceBooking.find({ client_id: id, status: "completed" }).populate("service_id", "serviceName");
       return res.json({ success: true, data: bookings });
     } catch (err) {
       return next(err);

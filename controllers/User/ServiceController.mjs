@@ -46,10 +46,10 @@ class ServiceController {
           message: "Service not found",
         });
       }
-      if (data && data.isAdditionalServices) {
-        const additionalServices = await AdditionalServices.find({ serviceId: data._id }).lean();
-        data.additionalServices = additionalServices;
-      }
+      // if (data && data.isAdditionalServices) {
+      //   const additionalServices = await AdditionalServices.find({ serviceId: data._id }).lean();
+      //   data.additionalServices = additionalServices;
+      // }
 
       res.status(200).json({
         success: true,
