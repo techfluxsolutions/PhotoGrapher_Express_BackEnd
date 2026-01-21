@@ -130,13 +130,34 @@ class ChatController {
             const { quoteId, message, type = "text", messageType, budget, startDate, endDate, location, eventType } = req.body;
             const userId = req.user.id;
 
-            if (!quoteId || !message) {
+            // Robust extraction if message is sent as an object
+            let finalMessage = message;
+            let finalMessageType = messageType || type;
+            let finalBudget = budget;
+            let finalStartDate = startDate;
+            let finalEndDate = endDate;
+            let finalLocation = location;
+            let finalEventType = eventType;
+            let finalQuoteId = quoteId;
+
+            if (typeof message === "object" && message !== null) {
+                finalMessage = message.message;
+                finalMessageType = message.messageType || finalMessageType;
+                finalBudget = message.budget || finalBudget;
+                finalStartDate = message.startDate || finalStartDate;
+                finalEndDate = message.endDate || finalEndDate;
+                finalLocation = message.location || finalLocation;
+                finalEventType = message.eventType || finalEventType;
+                finalQuoteId = message.quoteId || finalQuoteId;
+            }
+
+            if (!finalQuoteId || !finalMessage) {
                 return res.status(400).json({ success: false, message: "quoteId and message are required" });
             }
 
             // Find the conversation
             let conversation = await Conversation.findOne({
-                $or: [{ bookingId: quoteId }, { quoteId: quoteId }]
+                $or: [{ bookingId: finalQuoteId }, { quoteId: finalQuoteId }]
             });
 
             if (!conversation) {
@@ -152,18 +173,18 @@ class ChatController {
             const newMessage = await Message.create({
                 conversationId: conversation._id,
                 senderId: userId,
-                message,
-                messageType: messageType || type,
-                budget,
-                startDate,
-                endDate,
-                location,
-                quoteId,
-                eventType
+                message: finalMessage,
+                messageType: finalMessageType,
+                budget: finalBudget,
+                startDate: finalStartDate,
+                endDate: finalEndDate,
+                location: finalLocation,
+                quoteId: finalQuoteId,
+                eventType: finalEventType
             });
 
             // Update conversation last message info
-            conversation.lastMessage = message;
+            conversation.lastMessage = finalMessageType === "text" ? finalMessage : `[${finalMessageType}]`;
             conversation.lastMessageAt = new Date();
             await conversation.save();
 

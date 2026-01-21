@@ -122,6 +122,27 @@ export const initSocket = (server) => {
         socket.on("send_message", async ({ bookingId, message, type = "text", messageType, budget, startDate, endDate, location, quoteId, eventType }) => {
             console.log(`Socket Event: send_message. User: ${socket.user.id}, Booking: ${bookingId}, Type: ${messageType || type}`);
             try {
+                // Robust extraction if message is sent as an object
+                let finalMessage = message;
+                let finalMessageType = messageType || type;
+                let finalBudget = budget;
+                let finalStartDate = startDate;
+                let finalEndDate = endDate;
+                let finalLocation = location;
+                let finalEventType = eventType;
+                let finalQuoteId = quoteId || bookingId;
+
+                if (typeof message === "object" && message !== null) {
+                    finalMessage = message.message;
+                    finalMessageType = message.messageType || finalMessageType;
+                    finalBudget = message.budget || finalBudget;
+                    finalStartDate = message.startDate || finalStartDate;
+                    finalEndDate = message.endDate || finalEndDate;
+                    finalLocation = message.location || finalLocation;
+                    finalEventType = message.eventType || finalEventType;
+                    finalQuoteId = message.quoteId || finalQuoteId;
+                }
+
                 const roomName = `booking_${bookingId}`;
 
                 let conversation = await Conversation.findOne({
@@ -176,17 +197,17 @@ export const initSocket = (server) => {
                 const newMessage = await Message.create({
                     conversationId: conversation._id,
                     senderId: socket.user.id,
-                    message,
-                    messageType: messageType || type,
-                    budget,
-                    startDate,
-                    endDate,
-                    location,
-                    quoteId: quoteId || bookingId, // Use quoteId if provided, else bookingId
-                    eventType
+                    message: finalMessage,
+                    messageType: finalMessageType,
+                    budget: finalBudget,
+                    startDate: finalStartDate,
+                    endDate: finalEndDate,
+                    location: finalLocation,
+                    quoteId: finalQuoteId,
+                    eventType: finalEventType
                 });
 
-                conversation.lastMessage = message;
+                conversation.lastMessage = finalMessageType === "text" ? finalMessage : `[${finalMessageType}]`;
                 conversation.lastMessageAt = new Date();
                 await conversation.save();
 
