@@ -8,8 +8,30 @@ class ServiceController {
       if (req.file) {
         req.body.image = `/uploads/${req.file.filename}`;
       }
+      const { serviceName, serviceDescription, serviceCost, isAdditionalServices, additionalServices } = req.body;
+      const data = await Service.create(
+        {
+          serviceName,
+          serviceDescription,
+          serviceCost,
+          isAdditionalServices,
+          image: req.file ? `/uploads/${req.file.filename}` : null,
+        }
+      );
 
-      const data = await Service.create(req.body);
+      if (isAdditionalServices) {
+        additionalServices.forEach(async element => {
+          await AdditionalServices.create({
+            serviceId: data._id,
+            serviceName: data.serviceName,
+            serviceType: element.type,
+            serviceDescription: element.description,
+            serviceCost: element.cost,
+          });
+        });
+
+        data.additionalServices = additionalServices;
+      }
 
       res.status(201).json({
         success: true,
@@ -46,10 +68,10 @@ class ServiceController {
           message: "Service not found",
         });
       }
-      // if (data && data.isAdditionalServices) {
-      //   const additionalServices = await AdditionalServices.find({ serviceId: data._id }).lean();
-      //   data.additionalServices = additionalServices;
-      // }
+      if (data && data.isAdditionalServices) {
+        const additionalServices = await AdditionalServices.find({ serviceId: data._id }).lean();
+        data.additionalServices = additionalServices;
+      }
 
       res.status(200).json({
         success: true,
