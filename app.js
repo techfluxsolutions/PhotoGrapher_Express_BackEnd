@@ -28,20 +28,12 @@ app.use(express.json());
 app.use(cookieParser());
 app.use(
   cors({
-    origin: (origin, callback) => {
-      if (!origin) return callback(null, true);
-
-      const allowed =
-        origin.startsWith("http://localhost") ||
-        origin.startsWith("http://127.0.0.1") ||
-        origin.endsWith(".vercel.app") ||
-        origin === "https://api-photographer.techfluxsolutions.com";
-
-      if (allowed) return callback(null, true);
-
-      callback(new Error("Not allowed by CORS"));
-    },
-    credentials: true,
+    origin: [
+      "http://localhost:3000",
+      "http://localhost:5173",
+      "https://photographer-admin-6nit.vercel.app",
+      "https://photo-grapher-user-website.vercel.app",
+    ],
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allowedHeaders: [
       "Content-Type",
@@ -52,6 +44,7 @@ app.use(
     ],
   })
 );
+
 
 // ✅ Explicit OPTIONS handling
 app.use((req, res, next) => {
