@@ -14,11 +14,14 @@ import AdminEmailAuthController from "../../controllers/Admin/AdminEmailAuthCont
 import upload from "../../Config/multer.mjs";
 import authMiddleware from "../../middleware/authmiddleware.mjs";
 import { downloadInvoice } from "../../controllers/Admin/InvoiceController.mjs";
+import Service from "../../models/Service.mjs";
 
 const router = express.Router();
 
 // --- Admin Authentication (No middleware required) ---
 router.post("/auth/login", (req, res, next) => AdminEmailAuthController.login(req, res, next));
+//
+router.post("/uploadNineServices", (req, res, next) => ServiceController.uploadNineServices(req, res, next))
 
 // Handle OPTIONS preflight requests for CORS (before authentication)
 // router.use((req, res, next) => {

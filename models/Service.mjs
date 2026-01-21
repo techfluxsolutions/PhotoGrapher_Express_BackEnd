@@ -9,12 +9,12 @@ const serviceSchema = new mongoose.Schema(
     },
     serviceDescription: {
       type: String,
-      required: true,
+      // required: true,
     },
     serviceCost: {
       type: String,
       required: true,
-      index: true, // useful for filtering/sorting
+      // index: true, // useful for filtering/sorting
     },
     isAdditionalServices: {
       type: Boolean,

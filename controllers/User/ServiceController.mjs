@@ -1,5 +1,6 @@
 import Service from "../../models/Service.mjs";
 import AdditionalServices from "../../models/AdditionalServices.mjs";
+import nineServices from "../../utils/Site_Static_Data/NineServices.mjs";
 class ServiceController {
   // POST /services
   async create(req, res, next) {
@@ -176,6 +177,21 @@ class ServiceController {
 
     } catch (err) {
       return res.status(500).json({ success: false, message: err.message })
+    }
+  }
+
+  async uploadNineServices(req, res, next) {
+    try {
+
+      const data = await Service.insertMany(nineServices);
+      return res.status(200).json({
+        message: "Service are fetched successfully",
+        success: true,
+        data: data
+
+      })
+    } catch (error) {
+      next(error);
     }
   }
 }

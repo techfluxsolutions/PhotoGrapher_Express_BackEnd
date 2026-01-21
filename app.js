@@ -29,33 +29,30 @@ app.use(cookieParser());
 app.use(
   cors({
     origin: (origin, callback) => {
-      // Allow requests with no origin (like mobile apps or curl requests)
       if (!origin) return callback(null, true);
 
-      const allowedOrigins = [
-        "http://localhost:3000",
-        "http://127.0.0.1:3000",
-        "http://localhost:5173",
-        "http://localhost:5174",
-        "https://api-photographer.techfluxsolutions.com",
-        "https://photographer-admin-6nit.vercel.app",
-        "https://photo-grapher-user-website.vercel.app",
-      ];
-
-      const isLocalhost = origin.startsWith("http://localhost:") || origin.startsWith("http://127.0.0.1:");
-      const isTechFlux = origin.endsWith(".techfluxsolutions.com");
-
-      if (allowedOrigins.indexOf(origin) !== -1 || isLocalhost || isTechFlux) {
-        callback(null, true);
-      } else {
-        callback(new Error("Not allowed by CORS"));
+      if (
+        origin.includes("localhost") ||
+        origin.endsWith(".vercel.app") ||
+        origin === "https://api-photographer.techfluxsolutions.com"
+      ) {
+        return callback(null, true);
       }
+
+      callback(new Error("Not allowed by CORS"));
     },
-    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization", "Accept", "X-Requested-With", "Origin"],
     credentials: true,
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: [
+      "Content-Type",
+      "Authorization",
+      "Accept",
+      "X-Requested-With",
+      "Origin",
+    ],
   })
 );
+
 
 // --- Main Route Mounting ---
 app.use("/api/auth", authRoutes);

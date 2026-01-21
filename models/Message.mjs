@@ -14,7 +14,7 @@ const messageSchema = new mongoose.Schema(
         },
         message: {
             type: String,
-            required: true,
+            sparse: true,
         },
         messageType: {
             type: String,
@@ -24,7 +24,6 @@ const messageSchema = new mongoose.Schema(
         eventType: {
             type: String,
             sparse: true,
-
         },
         startDate: {
             type: String,
@@ -42,7 +41,6 @@ const messageSchema = new mongoose.Schema(
             type: String,
             sparse: true,
         },
-
         attachmentUrl: {
             type: String,
             default: null,
