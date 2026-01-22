@@ -26,20 +26,44 @@ initSocket(server);
 // Middleware to parse JSON bodies
 app.use(express.json());
 app.use(cookieParser());
+// app.use(
+//   cors({
+//     origin: [
+//       "http://localhost:3000",
+//       "http://localhost:5173",
+//       "https://photographer-admin.vercel.app",
+//       "https://photo-grapher-user-website.vercel.app",
+//       "https://photo-grapher-user-website.vercel.app",
+//     ],
+//     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+//     allowedHeaders: [
+//       "Content-Type",
+//       "Authorization",
+//       "Accept",
+//       "X-Requested-With",
+//       "Origin",
+//     ],
+//   })
+// );
+
+const allowedOrigins = [
+  "http://localhost:3000",
+  "http://localhost:5173",
+  "https://photographer-admin.vercel.app",
+  "https://photo-grapher-user-website.vercel.app",
+  "https://photo-grapher-user-website.vercel.app",
+  "https://user-photographer.techfluxsolutions.com",
+  "https://admin-photographer.techfluxsolutions.com"
+];
+
 app.use(
   cors({
-    origin: (origin, callback) => {
-      if (!origin) return callback(null, true);
-
-      if (
-        origin.includes("localhost") ||
-        origin.endsWith(".vercel.app") ||
-        origin === "https://api-photographer.techfluxsolutions.com"
-      ) {
+    origin: function (origin, callback) {
+      if (!origin) return callback(null, true); // allow mobile apps / curl
+      if (allowedOrigins.includes(origin)) {
         return callback(null, true);
       }
-
-      callback(new Error("Not allowed by CORS"));
+      callback(new Error("Not allowed by CORSs"));
     },
     credentials: true,
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
@@ -52,6 +76,17 @@ app.use(
     ],
   })
 );
+
+
+
+// // ✅ Explicit OPTIONS handling
+// app.use((req, res, next) => {
+//   if (req.method === "OPTIONS") {
+//     return res.sendStatus(204);
+//   }
+//   next();
+// });
+
 
 
 // --- Main Route Mounting ---
