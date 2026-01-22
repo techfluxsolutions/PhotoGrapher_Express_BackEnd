@@ -9,6 +9,13 @@ const conversationSchema = new mongoose.Schema(
             unique: true,
             sparse: true,
         },
+        bookingId: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "ServiceBooking",
+            required: false,
+            unique: true,
+            sparse: true,
+        },
         participants: [
             {
                 type: mongoose.Schema.Types.ObjectId,
@@ -28,7 +35,7 @@ const conversationSchema = new mongoose.Schema(
     { timestamps: true, collection: "conversations" }
 );
 
-// conversationSchema.index({ bookingId: 1 });
+conversationSchema.index({ bookingId: 1 });
 conversationSchema.index({ participants: 1 });
 
 export default mongoose.model("Conversation", conversationSchema);

@@ -18,6 +18,7 @@ class ChatController {
             // Find conversations where user is a participant
             const conversations = await Conversation.find({ participants: userId })
                 .populate("quoteId", "eventType eventDate location") // Populate quote details
+                .populate("bookingId", "status bookingDate") // Populate booking details
                 .populate("participants", "username avatar")
                 .sort({ lastMessageAt: -1 });
 
@@ -35,9 +36,9 @@ class ChatController {
             const limit = parseInt(req.query.limit) || 50;
             const skip = (page - 1) * limit;
 
-            // Try to find by bookingId first, then by quoteId
+            // Try to find by bookingId or quoteId
             let conversation = await Conversation.findOne({
-                $or: [{ bookingId }, { quoteId: bookingId }]
+                $or: [{ bookingId: bookingId }, { quoteId: bookingId }]
             });
 
             if (!conversation) {
@@ -112,7 +113,8 @@ class ChatController {
                 });
             } else {
                 // Ensure the user is in the participants list if the conversation already exists
-                if (!conversation.participants.includes(userId)) {
+                const userExists = conversation.participants.some(p => p.toString() === userId);
+                if (!userExists) {
                     conversation.participants.push(userId);
                     await conversation.save();
                 }
@@ -127,7 +129,7 @@ class ChatController {
     // Send a message via REST API
     async sendMessage(req, res, next) {
         try {
-            const { quoteId, message, type = "text", messageType, budget, startDate, endDate, location, eventType } = req.body;
+            const { bookingId, quoteId, message, type = "text", messageType, budget, startDate, endDate, location, eventType } = req.body;
             const userId = req.user.id;
 
             // Robust extraction if message is sent as an object
@@ -139,33 +141,38 @@ class ChatController {
             let finalLocation = location;
             let finalEventType = eventType;
             let finalQuoteId = quoteId;
+            let finalBookingId = bookingId;
 
             if (typeof message === "object" && message !== null) {
-                finalMessage = message.message;
-                finalMessageType = message.messageType || finalMessageType;
+                finalMessage = message.message || finalMessage;
+                finalMessageType = message.messageType || message.type || finalMessageType;
                 finalBudget = message.budget || finalBudget;
                 finalStartDate = message.startDate || finalStartDate;
                 finalEndDate = message.endDate || finalEndDate;
                 finalLocation = message.location || finalLocation;
                 finalEventType = message.eventType || finalEventType;
                 finalQuoteId = message.quoteId || finalQuoteId;
+                finalBookingId = message.bookingId || finalBookingId;
             }
 
-            if (!finalQuoteId || !finalMessage) {
-                return res.status(400).json({ success: false, message: "quoteId and message are required" });
+            const refId = finalBookingId || finalQuoteId;
+
+            if (!refId || !finalMessage) {
+                return res.status(400).json({ success: false, message: "bookingId/quoteId and message are required" });
             }
 
             // Find the conversation
             let conversation = await Conversation.findOne({
-                $or: [{ bookingId: finalQuoteId }, { quoteId: finalQuoteId }]
+                $or: [{ bookingId: refId }, { quoteId: refId }]
             });
 
             if (!conversation) {
-                return res.status(404).json({ success: false, message: "Conversation not found" });
+                return res.status(404).json({ success: false, message: "Conversation not found for ID: " + refId });
             }
 
             // Check if user is a participant
-            if (!conversation.participants.includes(userId) && !req.user.isAdmin) {
+            const isParticipant = conversation.participants.some(p => p.toString() === userId);
+            if (!isParticipant && !req.user.isAdmin) {
                 return res.status(403).json({ success: false, message: "Access denied" });
             }
 
@@ -179,7 +186,7 @@ class ChatController {
                 startDate: finalStartDate,
                 endDate: finalEndDate,
                 location: finalLocation,
-                quoteId: finalQuoteId,
+                quoteId: finalQuoteId || conversation.quoteId || null,
                 eventType: finalEventType
             });
 
@@ -194,7 +201,7 @@ class ChatController {
             // Notify others via socket
             try {
                 const io = getIO();
-                const roomName = `booking_${String(quoteId)}`;
+                const roomName = `booking_${refId}`;
                 console.log(`📡 Emitting message to room: ${roomName}`);
                 io.to(roomName).emit("receive_message", newMessage);
             } catch (socketErr) {

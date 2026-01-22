@@ -119,10 +119,23 @@ export const initSocket = (server) => {
             }
         });
 
-        socket.on("send_message", async ({ bookingId, message, type = "text", messageType, budget, startDate, endDate, location, quoteId, eventType }) => {
-            console.log(`Socket Event: send_message. User: ${socket.user.id}, Booking: ${bookingId}, Type: ${messageType || type}`);
+        socket.on("send_message", async (data) => {
+            console.log(`Socket Event: send_message. User: ${socket.user.id}, Data:`, JSON.stringify(data));
             try {
-                // Robust extraction if message is sent as an object
+                // Robust extraction from top-level or nested message object
+                let {
+                    bookingId,
+                    quoteId,
+                    message,
+                    type = "text",
+                    messageType,
+                    budget,
+                    startDate,
+                    endDate,
+                    location,
+                    eventType
+                } = data;
+
                 let finalMessage = message;
                 let finalMessageType = messageType || type;
                 let finalBudget = budget;
@@ -130,36 +143,45 @@ export const initSocket = (server) => {
                 let finalEndDate = endDate;
                 let finalLocation = location;
                 let finalEventType = eventType;
-                let finalQuoteId = quoteId || bookingId;
+                let finalQuoteId = quoteId;
+                let finalBookingId = bookingId;
 
                 if (typeof message === "object" && message !== null) {
-                    finalMessage = message.message;
-                    finalMessageType = message.messageType || finalMessageType;
+                    finalMessage = message.message || finalMessage;
+                    finalMessageType = message.messageType || message.type || finalMessageType;
                     finalBudget = message.budget || finalBudget;
                     finalStartDate = message.startDate || finalStartDate;
                     finalEndDate = message.endDate || finalEndDate;
                     finalLocation = message.location || finalLocation;
                     finalEventType = message.eventType || finalEventType;
                     finalQuoteId = message.quoteId || finalQuoteId;
+                    finalBookingId = message.bookingId || finalBookingId;
                 }
 
-                const roomName = `booking_${bookingId}`;
+                // The reference ID used for the room and finding conversation
+                const refId = finalBookingId || finalQuoteId;
+
+                if (!refId) {
+                    return socket.emit("error", "No Booking or Quote ID provided");
+                }
+
+                const roomName = `booking_${refId}`;
 
                 let conversation = await Conversation.findOne({
-                    $or: [{ bookingId: bookingId }, { quoteId: bookingId }]
+                    $or: [{ bookingId: refId }, { quoteId: refId }]
                 });
 
                 if (!conversation) {
-                    let context = await ServiceBooking.findById(bookingId);
+                    let context = await ServiceBooking.findById(refId);
                     let ctxType = "booking";
 
                     if (!context) {
-                        context = await Quote.findById(bookingId);
+                        context = await Quote.findById(refId);
                         ctxType = "quote";
                     }
 
                     if (!context) {
-                        return socket.emit("error", "Booking/Quote not found");
+                        return socket.emit("error", "Booking/Quote not found for ID: " + refId);
                     }
 
                     let isParticipant = false;
@@ -180,11 +202,11 @@ export const initSocket = (server) => {
                     const createData = { participants };
 
                     if (ctxType === "booking") {
-                        createData.bookingId = bookingId;
+                        createData.bookingId = refId;
                         participants.push(context.client_id);
                         if (context.photographer_id) participants.push(context.photographer_id);
                     } else {
-                        createData.quoteId = bookingId;
+                        createData.quoteId = refId;
                         participants.push(context.clientId);
                         const admins = await Admin.find({}, "_id");
                         participants.push(...admins.map(a => a._id));
@@ -203,7 +225,7 @@ export const initSocket = (server) => {
                     startDate: finalStartDate,
                     endDate: finalEndDate,
                     location: finalLocation,
-                    quoteId: finalQuoteId,
+                    quoteId: finalQuoteId || (conversation.quoteId) || null,
                     eventType: finalEventType
                 });
 
