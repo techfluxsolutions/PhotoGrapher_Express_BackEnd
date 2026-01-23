@@ -49,7 +49,7 @@ export const downloadInvoice = async (req, res) => {
 
         /* ========= INVOICE META ========= */
         doc
-            .text(`Invoice No: ${booking.veroaBookingId}`, 50, 200)
+            .text(`Booking ID: ${booking.veroaBookingId}`, 50, 200)
             .text(`Invoice Date: ${new Date().toLocaleDateString("en-IN")}`)
             .text(`Payment Mode: ${booking.paymentMode}`)
             .text(`Payment Status: ${booking.paymentStatus}`);
