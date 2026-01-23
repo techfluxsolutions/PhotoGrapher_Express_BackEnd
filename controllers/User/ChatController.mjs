@@ -59,6 +59,17 @@ class ChatController {
             }
 
             const total = await Message.countDocuments({ conversationId: conversation._id });
+            //
+
+            let pinedBookings;
+
+            const gotBookings = await ServiceBooking.find({ _id: conversation.bookingId });
+            if (gotBookings) {
+                pinedBookings = gotBookings;
+            } else {
+                pinedBookings = await ServiceBooking.findById(conversation.bookingId);
+            }
+
 
             const messages = await Message.find({ conversationId: conversation._id })
                 .sort({ createdAt: -1 }) // Get latest first
@@ -68,6 +79,7 @@ class ChatController {
 
             return res.json({
                 success: true,
+                pinnedService: pinedBookings,
                 data: messages.reverse(), // Client usually expects chronological order for chat
                 meta: { total, page, limit },
             });
