@@ -7,12 +7,58 @@ const parseDDMMYYYY = (dateStr) => {
 
 class ServiceBookingController {
   // Create a new service booking
+  // async create(req, res, next) {
+  //   try {
+  //     const payload = req.body;
+  //     payload.bookingDate = parseDDMMYYYY(payload.bookingDate);
+
+  //     // take last document from the database and get the booking id
+  //     const veroaLastBookingId = await ServiceBooking.findOne().sort({ createdAt: -1 }).select('veroaBookingId')
+  //     const veroaBookingId = veroaLastBookingId ? veroaLastBookingId.veroaBookingId + 1 : 1;
+  //     payload.veroaBookingId = veroaBookingId;
+
+  //     const booking = await ServiceBooking.create(payload);
+  //     return res.status(201).json({ success: true, data: booking });
+  //   } catch (err) {
+  //     return next(err);
+  //   }
+  // }
+
+
   async create(req, res, next) {
     try {
       const payload = req.body;
       payload.bookingDate = parseDDMMYYYY(payload.bookingDate);
+
+      // Get last booking
+      const lastBooking = await ServiceBooking
+        .findOne({ veroaBookingId: { $exists: true } })
+        .sort({ createdAt: -1 })
+        .select("veroaBookingId");
+
+      let nextNumber = 1;
+
+      if (lastBooking?.veroaBookingId) {
+        // Example: VEROA-BK-000001 → extract 000001
+        const lastNumber = parseInt(
+          lastBooking.veroaBookingId.split("-").pop(),
+          10
+        );
+        nextNumber = lastNumber + 1;
+      }
+
+      // Pad number to 6 digits
+      const formattedNumber = String(nextNumber).padStart(6, "0");
+
+      payload.veroaBookingId = `VEROA-BK-${formattedNumber}`;
+
       const booking = await ServiceBooking.create(payload);
-      return res.status(201).json({ success: true, data: booking });
+
+      return res.status(201).json({
+        success: true,
+        data: booking,
+      });
+
     } catch (err) {
       return next(err);
     }

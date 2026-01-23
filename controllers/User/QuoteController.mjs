@@ -133,11 +133,74 @@ class QuoteController {
       return next(err);
     }
   }
-  async QuoteConverToBookings(req, res) {
+  // async QuoteConverToBookings(req, res) {
 
+  //   try {
+  //     const { quoteId } = req.params;
+  //     const { clientId, flatOrHouseNo, streetName, city, state, postalCode } = req.body; // or from req.user._id if using auth
+
+  //     // 🔎 Step 1: Find quote by _id AND clientId
+  //     const quote = await Quote.findOne({
+  //       _id: quoteId,
+  //       clientId: clientId,
+  //     });
+
+  //     if (!quote) {
+  //       return res.status(404).json({
+  //         success: false,
+  //         message: "Quote not found or does not belong to this client",
+  //       });
+  //     }
+
+  //     // 🧠 Step 2: Create booking using quote details
+  //     const booking = await ServiceBooking.create({
+  //       service_id: quote.service_id,
+  //       client_id: quote.clientId,
+  //       bookingDate: quote.eventDate,
+
+  //       // Address mapping (can be updated later)
+  //       flatOrHouseNo: flatOrHouseNo,
+  //       streetName: streetName,
+  //       city: city,
+  //       state: state,
+  //       postalCode: postalCode,
+
+  //       totalAmount: quote.budget || 0,
+
+  //       quoteId: quote._id,
+  //       bookingSource: "quote",
+  //     });
+
+  //     // 🔄 Step 3: Update quote status
+  //     quote.quoteStatus = "upcommingBookings";
+  //     await quote.save();
+
+  //     return res.status(201).json({
+  //       success: true,
+  //       message: "Booking created successfully from quote",
+  //       data: booking,
+  //     });
+
+  //   } catch (error) {
+  //     console.error("Create booking from quote error:", error);
+  //     res.status(500).json({
+  //       success: false,
+  //       message: "Internal server error",
+  //     });
+  //   }
+  // }
+
+  async QuoteConverToBookings(req, res) {
     try {
       const { quoteId } = req.params;
-      const { clientId, flatOrHouseNo, streetName, city, state, postalCode } = req.body; // or from req.user._id if using auth
+      const {
+        clientId,
+        flatOrHouseNo,
+        streetName,
+        city,
+        state,
+        postalCode,
+      } = req.body;
 
       // 🔎 Step 1: Find quote by _id AND clientId
       const quote = await Quote.findOne({
@@ -152,21 +215,41 @@ class QuoteController {
         });
       }
 
+      // 🆔 Generate VEROA Booking ID
+      const lastBooking = await ServiceBooking
+        .findOne({ veroaBookingId: { $exists: true } })
+        .sort({ createdAt: -1 })
+        .select("veroaBookingId");
+
+      let nextNumber = 1;
+
+      if (lastBooking?.veroaBookingId) {
+        const lastNumber = parseInt(
+          lastBooking.veroaBookingId.split("-").pop(),
+          10
+        );
+        nextNumber = lastNumber + 1;
+      }
+
+      const formattedNumber = String(nextNumber).padStart(6, "0");
+      const veroaBookingId = `VEROA-BK-${formattedNumber}`;
+
       // 🧠 Step 2: Create booking using quote details
       const booking = await ServiceBooking.create({
+        veroaBookingId: veroaBookingId,
+
         service_id: quote.service_id,
         client_id: quote.clientId,
         bookingDate: quote.eventDate,
 
-        // Address mapping (can be updated later)
-        flatOrHouseNo: flatOrHouseNo,
-        streetName: streetName,
-        city: city,
-        state: state,
-        postalCode: postalCode,
+        // Address mapping
+        flatOrHouseNo,
+        streetName,
+        city,
+        state,
+        postalCode,
 
         totalAmount: quote.budget || 0,
-
         quoteId: quote._id,
         bookingSource: "quote",
       });
@@ -183,12 +266,13 @@ class QuoteController {
 
     } catch (error) {
       console.error("Create booking from quote error:", error);
-      res.status(500).json({
+      return res.status(500).json({
         success: false,
         message: "Internal server error",
       });
     }
   }
+
 
 }
 

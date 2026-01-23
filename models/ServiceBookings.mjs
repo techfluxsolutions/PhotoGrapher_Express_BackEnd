@@ -25,11 +25,6 @@ const serviceBookingSchema = new mongoose.Schema(
       type: Date,
       required: true,
     },
-    status: {
-      type: String,
-      enum: ["pending", "confirmed", "completed", "canceled"],
-      default: "pending",
-    },
     flatOrHouseNo: {
       type: String,
       required: true,
@@ -102,6 +97,9 @@ const serviceBookingSchema = new mongoose.Schema(
     cancellationDate: {
       type: String,
       default: ""
+    },
+    veroaBookingId: {
+      type: String
     },
     cancellationReason: {
       type: String,

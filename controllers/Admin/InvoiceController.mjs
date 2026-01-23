@@ -23,7 +23,7 @@ export const downloadInvoice = async (req, res) => {
         res.setHeader("Content-Type", "application/pdf");
         res.setHeader(
             "Content-Disposition",
-            `attachment; filename=Invoice-${booking._id}.pdf`
+            `attachment; filename=Invoice-${booking.veroaBookingId}.pdf`
         );
 
         doc.pipe(res);
@@ -49,7 +49,7 @@ export const downloadInvoice = async (req, res) => {
 
         /* ========= INVOICE META ========= */
         doc
-            .text(`Invoice No: INV-${booking._id}`, 50, 200)
+            .text(`Invoice No: ${booking.veroaBookingId}`, 50, 200)
             .text(`Invoice Date: ${new Date().toLocaleDateString("en-IN")}`)
             .text(`Payment Mode: ${booking.paymentMode}`)
             .text(`Payment Status: ${booking.paymentStatus}`);
