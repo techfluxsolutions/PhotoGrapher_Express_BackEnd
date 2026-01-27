@@ -67,7 +67,7 @@ class ChatController {
             if (gotBookings) {
                 pinedBookings = gotBookings;
             } else {
-                pinedBookings = await ServiceBooking.findById(conversation.bookingId);
+                pinedBookings = await Quote.find({ _id: conversation.quoteId });
             }
 
 
@@ -79,7 +79,7 @@ class ChatController {
 
             return res.json({
                 success: true,
-                pinnedService: pinedBookings,
+                pinned: pinedBookings,
                 data: messages.reverse(), // Client usually expects chronological order for chat
                 meta: { total, page, limit },
             });
