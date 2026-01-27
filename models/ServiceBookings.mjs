@@ -49,10 +49,6 @@ const serviceBookingSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
-    shootType: {
-      type: String,
-      required: false,
-    },
     team: {
       type: String,
       required: false,
