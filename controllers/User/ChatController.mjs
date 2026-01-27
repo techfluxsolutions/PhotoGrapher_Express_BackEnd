@@ -63,11 +63,11 @@ class ChatController {
 
             let pinedBookings;
 
-            const gotBookings = await ServiceBooking.find({ _id: conversation.bookingId });
+            const gotBookings = await ServiceBooking.findOne({ _id: conversation.bookingId });
             if (gotBookings) {
                 pinedBookings = gotBookings;
             } else {
-                pinedBookings = await Quote.find({ _id: conversation.quoteId });
+                pinedBookings = await Quote.findOne({ _id: conversation.quoteId });
             }
 
 
