@@ -73,6 +73,33 @@ class ReviewAndRatingController {
             next(error);
         }
     }
+    async getThreeRatings(req, res, next) {
+        try {
+            const reviews = await ReviewAndRating.find()
+                .sort({ createdAt: -1 })
+                .limit(3)
+                .populate('clientId', 'avatar')
+                .lean();
+
+            const formattedReviews = reviews.map(review => ({
+                _id: review._id,
+                ratingCount: review.ratingCount,
+                rateComments: review.rateComments,
+                createdAt: review.createdAt,
+
+                clientId: review.clientId?._id || null,
+                avatar: process.env.BASE_URL && review.clientId?.avatar ? `${process.env.BASE_URL}${review.clientId?.avatar}` : "",
+            }));
+
+            return res.status(200).json({
+                success: true,
+                data: formattedReviews,
+            });
+        } catch (error) {
+            next(error);
+        }
+    }
+
 
 }
 

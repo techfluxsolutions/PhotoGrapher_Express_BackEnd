@@ -126,6 +126,8 @@ router.get("/getPreviousTickets/:clientId", (req, res, next) => TicketController
 //Review And Rating
 router.post("/reviewAndRating", (req, res, next) => ReviewAndRatingController.create(req, res, next));
 router.get("/getReviewAndRating", (req, res, next) => ReviewAndRatingController.getAll(req, res, next));
+router.get("/getThreeRatings", (req, res, next) => ReviewAndRatingController.getThreeRatings(req, res, next));
+
 
 
 
