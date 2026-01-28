@@ -11,7 +11,7 @@ import AdminEmailAuthController from "../../controllers/Admin/AdminEmailAuthCont
 import upload from "../../Config/multer.mjs";
 import { downloadInvoice } from "../../controllers/Admin/InvoiceController.mjs";
 import SubscribedUserController from "../../controllers/User/SubscribedUserController.mjs";
-
+import AdminController from "../../controllers/User/AdminController.mjs";
 
 const router = express.Router();
 
@@ -115,10 +115,10 @@ router.get("/invoices/:bookingId", (req, res, next) => downloadInvoice(req, res,
 
 //Subscriber
 
-router.get("/subscribers", (req, res, next) => SubscribedUserController.getAllSubscribers(req, res, next));
-router.get("/subscriber/:id", (req, res, next) => SubscribedUserController.getSubscriberById(req, res, next));
-router.get("/subscriber/email/:email", (req, res, next) => SubscribedUserController.getSubscriberByEmail(req, res, next));
-router.put("/subscriber/:id", (req, res, next) => SubscribedUserController.updateSubscriber(req, res, next));
-router.delete("/subscriber/:id", (req, res, next) => SubscribedUserController.deleteSubscriber(req, res, next));
+router.get("/getsubscribers", (req, res, next) => SubscribedUserController.getAllSubscribers(req, res, next));
+router.get("/getsubscriber/:id", (req, res, next) => SubscribedUserController.getSubscriberById(req, res, next));
+router.get("/getsubscriber/email/:email", (req, res, next) => SubscribedUserController.getSubscriberByEmail(req, res, next));
+router.put("/updatesubscriber/:id", (req, res, next) => SubscribedUserController.updateSubscriber(req, res, next));
+router.delete("/deletesubscriber/:id", (req, res, next) => SubscribedUserController.deleteSubscriber(req, res, next));
 
 export default router;
