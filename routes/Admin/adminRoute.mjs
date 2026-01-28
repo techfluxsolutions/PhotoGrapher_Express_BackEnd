@@ -1,20 +1,17 @@
 import express from "express";
-import AdminController from "../../controllers/User/AdminController.mjs";
 import PackageController from "../../controllers/User/PackageController.mjs";
 import ServiceController from "../../controllers/User/ServiceController.mjs";
 import PayoutController from "../../controllers/User/PayoutController.mjs";
 import EnquiryController from "../../controllers/User/EnquiryController.mjs";
-import PersonalizedQuoteController from "../../controllers/User/PersonalizedQuoteController.mjs";
 import ReviewController from "../../controllers/User/ReviewController.mjs";
 import ServiceBookingController from "../../controllers/Admin/ServiceBookingController.mjs";
 import QuoteController from "../../controllers/Admin/QuoteController.mjs";
 import PaymentController from "../../controllers/Admin/PaymentController.mjs";
-import CustomerController from "../../controllers/Admin/CustomerController.mjs";
 import AdminEmailAuthController from "../../controllers/Admin/AdminEmailAuthController.mjs";
 import upload from "../../Config/multer.mjs";
-import authMiddleware from "../../middleware/authmiddleware.mjs";
 import { downloadInvoice } from "../../controllers/Admin/InvoiceController.mjs";
-import Service from "../../models/Service.mjs";
+import SubscribedUserController from "../../controllers/User/SubscribedUserController.mjs";
+
 
 const router = express.Router();
 
@@ -115,5 +112,13 @@ router.delete("/:id", (req, res, next) => AdminController.delete(req, res, next)
 
 // --- Invoice Management ---
 router.get("/invoices/:bookingId", (req, res, next) => downloadInvoice(req, res, next));
+
+//Subscriber
+
+router.get("/subscribers", (req, res, next) => SubscribedUserController.getAllSubscribers(req, res, next));
+router.get("/subscriber/:id", (req, res, next) => SubscribedUserController.getSubscriberById(req, res, next));
+router.get("/subscriber/email/:email", (req, res, next) => SubscribedUserController.getSubscriberByEmail(req, res, next));
+router.put("/subscriber/:id", (req, res, next) => SubscribedUserController.updateSubscriber(req, res, next));
+router.delete("/subscriber/:id", (req, res, next) => SubscribedUserController.deleteSubscriber(req, res, next));
 
 export default router;
