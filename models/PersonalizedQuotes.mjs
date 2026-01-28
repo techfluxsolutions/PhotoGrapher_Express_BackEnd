@@ -9,7 +9,7 @@ const personalizedQuoteSchema = new mongoose.Schema(
     },
     budget: {
       type: Number,
-      required: true,
+      sparse: true
     },
     eventStartDate: {
       type: Date,

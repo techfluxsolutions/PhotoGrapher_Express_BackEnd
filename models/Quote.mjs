@@ -4,7 +4,7 @@ const quoteSchema = new mongoose.Schema(
     service_id: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Service",
-      required: true,
+      sparse: true
     },
     eventType: {
       type: String,
@@ -53,6 +53,12 @@ const quoteSchema = new mongoose.Schema(
     budget: {
       type: String,
     },
+    quoteType: {
+      type: String,
+      enum: ["quotes", "personalizedQuotes"],
+      default: "quotes"
+    },
+
   },
   {
     timestamps: true,
