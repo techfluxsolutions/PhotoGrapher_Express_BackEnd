@@ -135,9 +135,7 @@ class ServiceBookingController {
       const limit = Math.max(1, parseInt(req.query.limit) || 20);
       const skip = (page - 1) * limit;
 
-      let filter = {
-        status: "completed"
-      };
+      let filter = {};
 
       // Add date range filter if provided
       if (req.query.fromDate && req.query.toDate) {
@@ -145,10 +143,20 @@ class ServiceBookingController {
         const toDate = new Date(req.query.toDate);
         toDate.setHours(23, 59, 59, 999);
 
-        filter.bookingDate = {
-          $gte: fromDate,
-          $lte: toDate,
-        };
+        filter.$or = [
+          {
+            bookingDate: {
+              $gte: fromDate,
+              $lte: toDate,
+            },
+          },
+          {
+            startDate: {
+              $gte: fromDate,
+              $lte: toDate,
+            },
+          },
+        ];
       }
 
       const [items, total] = await Promise.all([

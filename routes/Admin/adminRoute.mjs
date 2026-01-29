@@ -62,10 +62,14 @@ router.post("/bookings", (req, res, next) => ServiceBookingController.create(req
 router.get("/bookings", (req, res, next) => ServiceBookingController.list(req, res, next));
 router.get("/bookings/upcoming", (req, res, next) => ServiceBookingController.getUpcoming(req, res, next));
 router.get("/bookings/previous", (req, res, next) => ServiceBookingController.getPrevious(req, res, next));
+router.get("/getupcomingbookings", (req, res, next) => ServiceBookingController.getUpcoming(req, res, next));
+
 router.get("/bookings/:id", (req, res, next) => ServiceBookingController.getById(req, res, next));
 router.put("/bookings/:id", (req, res, next) => ServiceBookingController.update(req, res, next));
 router.delete("/bookings/:id", (req, res, next) => ServiceBookingController.delete(req, res, next));
+router.get("/getpreviousbookings", (req, res, next) => ServiceBookingController.getPrevious(req, res, next));
 router.get("/completelyPaidBookings", (req, res, next) => ServiceBookingController.getCompletedBookings(req, res, next));
+
 
 // --- ServiceBooking (alternative endpoint) ---
 router.post("/servicebookings", (req, res, next) => ServiceBookingController.create(req, res, next));
@@ -103,13 +107,6 @@ router.get("/customers/:id", (req, res, next) => CustomerController.getById(req,
 router.put("/customers/:id", (req, res, next) => CustomerController.update(req, res, next));
 router.delete("/customers/:id", (req, res, next) => CustomerController.delete(req, res, next));
 
-// --- Admin Management (MUST BE LAST - generic /:id routes) ---
-router.post("/", upload.single("avatar"), (req, res, next) => AdminController.create(req, res, next));
-router.get("/", (req, res, next) => AdminController.getAll(req, res, next));
-router.get("/:id", (req, res, next) => AdminController.getById(req, res, next));
-router.put("/:id", (req, res, next) => AdminController.update(req, res, next));
-router.delete("/:id", (req, res, next) => AdminController.delete(req, res, next));
-
 // --- Invoice Management ---
 router.get("/invoices/:bookingId", (req, res, next) => downloadInvoice(req, res, next));
 
@@ -120,5 +117,13 @@ router.get("/getsubscriber/:id", (req, res, next) => SubscribedUserController.ge
 router.get("/getsubscriber/email/:email", (req, res, next) => SubscribedUserController.getSubscriberByEmail(req, res, next));
 router.put("/updatesubscriber/:id", (req, res, next) => SubscribedUserController.updateSubscriber(req, res, next));
 router.delete("/deletesubscriber/:id", (req, res, next) => SubscribedUserController.deleteSubscriber(req, res, next));
+
+// --- Admin Management (MUST BE LAST - generic /:id routes) ---
+router.post("/", upload.single("avatar"), (req, res, next) => AdminController.create(req, res, next));
+router.get("/", (req, res, next) => AdminController.getAll(req, res, next));
+router.get("/:id", (req, res, next) => AdminController.getById(req, res, next));
+router.put("/:id", (req, res, next) => AdminController.update(req, res, next));
+router.delete("/:id", (req, res, next) => AdminController.delete(req, res, next));
+
 
 export default router;

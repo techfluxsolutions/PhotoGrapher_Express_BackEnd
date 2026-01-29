@@ -86,7 +86,6 @@ class ReviewAndRatingController {
                 ratingCount: review.ratingCount,
                 rateComments: review.rateComments,
                 createdAt: review.createdAt,
-
                 clientId: review.clientId?._id || null,
                 avatar: process.env.BASE_URL && review.clientId?.avatar ? `${process.env.BASE_URL}${review.clientId?.avatar}` : "",
             }));
