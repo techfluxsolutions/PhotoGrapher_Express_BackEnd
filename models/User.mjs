@@ -14,7 +14,7 @@ const userSchema = new mongoose.Schema(
     },
     avatar: {
       type: String,
-      default: "",
+      default: "https://api-photographer.techfluxsolutions.com/uploads/userProfile/NoProfileImg.png",
     },
 
     password: {
