@@ -106,6 +106,18 @@ const serviceBookingSchema = new mongoose.Schema(
       type: String,
       default: ""
     },
+    eventDate: {
+      type: String,
+      sparse: true
+    },
+    startDate: {
+      type: String,
+      sparse: true
+    },
+    endDate: {
+      type: String,
+      sparse: true
+    }
   },
   { timestamps: true }
 );

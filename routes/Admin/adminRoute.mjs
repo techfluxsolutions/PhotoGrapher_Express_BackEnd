@@ -62,8 +62,6 @@ router.post("/bookings", (req, res, next) => ServiceBookingController.create(req
 router.get("/bookings", (req, res, next) => ServiceBookingController.list(req, res, next));
 router.get("/bookings/upcoming", (req, res, next) => ServiceBookingController.getUpcoming(req, res, next));
 router.get("/bookings/previous", (req, res, next) => ServiceBookingController.getPrevious(req, res, next));
-router.get("/getupcomingbookings", (req, res, next) => ServiceBookingController.getUpcoming(req, res, next));
-
 router.get("/bookings/:id", (req, res, next) => ServiceBookingController.getById(req, res, next));
 router.put("/bookings/:id", (req, res, next) => ServiceBookingController.update(req, res, next));
 router.delete("/bookings/:id", (req, res, next) => ServiceBookingController.delete(req, res, next));

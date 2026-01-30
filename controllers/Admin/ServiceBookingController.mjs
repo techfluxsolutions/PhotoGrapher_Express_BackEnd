@@ -104,15 +104,23 @@ class ServiceBookingController {
       ]);
 
       const formattedItems = items.map(booking => ({
-        shoot_id: booking._id,
+        bookingId: booking._id,
+        veroaBookingId: booking.bookingId,
         client_id: booking.client_id ? booking.client_id._id : null,
         client_name: booking.client_id ? booking.client_id.username : "",
         assigned_photographer: booking.photographer_id ? booking.photographer_id.username : "",
         team_studio: booking.team || "",
-        shoot_type: booking.shootType || "",
+        eventType: booking.shootType || "",
+        eventDate: booking.bookingDate,
+        location: booking.city || "",
         note: booking.notes || "",
         status: booking.status,
-        date: booking.bookingDate
+        date: "",
+        bookingAmount: booking.totalAmount,
+        paymenyMode: booking.paymentMode,
+        paymentType: booking.paymentStatus,
+        bookingStatus: booking.status,
+
       }));
 
       return res.json({
@@ -169,14 +177,23 @@ class ServiceBookingController {
       ]);
 
       const formattedItems = items.map(booking => ({
-        shootId: booking._id,
-        clientId: booking.client_id ? booking.client_id._id : null,
-        clientName: booking.client_id ? booking.client_id.username : "",
-        assignedPhotographer: booking.photographer_id ? booking.photographer_id.username : "",
-        teamStudio: booking.team || "",
-        shootType: booking.shootType || "",
+        bookingId: booking._id,
+        veroaBookingId: booking.bookingId,
+        client_id: booking.client_id ? booking.client_id._id : null,
+        client_name: booking.client_id ? booking.client_id.username : "",
+        assigned_photographer: booking.photographer_id ? booking.photographer_id.username : "",
+        team_studio: booking.team || "",
+        eventType: booking.shootType || "",
+        eventDate: booking.bookingDate,
+        location: booking.city || "",
         note: booking.notes || "",
-        status_s: booking.status
+        status: booking.status,
+        date: "",
+        bookingAmount: booking.totalAmount,
+        paymenyMode: booking.paymentMode,
+        paymentType: booking.paymentStatus,
+        bookingStatus: booking.status,
+
       }));
 
       return res.json({
