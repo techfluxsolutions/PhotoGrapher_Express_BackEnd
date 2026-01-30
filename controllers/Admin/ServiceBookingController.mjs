@@ -105,7 +105,7 @@ class ServiceBookingController {
 
       const formattedItems = items.map(booking => ({
         bookingId: booking._id,
-        veroaBookingId: booking.bookingId,
+        veroaBookingId: booking.veroaBookingId,
         client_id: booking.client_id ? booking.client_id._id : null,
         client_name: booking.client_id ? booking.client_id.username : "",
         assigned_photographer: booking.photographer_id ? booking.photographer_id.username : "",
