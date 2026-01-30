@@ -4,6 +4,7 @@ import mongoose from "mongoose";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 import http from "http";
+import path from "path";
 import { initSocket } from "./services/SocketService.mjs";
 import {
   userRoutes,
@@ -27,6 +28,7 @@ initSocket(server);
 // Middleware to parse JSON bodies
 app.use(express.json());
 app.use(cookieParser());
+app.use("/uploads", express.static(path.resolve("uploads")));
 // app.use(
 //   cors({
 //     origin: [
