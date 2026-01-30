@@ -30,34 +30,40 @@ const photographerSchema = new mongoose.Schema(
       type: Boolean,
       default: true,
     },
-    bank_account_holder: {
-      type: String,
-      required: [true, "Bank account holder name is required"],
-    },
-    bank_account_number: {
-      type: String,
-      required: [true, "Bank account number is required"],
-      match: [/^\d+$/, "Account number must contain only digits"],
-    },
-    bank_ifsc: {
-      type: String,
-      required: [true, "IFSC code is required"],
-      match: [/^[A-Za-z]{4}\d{7}$/, "Invalid IFSC code format"],
-    },
+    // bank_account_holder: {
+    //   type: String,
+    //   required: [true, "Bank account holder name is required"],
+    // },
+    // bank_account_number: {
+    //   type: String,
+    //   required: [true, "Bank account number is required"],
+    //   match: [/^\d+$/, "Account number must contain only digits"],
+    // },
+    // bank_ifsc: {
+    //   type: String,
+    //   required: [true, "IFSC code is required"],
+    //   match: [/^[A-Za-z]{4}\d{7}$/, "Invalid IFSC code format"],
+    // },
     status: {
       type: String,
       enum: ["active", "inactive", "pending"],
       default: "pending",
     },
-    storage_used_mb: {
-      type: Number,
-      default: 0,
-      min: 0,
-    },
+    // storage_used_mb: {
+    //   type: Number,
+    //   default: 0,
+    //   min: 0,
+    // },
     calendar_availability: {
       type: String, // JSON string or URL to external calendar
       default: "{}",
     },
+    password: {
+      type: String,
+      required: [true, "Password is required"],
+    },
+    resetPasswordToken: String,
+    resetPasswordExpires: Date,
   },
   {
     timestamps: true,
