@@ -15,21 +15,21 @@ class ServiceBookingController {
       };
 
       const payload = req.body;
-      
+
       // Parse booking date if provided in DD-MM-YYYY format
       if (payload.bookingDate && typeof payload.bookingDate === 'string') {
         payload.bookingDate = parseDDMMYYYY(payload.bookingDate);
       }
 
       const booking = await ServiceBooking.create(payload);
-      
+
       // Populate after creation
       const populatedBooking = await ServiceBooking.findById(booking._id)
         .populate("service_id client_id photographer_id");
-      
-      return res.status(201).json({ 
-        success: true, 
-        data: populatedBooking 
+
+      return res.status(201).json({
+        success: true,
+        data: populatedBooking
       });
     } catch (err) {
       return next(err);
@@ -87,7 +87,7 @@ class ServiceBookingController {
         const fromDate = new Date(req.query.fromDate);
         const toDate = new Date(req.query.toDate);
         toDate.setHours(23, 59, 59, 999);
-        
+
         filter.bookingDate = {
           $gte: fromDate,
           $lte: toDate,
@@ -98,7 +98,7 @@ class ServiceBookingController {
         ServiceBooking.find(filter)
           .skip(skip)
           .limit(limit)
-          .sort({ bookingDate: 1 })
+          .sort({ createdAt: -1 })
           .populate("service_id client_id photographer_id"),
         ServiceBooking.countDocuments(filter),
       ]);
@@ -125,7 +125,7 @@ class ServiceBookingController {
 
       return res.json({
         success: true,
-        data: items,
+        data: formattedItems,
         meta: { total, page, limit },
       });
     } catch (err) {
@@ -142,9 +142,6 @@ class ServiceBookingController {
       const page = Math.max(1, parseInt(req.query.page) || 1);
       const limit = Math.max(1, parseInt(req.query.limit) || 20);
       const skip = (page - 1) * limit;
-
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
 
       let filter = {};
 
@@ -201,7 +198,7 @@ class ServiceBookingController {
 
       return res.json({
         success: true,
-        data: items,
+        data: formattedItems,
         meta: { total, page, limit },
       });
     } catch (err) {
@@ -216,20 +213,20 @@ class ServiceBookingController {
   async getById(req, res, next) {
     try {
       const { id } = req.params;
-      
+
       const booking = await ServiceBooking.findById(id)
         .populate("service_id client_id photographer_id");
-      
+
       if (!booking) {
-        return res.status(404).json({ 
-          success: false, 
-          message: "ServiceBooking not found" 
+        return res.status(404).json({
+          success: false,
+          message: "ServiceBooking not found"
         });
       }
-      
-      return res.json({ 
-        success: true, 
-        data: booking 
+
+      return res.json({
+        success: true,
+        data: booking
       });
     } catch (err) {
       return next(err);
@@ -244,7 +241,7 @@ class ServiceBookingController {
     try {
       const { id } = req.params;
       const payload = req.body;
-      
+
       // Parse booking date if provided in DD-MM-YYYY format
       if (payload.bookingDate && typeof payload.bookingDate === 'string') {
         const parseDDMMYYYY = (dateStr) => {
@@ -258,17 +255,17 @@ class ServiceBookingController {
         new: true,
         runValidators: true,
       }).populate("service_id client_id photographer_id");
-      
+
       if (!booking) {
-        return res.status(404).json({ 
-          success: false, 
-          message: "ServiceBooking not found" 
+        return res.status(404).json({
+          success: false,
+          message: "ServiceBooking not found"
         });
       }
-      
-      return res.json({ 
-        success: true, 
-        data: booking 
+
+      return res.json({
+        success: true,
+        data: booking
       });
     } catch (err) {
       return next(err);
@@ -282,20 +279,20 @@ class ServiceBookingController {
   async delete(req, res, next) {
     try {
       const { id } = req.params;
-      
+
       const booking = await ServiceBooking.findByIdAndDelete(id);
-      
+
       if (!booking) {
-        return res.status(404).json({ 
-          success: false, 
-          message: "ServiceBooking not found" 
+        return res.status(404).json({
+          success: false,
+          message: "ServiceBooking not found"
         });
       }
-      
-      return res.json({ 
-        success: true, 
+
+      return res.json({
+        success: true,
         message: "ServiceBooking deleted successfully",
-        data: null 
+        data: null
       });
     } catch (err) {
       return next(err);
@@ -380,6 +377,31 @@ class ServiceBookingController {
           .sort({ bookingDate: -1 })
           .populate("service_id client_id photographer_id"),
         ServiceBooking.countDocuments({ photographer_id: photographerId }),
+      ]);
+
+      return res.json({
+        success: true,
+        data: items,
+        meta: { total, page, limit },
+      });
+    } catch (err) {
+      return next(err);
+    }
+  }
+
+  async getCompletedBookings(req, res, next) {
+    try {
+      const page = Math.max(1, parseInt(req.query.page) || 1);
+      const limit = Math.max(1, parseInt(req.query.limit) || 20);
+      const skip = (page - 1) * limit;
+
+      const [items, total] = await Promise.all([
+        ServiceBooking.find({ status: "completed", paymentStatus: "fully paid" })
+          .skip(skip)
+          .limit(limit)
+          .sort({ bookingDate: -1 })
+          .populate("service_id client_id photographer_id"),
+        ServiceBooking.countDocuments({ status: "completed" }),
       ]);
 
       return res.json({
