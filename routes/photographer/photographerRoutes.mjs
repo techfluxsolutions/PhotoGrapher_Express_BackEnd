@@ -4,6 +4,8 @@ import PhotographerAuthController from "../../controllers/photographer/Photograp
 import AvailabilityController from "../../controllers/User/AvailabilityController.mjs";
 import JobController from "../../controllers/User/JobController.mjs";
 import PayoutController from "../../controllers/User/PayoutController.mjs";
+import BookingController from "../../controllers/photographer/BookingController.mjs";
+import galleryUpload from "../../Config/galleryMulter.mjs";
 //import authMiddleware from "../../middleware/authMiddleware.mjs";
 import { isPhotographer } from "../../middleware/isValid.Middleware.mjs";
 
@@ -37,6 +39,17 @@ router.patch("/jobs/:id", (req, res, next) => JobController.update(req, res, nex
 router.get("/payouts", (req, res, next) => PayoutController.list(req, res, next)); // Controller might need filtering for 'my payouts'
 
 // -- New Routes --
+// --- Bookings ---
+router.get("/bookings", (req, res, next) => BookingController.getAllBookings(req, res, next));
+router.get("/bookings/:id", (req, res, next) => BookingController.getBookingById(req, res, next));
+router.post("/bookings", (req, res, next) => BookingController.createBooking(req, res, next));
+router.put("/bookings/:id", (req, res, next) => BookingController.updateBooking(req, res, next));
+router.delete("/bookings/:id", (req, res, next) => BookingController.deleteBooking(req, res, next));
+
+// --- Gallery ---
+// 'gallery' is the field name, max 50 files
+router.post("/bookings/:id/gallery", galleryUpload.array('gallery', 50), (req, res, next) => BookingController.uploadGallery(req, res, next));
+router.post("/bookings/:id/gallery/share", (req, res, next) => BookingController.shareGallery(req, res, next));
 
 
 export default router;
