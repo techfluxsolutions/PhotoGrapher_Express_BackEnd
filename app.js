@@ -51,9 +51,9 @@ app.use("/uploads", express.static(path.resolve("uploads")));
 
 const allowedOrigins = [
   "http://localhost:3000",
+  "http://localhost:3001",
   "http://localhost:5173",
   "https://photographer-admin.vercel.app",
-  "https://photo-grapher-user-website.vercel.app",
   "https://photo-grapher-user-website.vercel.app",
   "https://user-photographer.techfluxsolutions.com",
   "https://admin-photographer.techfluxsolutions.com"
@@ -62,11 +62,13 @@ const allowedOrigins = [
 app.use(
   cors({
     origin: function (origin, callback) {
-      if (!origin) return callback(null, true); // allow mobile apps / curl
+      if (!origin) return callback(null, true);
       if (allowedOrigins.includes(origin)) {
         return callback(null, true);
+      } else {
+        console.log("CORS blocked origin:", origin);
+        return callback(new Error("Not allowed by CORS"));
       }
-      callback(new Error("Not allowed by CORSs"));
     },
     credentials: true,
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],

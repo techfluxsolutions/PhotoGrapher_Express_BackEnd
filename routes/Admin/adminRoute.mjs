@@ -12,7 +12,6 @@ import upload from "../../Config/multer.mjs";
 import { downloadInvoice } from "../../controllers/Admin/InvoiceController.mjs";
 import SubscribedUserController from "../../controllers/User/SubscribedUserController.mjs";
 import AdminController from "../../controllers/User/AdminController.mjs";
-import authMiddleware from "../../middleware/authMiddleware.mjs";
 const router = express.Router();
 
 // --- Admin Authentication (No middleware required) ---
