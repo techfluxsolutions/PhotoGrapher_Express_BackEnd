@@ -37,9 +37,24 @@ class SubscribedUserService {
 
     async getAllSubscribers(req, res, next) {
         try {
-            res.status(200).json({
-                message: "passed"
-            })
+            // pagination
+            const page = parseInt(req.query.page) || 1;
+            const limit = parseInt(req.query.limit) || 10;
+            const skip = (page - 1) * limit;
+            const subscribers = await SubscribedUser.find().skip(skip).limit(limit);
+            if (!subscribers) {
+                return res.status(404).json({
+                    success: true,
+                    message: "No subscriber found !",
+                });
+            }
+            return res.status(200).json({
+                success: true,
+                data: subscribers,
+                totalPages: page,
+                limit: limit,
+                total: subscribers.length,
+            });
         } catch (error) {
             return next(error);
         }
