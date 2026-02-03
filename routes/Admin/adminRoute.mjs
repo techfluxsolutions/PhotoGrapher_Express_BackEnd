@@ -29,7 +29,7 @@ router.post("/uploadNineServices", (req, res, next) => ServiceController.uploadN
 // });
 
 // Apply Auth and Admin check to all routes below
-//router.use(authMiddleware);
+router.use(authMiddleware);
 
 // --- Package Management ---
 router.post("/packages", (req, res, next) => PackageController.create(req, res, next));
