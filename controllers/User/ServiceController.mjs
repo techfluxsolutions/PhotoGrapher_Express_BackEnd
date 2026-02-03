@@ -216,6 +216,58 @@ class ServiceController {
       next(error);
     }
   }
+
+  // GET /services/names-and-additional
+  async getServiceNamesAndAdditional(req, res, next) {
+    try {
+      const data = await Service.find().select("serviceName isAdditionalServices");
+      res.status(200).json({
+        success: true,
+        data,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  // GET /services/additional/:serviceId
+  async getAdditionalServicesByServiceId(req, res, next) {
+    try {
+      const { serviceId } = req.params;
+      const data = await AdditionalServices.find({ serviceId });
+      res.status(200).json({
+        success: true,
+        data,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  // PATCH /services/additional/:id
+  async updateAdditionalService(req, res, next) {
+    try {
+      const { id } = req.params;
+      const data = await AdditionalServices.findByIdAndUpdate(id, req.body, {
+        new: true,
+        runValidators: true,
+      });
+
+      if (!data) {
+        return res.status(404).json({
+          success: false,
+          message: "Additional service not found",
+        });
+      }
+
+      res.status(200).json({
+        success: true,
+        data,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
 }
 
 export default new ServiceController();

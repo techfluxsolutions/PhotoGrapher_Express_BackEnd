@@ -63,6 +63,8 @@ router.get("/enquiries", (req, res, next) => EnquiryController.list(req, res, ne
 router.post("/bookings", (req, res, next) => ServiceBookingController.create(req, res, next));
 router.get("/bookings", (req, res, next) => ServiceBookingController.list(req, res, next));
 router.get("/bookings/:id", (req, res, next) => ServiceBookingController.getById(req, res, next));
+// --- incomplete booking ---
+router.get("/incomplete-bookings", (req, res, next) => ServiceBookingController.getIncompleteBookings(req, res, next));
 
 // booking payment
 router.put('/updatePaymentStatusBooking/:id', (req, res, next) => ServiceBookingController.updatePaymentStatusBooking(req, res, next));

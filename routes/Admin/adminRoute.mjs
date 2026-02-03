@@ -41,9 +41,14 @@ router.delete("/packages/:id", (req, res, next) => PackageController.delete(req,
 // --- Service Management ---
 router.post("/services", (req, res, next) => ServiceController.create(req, res, next));
 router.get("/services", (req, res, next) => ServiceController.list(req, res, next));
+router.get("/services/names-only", (req, res, next) => ServiceController.getServiceNamesAndAdditional(req, res, next));
 router.get("/services/:id", (req, res, next) => ServiceController.getById(req, res, next));
 router.put("/services/:id", (req, res, next) => ServiceController.update(req, res, next));
 router.delete("/services/:id", (req, res, next) => ServiceController.delete(req, res, next));
+
+// --- Additional Service Management ---
+router.get("/additional-services/:serviceId", (req, res, next) => ServiceController.getAdditionalServicesByServiceId(req, res, next));
+router.patch("/additional-services/:id", (req, res, next) => ServiceController.updateAdditionalService(req, res, next));
 
 // --- Enquiries ---
 router.post("/enquiries", (req, res, next) => EnquiryController.create(req, res, next));
