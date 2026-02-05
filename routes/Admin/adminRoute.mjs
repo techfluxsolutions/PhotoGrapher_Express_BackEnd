@@ -8,6 +8,7 @@ import ServiceBookingController from "../../controllers/Admin/ServiceBookingCont
 import QuoteController from "../../controllers/Admin/QuoteController.mjs";
 import PaymentController from "../../controllers/Admin/PaymentController.mjs";
 import AdminEmailAuthController from "../../controllers/Admin/AdminEmailAuthController.mjs";
+import PhotographerController from "../../controllers/photographer/PhotographerController.mjs"; // Added Import
 import upload from "../../Config/multer.mjs";
 import { downloadInvoice } from "../../controllers/Admin/InvoiceController.mjs";
 import SubscribedUserController from "../../controllers/User/SubscribedUserController.mjs";
@@ -36,6 +37,13 @@ router.get("/packages", (req, res, next) => PackageController.getAll(req, res, n
 router.get("/packages/:id", (req, res, next) => PackageController.getOne(req, res, next));
 router.put("/packages/:id", (req, res, next) => PackageController.update(req, res, next));
 router.delete("/packages/:id", (req, res, next) => PackageController.delete(req, res, next));
+
+// --- Photographer Management (Admin) ---
+router.post("/photographers", (req, res, next) => PhotographerController.createPhotographer(req, res, next));
+router.get("/photographers", (req, res, next) => PhotographerController.getAllPhotographers(req, res, next));
+router.get("/photographers/:id", (req, res, next) => PhotographerController.getPhotographerById(req, res, next));
+router.put("/photographers/:id", (req, res, next) => PhotographerController.updatePhotographer(req, res, next));
+router.delete("/photographers/:id", (req, res, next) => PhotographerController.deletePhotographer(req, res, next));
 
 // --- Service Management ---
 router.post("/services", (req, res, next) => ServiceController.create(req, res, next));

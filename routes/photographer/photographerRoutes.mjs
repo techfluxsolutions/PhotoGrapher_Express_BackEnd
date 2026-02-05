@@ -3,10 +3,10 @@ import PhotographerController from "../../controllers/photographer/PhotographerC
 import PhotographerAuthController from "../../controllers/photographer/PhotographerAuthController.mjs";
 import AvailabilityController from "../../controllers/User/AvailabilityController.mjs";
 import JobController from "../../controllers/User/JobController.mjs";
-import PayoutController from "../../controllers/User/PayoutController.mjs";
+import PayoutController from "../../controllers/photographer/PayoutController.mjs";
 import BookingController from "../../controllers/photographer/BookingController.mjs";
 import galleryUpload from "../../Config/galleryMulter.mjs";
-//import authMiddleware from "../../middleware/authMiddleware.mjs";
+import authMiddleware from "../../middleware/authmiddleware.mjs";
 import { isPhotographer } from "../../middleware/isValid.Middleware.mjs";
 
 const router = express.Router();
@@ -17,7 +17,7 @@ router.post("/auth/forgot-password", (req, res, next) => PhotographerAuthControl
 router.post("/auth/reset-password", (req, res, next) => PhotographerAuthController.resetPassword(req, res, next));
 
 // Apply Auth and Photographer check
-//router.use(authMiddleware, isPhotographer);
+router.use(authMiddleware, isPhotographer);
 
 // --- Profile & Self ---
 // Note: Photographer management (CRUD) is mostly Admin, but Photographers can update themselves
@@ -36,7 +36,11 @@ router.get("/jobs/:id", (req, res, next) => JobController.getOne(req, res, next)
 router.patch("/jobs/:id", (req, res, next) => JobController.update(req, res, next));
 
 // --- Payouts ---
-router.get("/payouts", (req, res, next) => PayoutController.list(req, res, next)); // Controller might need filtering for 'my payouts'
+router.get("/payouts", (req, res, next) => PayoutController.getAll(req, res, next));
+router.get("/payouts/:id", (req, res, next) => PayoutController.getOne(req, res, next));
+router.post("/payouts", (req, res, next) => PayoutController.create(req, res, next));
+router.put("/payouts/:id", (req, res, next) => PayoutController.update(req, res, next));
+router.delete("/payouts/:id", (req, res, next) => PayoutController.delete(req, res, next));
 
 // -- New Routes --
 // --- Bookings ---

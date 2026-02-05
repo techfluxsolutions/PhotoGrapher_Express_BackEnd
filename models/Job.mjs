@@ -48,12 +48,11 @@ const jobSchema = new mongoose.Schema(
 );
 
 // Pre-save hook: auto-set assigned photographer if not set (optional logic)
-jobSchema.pre("save", function (next) {
+jobSchema.pre("save", async function () {
   if (!this.assigned_photographer_id && this.quote_id) {
     // You could populate quote and assign based on rules
     // For now, just allow manual assignment
   }
-  next();
 });
 
 // Virtual: Is Confirmed?

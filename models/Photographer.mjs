@@ -30,20 +30,83 @@ const photographerSchema = new mongoose.Schema(
       type: Boolean,
       default: true,
     },
-    // bank_account_holder: {
-    //   type: String,
-    //   required: [true, "Bank account holder name is required"],
-    // },
-    // bank_account_number: {
-    //   type: String,
-    //   required: [true, "Bank account number is required"],
-    //   match: [/^\d+$/, "Account number must contain only digits"],
-    // },
-    // bank_ifsc: {
-    //   type: String,
-    //   required: [true, "IFSC code is required"],
-    //   match: [/^[A-Za-z]{4}\d{7}$/, "Invalid IFSC code format"],
-    // },
+    // ===== Basic Information =====
+    basicInfo: {
+      fullName: { type: String, default: "" },
+      displayName: { type: String, default: "" },
+      email: { type: String, default: "" },
+      phone: { type: String, default: "" }
+    },
+
+    // ===== Professional Details =====
+    professionalDetails: {
+      photographerType: { type: String, default: "" }, // e.g. Wedding, Fashion, Corporate
+      yearsOfExperience: { type: String, default: "" }, // e.g. 1-3, 3-5, 5+
+      primaryLocation: { type: String, default: "" },
+      willingToTravel: { type: Boolean, default: false },
+      languagesSpoken: { type: [String], default: [] }
+    },
+
+    // ===== About You =====
+    aboutYou: { type: String, default: "" },
+
+    // ===== Services and Styles =====
+    servicesAndStyles: {
+      services: {
+        weddingPhotography: { type: Boolean, default: false },
+        preWeddingPhotography: { type: Boolean, default: false },
+        fashionPhotography: { type: Boolean, default: false },
+        corporatePhotography: { type: Boolean, default: false },
+        eventPhotography: { type: Boolean, default: false },
+        foodPhotography: { type: Boolean, default: false },
+        productPhotography: { type: Boolean, default: false }
+      },
+      styles: {
+        documentary: { type: Boolean, default: false },
+        candid: { type: Boolean, default: false },
+        editorial: { type: Boolean, default: false }
+      }
+    },
+
+    // ===== Availability Settings =====
+    availability: {
+      status: { type: String, default: "" }, // e.g. Available, Busy, On Leave
+      workingDays: { type: [String], default: [] }, // e.g. ["Monday", "Tuesday"]
+      preferredTimeSlots: { type: [String], default: [] }, // e.g. ["Morning", "Evening"]
+      maxBookingsPerDay: { type: Number, default: 1 }
+    },
+
+    // ===== Pricing Basics =====
+    pricing: {
+      startingPrice: { type: Number, default: null },
+      currency: { type: String, default: "USD" },
+      customQuotesEnabled: { type: Boolean, default: false }
+    },
+
+    // ===== Bank Details =====
+    bank_account_holder: {
+      type: String,
+      required: [false, "Bank account holder name is required"], // Made optional for initial profile
+    },
+    bank_name: {
+      type: String,
+      // required: [true, "Bank name is required"]
+    },
+    bank_account_number: {
+      type: String,
+      // required: [true, "Bank account number is required"],
+      match: [/^\d+$/, "Account number must contain only digits"],
+    },
+    bank_ifsc: {
+      type: String,
+      // required: [true, "IFSC code is required"],
+      match: [/^[A-Za-z]{4}\d{7}$/, "Invalid IFSC code format"],
+    },
+    account_type: {
+      type: String,
+      enum: ["Savings", "Current"],
+      // default: "Savings"
+    },
     status: {
       type: String,
       enum: ["active", "inactive", "pending"],
