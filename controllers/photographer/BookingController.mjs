@@ -32,8 +32,9 @@ class BookingController {
 
             const [bookings, total] = await Promise.all([
                 ServiceBooking.find(filter)
+                    .select("-gallery -images") // Optimize: Exclude heavy fields
                     .populate("client_id", "username email mobileNumber avatar")
-                    .populate("service_id", "name")
+                    .populate("service_id", "serviceName") // Select serviceName for Event Type
                     .populate("additionalServicesId")
                     .populate("photographer_id", "username")
                     .sort({ createdAt: -1 })
@@ -45,8 +46,22 @@ class BookingController {
             // Fetch galleries for these bookings (Optional: typically list view doesn't show full gallery, maybe just count or boolean)
             // For list view, we might not need gallery details.
 
+            // Format response to match UI requirements
+            const formattedBookings = bookings.map(booking => ({
+                _id: booking._id,
+                bookingId: booking.veroaBookingId,
+                client_id: booking.client_id,
+                eventType: booking.service_id?.serviceName || "N/A", // Map Service Name to Event Type
+                requirements: booking.notes || "No requirements", // Map Notes to Requirements
+                date: booking.bookingDate,
+                city: booking.city,
+                status: booking.status,
+                daysLeft: "Calculated Frontend", // Frontend logically handles this, but we can compute if needed
+                // data: booking // original data if needed
+            }));
+
             return sendSuccessResponse(res, {
-                bookings,
+                bookings: formattedBookings,
                 meta: { total, page, limit },
             }, "Bookings fetched successfully");
         } catch (error) {
@@ -60,7 +75,7 @@ class BookingController {
             const { id } = req.params;
             const booking = await ServiceBooking.findById(id)
                 .populate("client_id", "username email mobileNumber avatar")
-                .populate("service_id")
+                .populate("service_id", "serviceName") // Ensure serviceName is selected
                 .populate("additionalServicesId")
                 .populate("photographer_id", "username");
 
@@ -70,8 +85,13 @@ class BookingController {
 
             const gallery = await Gallery.findOne({ booking_id: id });
 
+            // Enhance response with helper fields while keeping original data
+            let bookingObj = booking.toObject();
+            bookingObj.eventType = booking.service_id?.serviceName || "N/A";
+            bookingObj.requirements = booking.notes || "No requirements";
+
             return sendSuccessResponse(res, {
-                booking,
+                booking: bookingObj,
                 gallery: gallery ? gallery : null
             }, "Booking fetched successfully");
         } catch (error) {

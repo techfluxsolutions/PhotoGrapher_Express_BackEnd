@@ -7,10 +7,10 @@ const payoutSchema = new mongoose.Schema(
       ref: "Photographer",
       required: [true, "Photographer ID is required"],
     },
-    job_id: {
+    booking_id: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Job",
-      required: [true, "Job ID is required"],
+      ref: "ServiceBooking",
+      required: [true, "Booking ID is required"],
     },
     payout_amount: {
       type: Number, // This might be redundant if we have paid_amount, keeping for backward compatibility or as 'current transaction amount'
@@ -59,7 +59,7 @@ payoutSchema.virtual("isProcessed").get(function () {
 });
 
 // Index
-payoutSchema.index({ photographer_id: 1, job_id: 1 }, { unique: true }); // Ensure one payout summary per job
+payoutSchema.index({ photographer_id: 1, booking_id: 1 }, { unique: true }); // Ensure one payout summary per booking
 payoutSchema.index({ status: 1 });
 payoutSchema.index({ payout_date: -1 });
 

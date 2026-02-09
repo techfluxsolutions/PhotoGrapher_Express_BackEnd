@@ -40,9 +40,9 @@ router.get("/payouts", (req, res, next) => PayoutController.getAll(req, res, nex
 router.get("/payouts/:id", (req, res, next) => PayoutController.getOne(req, res, next));
 router.post("/payouts", (req, res, next) => PayoutController.create(req, res, next));
 router.put("/payouts/:id", (req, res, next) => PayoutController.update(req, res, next));
+router.put("/payouts/booking/:bookingId", (req, res, next) => PayoutController.updateByBookingId(req, res, next)); // New Route
 router.delete("/payouts/:id", (req, res, next) => PayoutController.delete(req, res, next));
 
-// -- New Routes --
 // --- Bookings ---
 router.get("/bookings", (req, res, next) => BookingController.getAllBookings(req, res, next));
 router.get("/bookings/:id", (req, res, next) => BookingController.getBookingById(req, res, next));
