@@ -1,4 +1,5 @@
 import Admin from "../models/Admin.mjs";
+import Photographer from "../models/Photographer.mjs";
 
 export const chatRoleCheck = async (req, res, next) => {
     console.log("req.user", req.user);

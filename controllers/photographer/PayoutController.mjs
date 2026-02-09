@@ -33,7 +33,16 @@ class PayoutController {
                 })
                 .sort({ createdAt: -1 });
 
-            res.status(200).json({ success: true, data: payouts });
+            // Add invoice download URL
+            const payoutsWithInvoice = payouts.map(payout => {
+                const p = payout.toObject();
+                if (p.booking_id && p.booking_id._id) {
+                    p.invoice_download_url = `/api/photographers/invoices/${p.booking_id._id}`;
+                }
+                return p;
+            });
+
+            res.status(200).json({ success: true, data: payoutsWithInvoice });
         } catch (error) {
             next(error);
         }
@@ -57,7 +66,12 @@ class PayoutController {
                 return res.status(404).json({ success: false, message: "Payout not found" });
             }
 
-            res.status(200).json({ success: true, data: payout });
+            const payoutObj = payout.toObject();
+            if (payoutObj.booking_id && payoutObj.booking_id._id) {
+                payoutObj.invoice_download_url = `/api/photographers/invoices/${payoutObj.booking_id._id}`;
+            }
+
+            res.status(200).json({ success: true, data: payoutObj });
         } catch (error) {
             next(error);
         }

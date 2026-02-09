@@ -7,6 +7,7 @@ import {
 } from "../../utils/handleResponce.mjs";
 import fs from 'fs';
 import path from 'path';
+import { downloadInvoice } from "../../controllers/Admin/InvoiceController.mjs";
 
 class BookingController {
     // Get all bookings (with pagination and filter for photographer)
@@ -232,6 +233,7 @@ class BookingController {
         }
     }
 
+
     // Share Gallery
     async shareGallery(req, res) {
         try {
@@ -252,6 +254,12 @@ class BookingController {
         } catch (error) {
             return sendErrorResponse(res, error, 500);
         }
+    }
+
+    // Download Invoice
+    async downloadInvoice(req, res, next) {
+        // Delegate to InvoiceController logic
+        return downloadInvoice(req, res, next);
     }
 }
 

@@ -56,4 +56,8 @@ router.post("/bookings/:id/gallery", galleryUpload.array('gallery', 50), (req, r
 router.post("/bookings/:id/gallery/share", (req, res, next) => BookingController.shareGallery(req, res, next));
 
 
+// --- Invoice (For their bookings) ---
+router.get("/invoices/:bookingId", (req, res, next) => BookingController.downloadInvoice(req, res, next));
+
+
 export default router;
