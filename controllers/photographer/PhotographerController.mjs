@@ -116,16 +116,24 @@ class PhotographerController {
             const total = await Photographer.countDocuments(query);
 
             // Transform to flat structure for cleaner response
-            const transformedItems = items.map(p => ({
-                _id: p._id,
-                name: p.basicInfo?.fullName,
-                email: p.email,
-                phone: p.mobileNumber,
-                experience: p.professionalDetails?.yearsOfExperience,
-                city: p.professionalDetails?.primaryLocation,
-                status: p.status,
-                createdAt: p.createdAt
-            }));
+            const transformedItems = items.map(p => {
+                const date = new Date(p.createdAt);
+                const day = String(date.getDate()).padStart(2, '0');
+                const month = String(date.getMonth() + 1).padStart(2, '0');
+                const year = date.getFullYear();
+
+                return {
+                    _id: p._id,
+                    name: p.basicInfo?.fullName,
+                    email: p.email,
+                    phone: p.mobileNumber,
+                    experience: p.professionalDetails?.yearsOfExperience,
+                    city: p.professionalDetails?.primaryLocation,
+                    status: p.status,
+                    createdAt: p.createdAt,
+                    signUpDate: `${day}/${month}/${year}`
+                };
+            });
 
             res.status(200).json({
                 success: true,
