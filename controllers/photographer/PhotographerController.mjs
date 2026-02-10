@@ -80,7 +80,7 @@ class PhotographerController {
 
             res.status(201).json({
                 success: true,
-                message: "Unverified photographer added successfully",
+                message: "Photographer added successfully",
                 photographer: {
                     _id: newPhotographer._id,
                     name: newPhotographer.basicInfo.fullName,
@@ -89,7 +89,8 @@ class PhotographerController {
                     experience: newPhotographer.professionalDetails.yearsOfExperience,
                     city: newPhotographer.professionalDetails.primaryLocation,
                     status: newPhotographer.status,
-                    createdAt: newPhotographer.createdAt
+                    createdAt: newPhotographer.createdAt,
+                    signUpDate: `${String(newPhotographer.createdAt.getDate()).padStart(2, '0')}/${String(newPhotographer.createdAt.getMonth() + 1).padStart(2, '0')}/${newPhotographer.createdAt.getFullYear()}`
                 }
             });
 
@@ -282,18 +283,67 @@ class PhotographerController {
                 return res.status(400).json({ message: "Photographer ID required" });
             }
 
+            let updateData = { ...req.body };
+
             // Handle password update if present
-            if (req.body.password) {
+            if (updateData.password) {
                 const salt = await bcrypt.genSalt(10);
-                req.body.password = await bcrypt.hash(req.body.password, salt);
+                updateData.password = await bcrypt.hash(updateData.password, salt);
             }
 
-            // Using findByIdAndUpdate with $set to handle updates. 
-            // Since req.body might contain nested objects (basicInfo, etc.), Mongoose handles partial updates 
-            // if we structure it right, or replaces the nested object if we pass the whole object.
-            // For profile updates, passing the whole nested object (e.g. basicInfo) from frontend is standard.
+            // Handle Profile Photo Upload
+            if (req.file) {
+                // Ensure basicInfo is an object
+                if (typeof updateData.basicInfo === 'string') {
+                    try {
+                        updateData.basicInfo = JSON.parse(updateData.basicInfo);
+                    } catch (e) {
+                        updateData.basicInfo = {};
+                    }
+                } else if (!updateData.basicInfo) {
+                    updateData.basicInfo = {};
+                }
 
-            const photographer = await Photographer.findByIdAndUpdate(id, req.body, {
+                // Merge profilePhoto into basicInfo
+                updateData.basicInfo = {
+                    ...updateData.basicInfo,
+                    profilePhoto: `/uploads/${req.file.filename}`
+                };
+            }
+
+            // Parse Schema Fields if they are JSON strings (from FormData)
+            const jsonFields = [
+                'basicInfo',
+                'professionalDetails',
+                'servicesAndStyles',
+                'availability',
+                'pricing',
+                'photographyAccessories',
+                'bank_details' // keys like bank_name are top level but just in case user nested them? 
+                // Actually schema has flat bank (bank_name etc) and nested (basicInfo etc)
+                // Only nested arrays/objects need parsing.
+            ];
+
+            // Add fields that are definitely objects/arrays in Schema
+            // function to try parse
+            const tryParse = (key) => {
+                if (updateData[key] && typeof updateData[key] === 'string') {
+                    try {
+                        updateData[key] = JSON.parse(updateData[key]);
+                    } catch (e) {
+                        // console.error(`Failed to parse ${key}`, e);
+                    }
+                }
+            };
+
+            tryParse('basicInfo');
+            tryParse('professionalDetails');
+            tryParse('servicesAndStyles');
+            tryParse('availability');
+            tryParse('pricing');
+            tryParse('photographyAccessories');
+
+            const photographer = await Photographer.findByIdAndUpdate(id, updateData, {
                 new: true,
                 runValidators: true
             });

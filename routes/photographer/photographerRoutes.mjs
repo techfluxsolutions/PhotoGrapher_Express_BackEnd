@@ -1,4 +1,5 @@
 import express from "express";
+import upload from "../../Config/multer.mjs";
 import PhotographerController from "../../controllers/photographer/PhotographerController.mjs";
 import PhotographerAuthController from "../../controllers/photographer/PhotographerAuthController.mjs";
 import AvailabilityController from "../../controllers/User/AvailabilityController.mjs";
@@ -25,7 +26,7 @@ router.use(authMiddleware, isPhotographer);
 // --- Profile & Self ---
 // Note: Photographer management (CRUD) is mostly Admin, but Photographers can update themselves
 router.get("/me", (req, res, next) => PhotographerController.getPhotographerById(req, res, next));
-router.put("/me", (req, res, next) => PhotographerController.updatePhotographer(req, res, next));
+router.put("/me", upload.single('profilePhoto'), (req, res, next) => PhotographerController.updatePhotographer(req, res, next));
 
 // --- Availability ---
 router.post("/availability", (req, res, next) => AvailabilityController.create(req, res, next));

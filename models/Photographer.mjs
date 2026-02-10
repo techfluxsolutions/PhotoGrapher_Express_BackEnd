@@ -36,7 +36,8 @@ const photographerSchema = new mongoose.Schema(
       fullName: { type: String, default: "" },
       displayName: { type: String, default: "" },
       email: { type: String, default: "" },
-      phone: { type: String, default: "" }
+      phone: { type: String, default: "" },
+      profilePhoto: { type: String, default: "" } // URL to profile photo
     },
 
     // ===== Professional Details =====
@@ -106,7 +107,7 @@ const photographerSchema = new mongoose.Schema(
     bank_ifsc: {
       type: String,
       // required: [true, "IFSC code is required"],
-      match: [/^[A-Za-z]{4}\d{7}$/, "Invalid IFSC code format"],
+      match: [/^[A-Za-z]{4}0[A-Za-z0-9]{6}$/, "Invalid IFSC code format (Example: HDFC0001234)"],
     },
     account_type: {
       type: String,
