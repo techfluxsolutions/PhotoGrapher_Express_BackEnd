@@ -39,6 +39,13 @@ router.put("/packages/:id", (req, res, next) => PackageController.update(req, re
 router.delete("/packages/:id", (req, res, next) => PackageController.delete(req, res, next));
 
 // --- Photographer Management (Admin) ---
+router.post("/photographers/unverified", (req, res, next) => PhotographerController.addUnverifiedPhotographer(req, res, next));
+router.get("/photographers/unverified", (req, res, next) => PhotographerController.getUnverifiedPhotographers(req, res, next));
+router.post("/photographers/verify/:id", (req, res, next) => PhotographerController.verifyPhotographer(req, res, next));
+router.post("/photographers/profile/:id", (req, res, next) => PhotographerController.createProfile(req, res, next));
+router.put("/photographers/unverified/:id", (req, res, next) => PhotographerController.updatePhotographer(req, res, next));
+router.delete("/photographers/unverified/:id", (req, res, next) => PhotographerController.deletePhotographer(req, res, next));
+
 router.post("/photographers", (req, res, next) => PhotographerController.createPhotographer(req, res, next));
 router.get("/photographers", (req, res, next) => PhotographerController.getAllPhotographers(req, res, next));
 router.get("/photographers/:id", (req, res, next) => PhotographerController.getPhotographerById(req, res, next));

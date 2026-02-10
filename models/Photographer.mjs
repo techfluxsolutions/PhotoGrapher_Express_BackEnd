@@ -4,10 +4,11 @@ const photographerSchema = new mongoose.Schema(
   {
     username: {
       type: String,
-      required: [true, "Username is required"],
+      required: false,
       unique: true,
       trim: true,
       lowercase: true,
+      sparse: true,
     },
     mobileNumber: {
       type: String,
@@ -41,6 +42,11 @@ const photographerSchema = new mongoose.Schema(
     // ===== Professional Details =====
     professionalDetails: {
       photographerType: { type: String, default: "" }, // e.g. Wedding, Fashion, Corporate
+      expertiseLevel: {
+        type: String,
+        enum: ["Beginner", "Intermediate", "Professional", ""],
+        default: ""
+      },
       yearsOfExperience: { type: String, default: "" }, // e.g. 1-3, 3-5, 5+
       primaryLocation: { type: String, default: "" },
       willingToTravel: { type: Boolean, default: false },
@@ -123,10 +129,18 @@ const photographerSchema = new mongoose.Schema(
     },
     password: {
       type: String,
-      required: [true, "Password is required"],
+      required: false,
     },
     resetPasswordToken: String,
     resetPasswordExpires: Date,
+
+    // ===== Equipment & Accessories =====
+    photographyAccessories: [
+      {
+        name: { type: String, required: true },
+        category: { type: String, required: true }, // e.g., Support, Lighting, Optics
+      }
+    ],
   },
   {
     timestamps: true,

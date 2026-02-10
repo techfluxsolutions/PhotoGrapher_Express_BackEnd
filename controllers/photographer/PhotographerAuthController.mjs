@@ -1,5 +1,6 @@
 import PhotographerDB from "../../models/Photographer.mjs";
 import { signToken } from "../../utils/jwt.mjs";
+import bcrypt from "bcrypt";
 import {
   sendErrorResponse,
   sendSuccessResponse,
@@ -16,16 +17,21 @@ class PhotographerAuthController {
       }
 
       // Find photographer by email
-        // Note: Check if the user is a photographer? The model has isPhotographer: true default.
+      // Note: Check if the user is a photographer? The model has isPhotographer: true default.
       const photographer = await PhotographerDB.findOne({ email });
 
       if (!photographer) {
         return sendErrorResponse(res, "Invalid email or password", 401);
       }
 
-      // Simple password check (plain text as requested)
-      if (photographer.password !== password) {
-        return sendErrorResponse(res, "Invalid email or password", 401);
+      // Password Check (Support both hashed and legacy plain text if needed, but primarily hashed)
+      const isMatch = await bcrypt.compare(password, photographer.password);
+
+      if (!isMatch) {
+        // Fallback for plain text (if any exist during transition) - Optional
+        if (photographer.password !== password) {
+          return sendErrorResponse(res, "Invalid email or password", 401);
+        }
       }
 
       // Generate Token
@@ -89,7 +95,7 @@ class PhotographerAuthController {
       // MOCK Email Sending
       // In a real app, send an email here.
       // For now, return the token in the response so the user can use it.
-      
+
       console.log(`[MOCK EMAIL] Password reset token for ${email}: ${resetToken}`);
 
       return sendSuccessResponse(
@@ -108,33 +114,33 @@ class PhotographerAuthController {
   // Reset Password
   async resetPassword(req, res) {
     try {
-        const { token, newPassword } = req.body;
+      const { token, newPassword } = req.body;
 
-        if (!token || !newPassword) {
-            return sendErrorResponse(res, "Token and new password are required", 400);
-        }
+      if (!token || !newPassword) {
+        return sendErrorResponse(res, "Token and new password are required", 400);
+      }
 
-        const photographer = await PhotographerDB.findOne({
-            resetPasswordToken: token,
-            resetPasswordExpires: { $gt: Date.now() },
-        });
+      const photographer = await PhotographerDB.findOne({
+        resetPasswordToken: token,
+        resetPasswordExpires: { $gt: Date.now() },
+      });
 
-        if (!photographer) {
-            return sendErrorResponse(res, "Invalid or expired token", 400);
-        }
+      if (!photographer) {
+        return sendErrorResponse(res, "Invalid or expired token", 400);
+      }
 
-        // Set new password (plain text as requested)
-        photographer.password = newPassword;
-        photographer.resetPasswordToken = undefined;
-        photographer.resetPasswordExpires = undefined;
+      // Set new password (plain text as requested)
+      photographer.password = newPassword;
+      photographer.resetPasswordToken = undefined;
+      photographer.resetPasswordExpires = undefined;
 
-        await photographer.save();
+      await photographer.save();
 
-        return sendSuccessResponse(res, null, "Password reset successful", 200);
+      return sendSuccessResponse(res, null, "Password reset successful", 200);
 
     } catch (error) {
-        console.error("Reset password error:", error);
-        return sendErrorResponse(res, error.message, 500);
+      console.error("Reset password error:", error);
+      return sendErrorResponse(res, error.message, 500);
     }
   }
 }

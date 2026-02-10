@@ -16,7 +16,10 @@ router.post("/auth/login", (req, res, next) => PhotographerAuthController.login(
 router.post("/auth/forgot-password", (req, res, next) => PhotographerAuthController.forgotPassword(req, res, next));
 router.post("/auth/reset-password", (req, res, next) => PhotographerAuthController.resetPassword(req, res, next));
 
-// Apply Auth and Photographer check
+
+
+
+// Apply Auth and Photographer check for subsequent routes
 router.use(authMiddleware, isPhotographer);
 
 // --- Profile & Self ---
