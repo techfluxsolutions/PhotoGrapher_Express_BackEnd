@@ -80,7 +80,7 @@ class PhotographerController {
             if (!photographer) {
                 return res.status(404).json({ message: "Photographer not found" });
             }
-            res.status(200).json({ message: "Photographer fetched successfully", photographer });
+            res.status(200).json({ success: true, message: "Photographer fetched successfully", photographer });
         } catch (error) {
             res.status(500).json({ message: "Failed to fetch photographer", error: error.message });
         }
