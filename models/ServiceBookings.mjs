@@ -119,9 +119,8 @@ const serviceBookingSchema = new mongoose.Schema(
       sparse: true
     },
     is_Incomplete: {
-      type: String,
-      enum: ["Yes", "No"],
-      default: "No"
+      type: Boolean,
+      default: false
     }
   },
   { timestamps: true }
