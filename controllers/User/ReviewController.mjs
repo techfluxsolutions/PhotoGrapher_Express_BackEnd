@@ -1,22 +1,19 @@
 import ReviewAndRating from "../../models/ReviewAndRating.mjs";
-
+import ServiceBooking from "../../models/ServiceBookings.mjs";
 class ReviewController {
   async create(req, res, next) {
     try {
       const {
         clientId,
-        photographerId,
         bookingId,
-        serviceId,
         ratingCount,
-        rateComments,
       } = req.body;
 
       // Prevent duplicate review for same booking by same client
       const existingReview = await ReviewAndRating.findOne({
         clientId,
         bookingId,
-        serviceId,
+
       });
 
       if (existingReview) {
