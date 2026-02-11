@@ -63,7 +63,7 @@ class ChatController {
 
             let pinedBookings;
 
-            const gotBookings = await ServiceBooking.findOne({ _id: conversation.bookingId }).populate('service_Id additionalServices', 'serviceName')
+            const gotBookings = await ServiceBooking.findOne({ _id: conversation.bookingId }).populate('service_id additionalServicesId', 'serviceName serviceCost')
             if (gotBookings) {
                 pinedBookings = gotBookings;
             } else {
