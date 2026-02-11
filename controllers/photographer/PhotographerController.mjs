@@ -2,27 +2,68 @@ import Photographer from "../../models/Photographer.mjs";
 import bcrypt from "bcrypt";
 
 class PhotographerController {
-    // get all photographers (Admin or Public listing) - Defaults to ACTIVE/VERIFIED
+    // Get All Photographers (Unified endpoint with filtering)
     async getAllPhotographers(req, res) {
         try {
             const page = Math.max(1, parseInt(req.query.page) || 1);
             const limit = Math.max(1, parseInt(req.query.limit) || 20);
             const skip = (page - 1) * limit;
 
-            // Filter by status (default to active if not specified, or allowing query override)
-            const query = { status: "active" };
+            // Filter logic
+            let query = {};
+            // Default to 'active' if no status is provided
+            if (!req.query.status) {
+                query = { status: "active" };
+            } else if (req.query.status !== 'all') {
+                // If specific status (e.g. 'pending', 'active') is requested
+                query = { status: req.query.status };
+            }
 
-            const items = await Photographer.find(query).skip(skip).limit(limit);
+            const items = await Photographer.find(query)
+                .select('basicInfo.fullName email mobileNumber professionalDetails.yearsOfExperience professionalDetails.primaryLocation status createdAt')
+                .skip(skip)
+                .limit(limit)
+                .sort({ createdAt: -1 });
+
             const total = await Photographer.countDocuments(query);
 
+            // Transform response
+            const transformedItems = items.map(p => this._transformPhotographerData(p));
+
             res.status(200).json({
+                success: true,
                 message: "Photographers fetched successfully",
-                photographers: items,
+                photographers: transformedItems,
                 meta: { total, page, limit }
             });
         } catch (error) {
             res.status(500).json({ message: "Failed to fetch photographers", error: error.message });
         }
+    }
+
+    // Helper to transform photographer data uniformly
+    _transformPhotographerData(p) {
+        const date = new Date(p.createdAt);
+        const day = String(date.getDate()).padStart(2, '0');
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const year = date.getFullYear();
+
+        let verificationStatus = "Inactive";
+        if (p.status === 'active') verificationStatus = "Verified";
+        if (p.status === 'pending') verificationStatus = "Unverified";
+
+        return {
+            _id: p._id,
+            name: p.basicInfo?.fullName,
+            email: p.email,
+            phone: p.mobileNumber,
+            experience: p.professionalDetails?.yearsOfExperience,
+            city: p.professionalDetails?.primaryLocation,
+            status: p.status,
+            verificationStatus: verificationStatus,
+            createdAt: p.createdAt,
+            signUpDate: `${day}/${month}/${year}`
+        };
     }
 
     // get photographer by id (Supports Admin/Public via :id, or Self via Auth)
@@ -99,52 +140,7 @@ class PhotographerController {
         }
     }
 
-    // Get Unverified Photographers
-    async getUnverifiedPhotographers(req, res) {
-        try {
-            const page = Math.max(1, parseInt(req.query.page) || 1);
-            const limit = Math.max(1, parseInt(req.query.limit) || 20);
-            const skip = (page - 1) * limit;
 
-            const query = { status: "pending" };
-
-            const items = await Photographer.find(query)
-                .select('basicInfo.fullName email mobileNumber professionalDetails.yearsOfExperience professionalDetails.primaryLocation status createdAt')
-                .skip(skip)
-                .limit(limit)
-                .sort({ createdAt: -1 });
-
-            const total = await Photographer.countDocuments(query);
-
-            // Transform to flat structure for cleaner response
-            const transformedItems = items.map(p => {
-                const date = new Date(p.createdAt);
-                const day = String(date.getDate()).padStart(2, '0');
-                const month = String(date.getMonth() + 1).padStart(2, '0');
-                const year = date.getFullYear();
-
-                return {
-                    _id: p._id,
-                    name: p.basicInfo?.fullName,
-                    email: p.email,
-                    phone: p.mobileNumber,
-                    experience: p.professionalDetails?.yearsOfExperience,
-                    city: p.professionalDetails?.primaryLocation,
-                    status: p.status,
-                    createdAt: p.createdAt,
-                    signUpDate: `${day}/${month}/${year}`
-                };
-            });
-
-            res.status(200).json({
-                success: true,
-                photographers: transformedItems,
-                meta: { total, page, limit }
-            });
-        } catch (error) {
-            res.status(500).json({ message: "Failed to fetch unverified photographers", error: error.message });
-        }
-    }
 
     // Update Unverified Photographer
     async updateUnverifiedPhotographer(req, res) {

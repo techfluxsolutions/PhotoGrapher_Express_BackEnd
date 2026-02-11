@@ -9,6 +9,7 @@ import BookingController from "../../controllers/photographer/BookingController.
 import galleryUpload from "../../Config/galleryMulter.mjs";
 import authMiddleware from "../../middleware/authmiddleware.mjs";
 import { isPhotographer } from "../../middleware/isValid.Middleware.mjs";
+import ServiceController from "../../controllers/User/ServiceController.mjs";
 
 const router = express.Router();
 
@@ -63,5 +64,8 @@ router.post("/bookings/:id/gallery/share", (req, res, next) => BookingController
 // --- Invoice (For their bookings) ---
 router.get("/invoices/:bookingId", (req, res, next) => BookingController.downloadInvoice(req, res, next));
 
+// --- Services ---
+router.get("/servicename", (req, res, next) => ServiceController.getServiceNameOnly(req, res, next));
+router.get("/services/:id", (req, res, next) => ServiceController.getById(req, res, next));
 
 export default router;
