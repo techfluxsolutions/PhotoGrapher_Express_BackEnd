@@ -27,6 +27,7 @@ class ReviewController {
       }
 
       const data = await ReviewAndRating.create(req.body);
+      await ServiceBooking.findByIdAndUpdate(bookingId, { ratingsGivenByClient: ratingCount / 2 });
       res.status(201).json({ success: true, data });
     } catch (error) {
       next(error);

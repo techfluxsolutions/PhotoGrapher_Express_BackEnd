@@ -121,7 +121,11 @@ const serviceBookingSchema = new mongoose.Schema(
     is_Incomplete: {
       type: Boolean,
       default: false
-    }
+    },
+    ratingsGivenByClient: {
+      type: Number,
+      default: 0
+    },
   },
   { timestamps: true }
 );
