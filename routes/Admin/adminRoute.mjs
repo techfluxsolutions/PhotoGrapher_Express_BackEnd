@@ -43,7 +43,8 @@ router.post("/photographers/unverified", (req, res, next) => PhotographerControl
 router.get("/photographers/unverified", (req, res, next) => PhotographerController.getUnverifiedPhotographers(req, res, next));
 router.post("/photographers/verify/:id", (req, res, next) => PhotographerController.verifyPhotographer(req, res, next));
 router.post("/photographers/profile/:id", (req, res, next) => PhotographerController.createProfile(req, res, next));
-router.put("/photographers/unverified/:id", (req, res, next) => PhotographerController.updatePhotographer(req, res, next));
+router.get("/photographers/profile/:id", (req, res, next) => PhotographerController.getPhotographerById(req, res, next));
+router.put("/photographers/unverified/:id", (req, res, next) => PhotographerController.updateUnverifiedPhotographer(req, res, next));
 router.delete("/photographers/unverified/:id", (req, res, next) => PhotographerController.deletePhotographer(req, res, next));
 
 router.post("/photographers", (req, res, next) => PhotographerController.createPhotographer(req, res, next));
@@ -55,6 +56,7 @@ router.delete("/photographers/:id", (req, res, next) => PhotographerController.d
 // --- Service Management ---
 router.post("/services", (req, res, next) => ServiceController.create(req, res, next));
 router.get("/services", (req, res, next) => ServiceController.list(req, res, next));
+router.get("/servicename", (req, res, next) => ServiceController.getServiceNameOnly(req, res, next));
 router.get("/services/names-only", (req, res, next) => ServiceController.getServiceNamesAndAdditional(req, res, next));
 router.get("/services/:id", (req, res, next) => ServiceController.getById(req, res, next));
 router.put("/services/:id", (req, res, next) => ServiceController.update(req, res, next));

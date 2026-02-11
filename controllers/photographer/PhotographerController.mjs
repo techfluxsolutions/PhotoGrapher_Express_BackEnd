@@ -146,6 +146,61 @@ class PhotographerController {
         }
     }
 
+    // Update Unverified Photographer
+    async updateUnverifiedPhotographer(req, res) {
+        try {
+            const { id } = req.params;
+            const { name, email, phone, experience, city } = req.body;
+
+            const photographer = await Photographer.findById(id);
+
+            if (!photographer) {
+                return res.status(404).json({ message: "Photographer not found" });
+            }
+
+            // Optional: Check if email is being changed and if it conflicts
+            if (email && email !== photographer.email) {
+                const existingUser = await Photographer.findOne({ email });
+                if (existingUser) {
+                    return res.status(400).json({ message: "Email already exists" });
+                }
+            }
+
+            // Update fields manually as per the schema structure for unverified (pending) photographers
+            if (name) photographer.basicInfo.fullName = name;
+            if (email) {
+                photographer.email = email;
+                photographer.basicInfo.email = email;
+            }
+            if (phone) {
+                photographer.mobileNumber = phone;
+                photographer.basicInfo.phone = phone;
+            }
+            if (experience) photographer.professionalDetails.yearsOfExperience = experience;
+            if (city) photographer.professionalDetails.primaryLocation = city;
+
+            await photographer.save();
+
+            res.status(200).json({
+                success: true,
+                message: "Unverified photographer updated successfully",
+                photographer: {
+                    _id: photographer._id,
+                    name: photographer.basicInfo.fullName,
+                    email: photographer.email,
+                    phone: photographer.mobileNumber,
+                    experience: photographer.professionalDetails.yearsOfExperience,
+                    city: photographer.professionalDetails.primaryLocation,
+                    status: photographer.status,
+                    createdAt: photographer.createdAt
+                }
+            });
+
+        } catch (error) {
+            res.status(500).json({ message: "Failed to update unverified photographer", error: error.message });
+        }
+    }
+
     // Verify Photographer (Password + Status Activation Only)
     async verifyPhotographer(req, res) {
         try {
