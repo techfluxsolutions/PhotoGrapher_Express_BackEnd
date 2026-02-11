@@ -22,6 +22,7 @@ const serviceSchema = new mongoose.Schema(
     },
     additionalServices: {
       type: [Object],
+      ref: "AdditionalService",
       default: []
     }
   },

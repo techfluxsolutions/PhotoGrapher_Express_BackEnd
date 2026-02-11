@@ -63,13 +63,12 @@ class ChatController {
 
             let pinedBookings;
 
-            const gotBookings = await ServiceBooking.findOne({ _id: conversation.bookingId });
+            const gotBookings = await ServiceBooking.findOne({ _id: conversation.bookingId }).populate('serviceId additionalServices', 'serviceName')
             if (gotBookings) {
                 pinedBookings = gotBookings;
             } else {
-                pinedBookings = await Quote.findOne({ _id: conversation.quoteId });
+                pinedBookings = await Quote.findOne({ _id: conversation.quoteId }).populate('serviceId', 'serviceName');
             }
-
 
             const messages = await Message.find({ conversationId: conversation._id })
                 .sort({ createdAt: -1 }) // Get latest first
