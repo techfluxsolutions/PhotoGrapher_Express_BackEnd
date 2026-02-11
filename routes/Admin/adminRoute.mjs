@@ -40,7 +40,7 @@ router.delete("/packages/:id", (req, res, next) => PackageController.delete(req,
 
 // --- Photographer Management (Admin) ---
 router.post("/photographers/unverified", (req, res, next) => PhotographerController.addUnverifiedPhotographer(req, res, next));
-router.get("/photographers/unverified", (req, res, next) => PhotographerController.getUnverifiedPhotographers(req, res, next));
+// router.get("/photographers/unverified", (req, res, next) => PhotographerController.getUnverifiedPhotographers(req, res, next)); // Removed - use /photographers?status=pending
 router.post("/photographers/verify/:id", (req, res, next) => PhotographerController.verifyPhotographer(req, res, next));
 router.post("/photographers/profile/:id", (req, res, next) => PhotographerController.createProfile(req, res, next));
 router.get("/photographers/profile/:id", (req, res, next) => PhotographerController.getPhotographerById(req, res, next));
