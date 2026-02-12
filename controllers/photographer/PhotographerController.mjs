@@ -1,4 +1,5 @@
 import Photographer from "../../models/Photographer.mjs";
+import PlatformSettings from "../../models/PlatformSettings.mjs";
 import bcrypt from "bcrypt";
 
 class PhotographerController {
@@ -20,7 +21,7 @@ class PhotographerController {
             }
 
             const items = await Photographer.find(query)
-                .select('basicInfo.fullName email mobileNumber professionalDetails.yearsOfExperience professionalDetails.primaryLocation professionalDetails.startUpDate status createdAt')
+                .select('basicInfo.fullName email mobileNumber professionalDetails.yearsOfExperience professionalDetails.primaryLocation professionalDetails.startUpDate status createdAt commissionPercentage')
                 .skip(skip)
                 .limit(limit)
                 .sort({ createdAt: -1 });
@@ -62,7 +63,8 @@ class PhotographerController {
             status: p.status,
             verificationStatus: verificationStatus,
             createdAt: p.createdAt,
-            signUpDate: p.professionalDetails?.startUpDate || `${day}/${month}/${year}`
+            signUpDate: p.professionalDetails?.startUpDate || `${day}/${month}/${year}`,
+            commissionPercentage: p.commissionPercentage || 0
         };
     }
 
@@ -428,9 +430,70 @@ class PhotographerController {
             if (!photographer) {
                 return res.status(200).json({ message: "Photographer not found" });
             }
-            res.status(200).json({ message: "Photographer deleted successfully", photographer });
+            res.status(200).json({ success: true, message: "Photographer deleted successfully", photographer });
         } catch (error) {
-            res.status(500).json({ message: "Failed to delete photographer", error: error.message });
+            res.status(500).json({ success: false, message: "Failed to delete photographer", error: error.message });
+        }
+    }
+
+    async updateCommissions(req, res) {
+        try {
+            const { basic, intermediate, professional } = req.body;
+
+            const updates = [];
+
+            if (basic !== undefined) {
+                updates.push(Photographer.updateMany(
+                    { "professionalDetails.expertiseLevel": "Beginner" },
+                    { $set: { commissionPercentage: basic } }
+                ));
+            }
+
+            if (intermediate !== undefined) {
+                updates.push(Photographer.updateMany(
+                    { "professionalDetails.expertiseLevel": "Intermediate" },
+                    { $set: { commissionPercentage: intermediate } }
+                ));
+            }
+
+            if (professional !== undefined) {
+                updates.push(Photographer.updateMany(
+                    { "professionalDetails.expertiseLevel": "Professional" },
+                    { $set: { commissionPercentage: professional } }
+                ));
+            }
+
+            await Promise.all(updates);
+
+            // Update Global Settings
+            await PlatformSettings.findOneAndUpdate(
+                { type: "commissions" },
+                {
+                    $set: {
+                        ...(basic !== undefined && { basic }),
+                        ...(intermediate !== undefined && { intermediate }),
+                        ...(professional !== undefined && { professional })
+                    }
+                },
+                { upsert: true, new: true }
+            );
+
+            res.status(200).json({ message: "Commissions updated successfully" });
+        } catch (error) {
+            console.error("Error updating commissions:", error);
+            res.status(500).json({ message: "Failed to update commissions", error: error.message });
+        }
+    }
+    async getCommissions(req, res) {
+        try {
+            const settings = await PlatformSettings.findOne({ type: "commissions" });
+            res.status(200).json({
+                success: true,
+                commissions: settings || { basic: 0, intermediate: 0, professional: 0 }
+            });
+        } catch (error) {
+            console.error("Error fetching commissions:", error);
+            res.status(500).json({ message: "Failed to fetch commissions", error: error.message });
         }
     }
 }

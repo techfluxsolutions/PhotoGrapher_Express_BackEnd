@@ -138,6 +138,12 @@ const photographerSchema = new mongoose.Schema(
     },
     resetPasswordToken: String,
     resetPasswordExpires: Date,
+    commissionPercentage: {
+      type: Number,
+      default: 0,
+      min: 0,
+      max: 100
+    },
 
     // ===== Equipment & Accessories =====
     photographyAccessories: [

@@ -48,6 +48,8 @@ router.post("/photographers/profile/:id", (req, res, next) => PhotographerContro
 router.get("/photographers/profile/:id", (req, res, next) => PhotographerController.getPhotographerById(req, res, next));
 router.put("/photographers/unverified/:id", (req, res, next) => PhotographerController.updateUnverifiedPhotographer(req, res, next));
 router.delete("/photographers/unverified/:id", (req, res, next) => PhotographerController.deletePhotographer(req, res, next));
+router.put("/photographers/commissions", (req, res, next) => PhotographerController.updateCommissions(req, res, next));
+router.get("/photographers/commissions", (req, res, next) => PhotographerController.getCommissions(req, res, next));
 
 router.post("/photographers", (req, res, next) => PhotographerController.createPhotographer(req, res, next));
 router.get("/photographers", (req, res, next) => PhotographerController.getAllPhotographers(req, res, next));
