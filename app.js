@@ -29,6 +29,7 @@ initSocket(server);
 app.use(express.json());
 app.use(cookieParser());
 app.use("/uploads", express.static(path.resolve("uploads")));
+app.use("/assests", express.static(path.resolve("assests")));
 // app.use(
 //   cors({
 //     origin: [
