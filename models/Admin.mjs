@@ -11,9 +11,10 @@ const adminSchema = new mongoose.Schema(
     },
     mobileNumber: {
       type: String,
-      required: [true, "Mobile number is required"],
+      required: false,
       unique: true,
       trim: true,
+      sparse: true,
       lowercase: true,
     },
     email: {
@@ -46,6 +47,16 @@ const adminSchema = new mongoose.Schema(
     can_followup_photographer: { type: Boolean, default: false },
     can_manage_packages: { type: Boolean, default: false },
     can_view_reports: { type: Boolean, default: false },
+    status: {
+      type: String,
+      enum: ["active", "inactive"],
+      default: "active",
+    },
+    createdBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Admin",
+      default: null,
+    },
   },
   {
     timestamps: true,

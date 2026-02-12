@@ -29,7 +29,7 @@ class RoleController {
             if (permissions && permissions.length > 0) {
                 const validPermissions = [
                     'Dashboard', 'Photographers', 'Customers', 'Bookings', 'Payments',
-                    'Services', 'Quotes', 'Commission', 'Subscribers', 'Roles', 'Disputes'
+                    'Services', 'Quotes', 'Commission', 'Subscribers', 'Roles'
                 ];
                 const invalidPermissions = permissions.filter(p => !validPermissions.includes(p));
                 if (invalidPermissions.length > 0) {
@@ -46,35 +46,11 @@ class RoleController {
                 permissions: permissions || []
             });
 
-            // If email and password provided, create a new admin user with this role
-            let newAdmin = null;
-            if (email && password) {
-                // Check if admin email already exists
-                const existingAdmin = await AdminEmailAuth.findOne({ email });
-                if (existingAdmin) {
-                    return res.status(400).json({
-                        success: false,
-                        message: "Admin email already exists"
-                    });
-                }
-
-                const hashedPassword = await bcrypt.hash(password, 10);
-
-                newAdmin = await AdminEmailAuth.create({
-                    email,
-                    password: hashedPassword,
-                    role: newRole._id,
-                    permissions: newRole.permissions, // Copy permissions to user for quick access if needed
-                    isActive: true
-                });
-            }
-
             res.status(201).json({
                 success: true,
                 message: "Role created successfully",
                 data: {
-                    role: newRole,
-                    admin: newAdmin
+                    role: newRole
                 }
             });
         } catch (error) {
@@ -90,10 +66,21 @@ class RoleController {
 
     async getAll(req, res, next) {
         try {
-            const roles = await Role.find();
+            const page = parseInt(req.query.page) || 1;
+            const limit = parseInt(req.query.limit) || 10;
+            const skip = (page - 1) * limit;
+
+            const total = await Role.countDocuments();
+            const roles = await Role.find().skip(skip).limit(limit).sort({ createdAt: -1 });
+
             res.status(200).json({
                 success: true,
-                data: roles
+                data: roles,
+                meta: {
+                    total,
+                    page,
+                    limit
+                }
             });
         } catch (error) {
             next(error);

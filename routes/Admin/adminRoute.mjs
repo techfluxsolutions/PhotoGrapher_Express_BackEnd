@@ -15,6 +15,7 @@ import SubscribedUserController from "../../controllers/User/SubscribedUserContr
 import AdminController from "../../controllers/User/AdminController.mjs";
 import SidebarIconController from "../../controllers/Admin/SidebarIconController.mjs";
 import RoleController from "../../controllers/Admin/RoleController.mjs";
+import StaffController from "../../controllers/Admin/StaffController.mjs";
 const router = express.Router();
 
 // --- Admin Authentication (No middleware required) ---
@@ -152,9 +153,17 @@ router.get("/roles/:id", (req, res, next) => RoleController.getById(req, res, ne
 router.put("/roles/:id", (req, res, next) => RoleController.update(req, res, next));
 router.delete("/roles/:id", (req, res, next) => RoleController.delete(req, res, next));
 
+// --- Staff Management ---
+router.post("/staff", (req, res, next) => StaffController.create(req, res, next));
+router.get("/staff", (req, res, next) => StaffController.getAll(req, res, next));
+router.get("/staff/:id", (req, res, next) => StaffController.getById(req, res, next));
+router.put("/staff/:id", (req, res, next) => StaffController.update(req, res, next));
+router.delete("/staff/:id", (req, res, next) => StaffController.delete(req, res, next));
+
 // --- Admin Management (MUST BE LAST - generic /:id routes) ---
 router.post("/", upload.single("avatar"), (req, res, next) => AdminController.create(req, res, next));
 router.get("/", (req, res, next) => AdminController.getAll(req, res, next));
+router.put("/:id/status", (req, res, next) => AdminController.changeStatus(req, res, next));
 router.get("/:id", (req, res, next) => AdminController.getById(req, res, next));
 router.put("/:id", (req, res, next) => AdminController.update(req, res, next));
 router.delete("/:id", (req, res, next) => AdminController.delete(req, res, next));

@@ -12,6 +12,10 @@ class AdminController {
       if (req.file) {
         payload.avatar = req.file.path;
       }
+      // Track creator if available
+      if (req.user && req.user.id) {
+        payload.createdBy = req.user.id;
+      }
       const { email } = payload;
       const isEmailExist = await AdminDB.findOne({ email: email });
       if (isEmailExist) {
@@ -86,6 +90,32 @@ class AdminController {
           .status(404)
           .json({ success: false, message: "Admin not found" });
       return res.json({ success: true, data: null });
+    } catch (err) {
+      return sendErrorResponse(res, err.message, 500);
+    }
+  }
+
+  async changeStatus(req, res, next) {
+    try {
+      const { id } = req.params;
+      const { status } = req.body;
+
+      if (!status) {
+        return sendErrorResponse(res, "Status is required", 400);
+      }
+
+      // Validate status enum locally before DB call (optional but good practice)
+      if (!["active", "inactive"].includes(status)) {
+        return sendErrorResponse(res, "Invalid status. Use 'active' or 'inactive'", 400);
+      }
+
+      const admin = await AdminDB.findByIdAndUpdate(id, { status }, { new: true });
+
+      if (!admin) {
+        return sendErrorResponse(res, "Admin not found", 404);
+      }
+
+      return sendSuccessResponse(res, admin, "Admin status updated successfully", 200);
     } catch (err) {
       return sendErrorResponse(res, err.message, 500);
     }
