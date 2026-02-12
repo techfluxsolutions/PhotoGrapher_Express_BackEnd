@@ -25,12 +25,18 @@ class AdminEmailAuthController {
 
       // Check if email matches the hardcoded admin email
       if (email.toLowerCase().trim() !== ADMIN_EMAIL.toLowerCase()) {
-        return sendErrorResponse(res, "Invalid email or password", 200);
+        return res.json({
+          success: false,
+          message: "Invalid email or password",
+        })
       }
 
       // Check if password matches the hardcoded password
       if (password !== ADMIN_PASSWORD) {
-        return sendErrorResponse(res, "Invalid email or password", 200);
+        return res.json({
+          success: false,
+          message: "Invalid email or password",
+        })
       }
 
       // Find or create the admin record in the database

@@ -67,8 +67,14 @@ const photographerSchema = new mongoose.Schema(
         eventPhotography: { type: Boolean, default: false },
         foodPhotography: { type: Boolean, default: false },
         productPhotography: { type: Boolean, default: false },
+<<<<<<< HEAD
         automobilePhotography: { type: Boolean, default: false },
         eventPhotography: { type: Boolean, default: false },
+=======
+        maternityAndBabyShoot: { type: Boolean, default: false },
+        sportsPhotography: { type: Boolean, default: false },
+        automobilePhotography: { type: Boolean, default: false }
+>>>>>>> yogi
       },
       styles: {
         documentary: { type: Boolean, default: false },
