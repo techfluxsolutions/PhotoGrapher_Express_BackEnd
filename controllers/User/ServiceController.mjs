@@ -155,6 +155,12 @@ class ServiceController {
       const servicesWithStyles = serviceNames.map(service => ({
         _id: service._id,
         serviceName: service.serviceName,
+        key: service.serviceName
+          .toLowerCase()
+          .replace(/(?:^\w|[A-Z]|\b\w|\s+)/g, (match, index) =>
+            index === 0 ? match.toLowerCase() : match.toUpperCase()
+          )
+          .replace(/\s+/g, ''),
         styles: photographerData?.servicesAndStyles?.styles || {},
         services: photographerData?.servicesAndStyles?.services || {}
       }));
