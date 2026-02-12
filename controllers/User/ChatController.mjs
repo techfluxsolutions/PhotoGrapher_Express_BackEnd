@@ -239,6 +239,18 @@ class ChatController {
                 const roomName = `booking_${refId}`;
                 console.log(`📡 Emitting message to room: ${roomName}`);
                 io.to(roomName).emit("receive_message", newMessage);
+
+                // Notify all participants about the conversation update
+                const participants = conversation.participants;
+                participants.forEach(participantId => {
+                    io.to(`user_${participantId}`).emit("conversation:update", {
+                        conversationId: conversation._id,
+                        lastMessage: conversation.lastMessage,
+                        lastMessageAt: conversation.lastMessageAt,
+                        bookingId: conversation.bookingId,
+                        quoteId: conversation.quoteId
+                    });
+                });
             } catch (socketErr) {
                 console.error("❌ Socket notification failed:", socketErr.message);
             }

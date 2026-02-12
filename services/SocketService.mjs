@@ -50,6 +50,7 @@ export const initSocket = (server) => {
 
     io.on("connection", (socket) => {
         console.log(`User connected: ${socket.user.id}`);
+        socket.join(`user_${socket.user.id}`);
 
         // Join Booking Chat Room
         socket.on("join_booking_chat", async ({ bookingId }) => {
@@ -133,7 +134,12 @@ export const initSocket = (server) => {
                     startDate,
                     endDate,
                     location,
-                    eventType
+                    eventType,
+                    flatOrHouseNo,
+                    streetName,
+                    city,
+                    state,
+                    postalCode
                 } = data;
 
                 let finalMessage = message;
@@ -156,6 +162,11 @@ export const initSocket = (server) => {
                     finalEventType = message.eventType || finalEventType;
                     finalQuoteId = message.quoteId || finalQuoteId;
                     finalBookingId = message.bookingId || finalBookingId;
+                    finalFlatOrHouseNo = message.flatOrHouseNo || finalFlatOrHouseNo;
+                    finalStreetName = message.streetName || finalStreetName;
+                    finalCity = message.city || finalCity;
+                    finalState = message.state || finalState;
+                    finalPostalCode = message.postalCode || finalPostalCode;
                 }
 
                 // The reference ID used for the room and finding conversation
@@ -226,7 +237,12 @@ export const initSocket = (server) => {
                     endDate: finalEndDate,
                     location: finalLocation,
                     quoteId: finalQuoteId || (conversation.quoteId) || null,
-                    eventType: finalEventType
+                    eventType: finalEventType,
+                    flatOrHouseNo: finalFlatOrHouseNo,
+                    streetName: finalStreetName,
+                    city: finalCity,
+                    state: finalState,
+                    postalCode: finalPostalCode
                 });
 
                 conversation.lastMessage = finalMessageType === "text" ? finalMessage : `[${finalMessageType}]`;
@@ -237,6 +253,18 @@ export const initSocket = (server) => {
 
                 io.to(roomName).emit("receive_message", newMessage);
                 console.log(`Message sent to room ${roomName}`);
+
+                // Notify all participants about the conversation update
+                const participants = conversation.participants;
+                participants.forEach(participantId => {
+                    io.to(`user_${participantId}`).emit("conversation:update", {
+                        conversationId: conversation._id,
+                        lastMessage: conversation.lastMessage,
+                        lastMessageAt: conversation.lastMessageAt,
+                        bookingId: conversation.bookingId,
+                        quoteId: conversation.quoteId
+                    });
+                });
 
             } catch (error) {
                 console.error("Send Message Error:", error);
