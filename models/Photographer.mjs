@@ -51,7 +51,8 @@ const photographerSchema = new mongoose.Schema(
       yearsOfExperience: { type: String, default: "" }, // e.g. 1-3, 3-5, 5+
       primaryLocation: { type: String, default: "" },
       willingToTravel: { type: Boolean, default: false },
-      languagesSpoken: { type: [String], default: [] }
+      languagesSpoken: { type: [String], default: [] },
+      startUpDate: { type: String, default: "" }
     },
 
     // ===== About You =====

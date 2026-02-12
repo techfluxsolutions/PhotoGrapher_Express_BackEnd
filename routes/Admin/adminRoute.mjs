@@ -14,6 +14,7 @@ import { downloadInvoice } from "../../controllers/Admin/InvoiceController.mjs";
 import SubscribedUserController from "../../controllers/User/SubscribedUserController.mjs";
 import AdminController from "../../controllers/User/AdminController.mjs";
 import SidebarIconController from "../../controllers/Admin/SidebarIconController.mjs";
+import RoleController from "../../controllers/Admin/RoleController.mjs";
 const router = express.Router();
 
 // --- Admin Authentication (No middleware required) ---
@@ -141,6 +142,13 @@ router.delete("/deletesubscriber/:id", (req, res, next) => SubscribedUserControl
 // --- Sidebar Icons ---
 router.get("/sidebar-icons", (req, res, next) => SidebarIconController.getAll(req, res, next));
 router.post("/sidebar-icons/seed", (req, res, next) => SidebarIconController.seed(req, res, next));
+
+// --- Role Management ---
+router.post("/roles", (req, res, next) => RoleController.create(req, res, next));
+router.get("/roles", (req, res, next) => RoleController.getAll(req, res, next));
+router.get("/roles/:id", (req, res, next) => RoleController.getById(req, res, next));
+router.put("/roles/:id", (req, res, next) => RoleController.update(req, res, next));
+router.delete("/roles/:id", (req, res, next) => RoleController.delete(req, res, next));
 
 // --- Admin Management (MUST BE LAST - generic /:id routes) ---
 router.post("/", upload.single("avatar"), (req, res, next) => AdminController.create(req, res, next));

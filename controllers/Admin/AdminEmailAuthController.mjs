@@ -1,5 +1,6 @@
 import AdminEmailAuthDB from "../../models/AdminEmailAuth.mjs";
 import { signToken } from "../../utils/jwt.mjs";
+import bcrypt from "bcrypt";
 import {
   sendErrorResponse,
   sendSuccessResponse,
@@ -23,32 +24,49 @@ class AdminEmailAuthController {
         );
       }
 
-      // Check if email matches the hardcoded admin email
-      if (email.toLowerCase().trim() !== ADMIN_EMAIL.toLowerCase()) {
-        return res.json({
-          success: false,
-          message: "Invalid email or password",
-        })
-      }
+      // Find admin user by email
+      let admin = await AdminEmailAuthDB.findOne({ email });
 
-      // Check if password matches the hardcoded password
-      if (password !== ADMIN_PASSWORD) {
-        return res.json({
-          success: false,
-          message: "Invalid email or password",
-        })
-      }
-
-      // Find or create the admin record in the database
-      let admin = await AdminEmailAuthDB.findOne({ email: ADMIN_EMAIL });
-
+      // If not found in DB, check hardcoded fallback (for super admin bootstrap)
       if (!admin) {
-        // Create the admin record if it doesn't exist
-        admin = await AdminEmailAuthDB.create({
-          email: ADMIN_EMAIL,
-          password: ADMIN_PASSWORD,
-          isActive: true,
-        });
+        if (email.toLowerCase().trim() === ADMIN_EMAIL.toLowerCase() && password === ADMIN_PASSWORD) {
+          // Create the super admin record if it doesn't exist but credentials match hardcoded
+          const hashedPassword = await bcrypt.hash(ADMIN_PASSWORD, 10);
+          admin = await AdminEmailAuthDB.create({
+            email: ADMIN_EMAIL,
+            password: hashedPassword,
+            isActive: true,
+          });
+        } else {
+          return res.json({
+            success: false,
+            message: "Invalid email or password",
+          });
+        }
+      } else {
+        // If found in DB, verify password
+        let isPasswordValid = false;
+
+        // Check if password is hashed (bcrypt hashes start with '$2b$')
+        if (admin.password.startsWith('$2b$')) {
+          isPasswordValid = await bcrypt.compare(password, admin.password);
+        } else {
+          // Fallback to plain text comparison (migration logic)
+          if (admin.password === password) {
+            isPasswordValid = true;
+            // Automatically migrate to hashed password
+            const hashedPassword = await bcrypt.hash(password, 10);
+            admin.password = hashedPassword;
+            await admin.save();
+          }
+        }
+
+        if (!isPasswordValid) {
+          return res.json({
+            success: false,
+            message: "Invalid email or password",
+          });
+        }
       }
 
       // Update last login timestamp
@@ -61,6 +79,8 @@ class AdminEmailAuthController {
         email: admin.email,
         userType: "admin",
         isAdmin: true,
+        role: admin.role, // Include role in token
+        permissions: admin.permissions // Include permissions in token
       });
 
       // Prepare admin data for response
@@ -69,6 +89,8 @@ class AdminEmailAuthController {
         email: admin.email,
         isActive: admin.isActive,
         lastLogin: admin.lastLogin,
+        role: admin.role,
+        permissions: admin.permissions
       };
 
       // Set token in cookie (optional, matching existing auth pattern)

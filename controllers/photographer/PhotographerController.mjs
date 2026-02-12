@@ -20,7 +20,7 @@ class PhotographerController {
             }
 
             const items = await Photographer.find(query)
-                .select('basicInfo.fullName email mobileNumber professionalDetails.yearsOfExperience professionalDetails.primaryLocation status createdAt')
+                .select('basicInfo.fullName email mobileNumber professionalDetails.yearsOfExperience professionalDetails.primaryLocation professionalDetails.startUpDate status createdAt')
                 .skip(skip)
                 .limit(limit)
                 .sort({ createdAt: -1 });
@@ -62,7 +62,7 @@ class PhotographerController {
             status: p.status,
             verificationStatus: verificationStatus,
             createdAt: p.createdAt,
-            signUpDate: `${day}/${month}/${year}`
+            signUpDate: p.professionalDetails?.startUpDate || `${day}/${month}/${year}`
         };
     }
 
@@ -91,7 +91,7 @@ class PhotographerController {
     // Add Unverified Photographer (Status: Pending)
     async addUnverifiedPhotographer(req, res) {
         try {
-            const { name, email, phone, experience, city } = req.body;
+            const { name, email, phone, experience, city, startUpDate, signUpDate } = req.body;
 
             // Check if email already exists
             const existingUser = await Photographer.findOne({ email });
@@ -112,7 +112,8 @@ class PhotographerController {
                 },
                 professionalDetails: {
                     yearsOfExperience: experience,
-                    primaryLocation: city
+                    primaryLocation: city,
+                    startUpDate: startUpDate || signUpDate
                 },
                 status: "pending"
             });
@@ -131,7 +132,7 @@ class PhotographerController {
                     city: newPhotographer.professionalDetails.primaryLocation,
                     status: newPhotographer.status,
                     createdAt: newPhotographer.createdAt,
-                    signUpDate: `${String(newPhotographer.createdAt.getDate()).padStart(2, '0')}/${String(newPhotographer.createdAt.getMonth() + 1).padStart(2, '0')}/${newPhotographer.createdAt.getFullYear()}`
+                    signUpDate: newPhotographer.professionalDetails.startUpDate || `${String(newPhotographer.createdAt.getDate()).padStart(2, '0')}/${String(newPhotographer.createdAt.getMonth() + 1).padStart(2, '0')}/${newPhotographer.createdAt.getFullYear()}`
                 }
             });
 
@@ -146,7 +147,7 @@ class PhotographerController {
     async updateUnverifiedPhotographer(req, res) {
         try {
             const { id } = req.params;
-            const { name, email, phone, experience, city } = req.body;
+            const { name, email, phone, experience, city, startUpDate, signUpDate } = req.body;
 
             const photographer = await Photographer.findById(id);
 
@@ -162,6 +163,14 @@ class PhotographerController {
                 }
             }
 
+            // Check if phone is being changed and if it conflicts
+            if (phone && phone !== photographer.mobileNumber) {
+                const existingUser = await Photographer.findOne({ mobileNumber: phone });
+                if (existingUser) {
+                    return res.status(400).json({ message: "Mobile number already exists" });
+                }
+            }
+
             // Update fields manually as per the schema structure for unverified (pending) photographers
             if (name) photographer.basicInfo.fullName = name;
             if (email) {
@@ -174,6 +183,8 @@ class PhotographerController {
             }
             if (experience) photographer.professionalDetails.yearsOfExperience = experience;
             if (city) photographer.professionalDetails.primaryLocation = city;
+            const dateToUpdate = startUpDate || signUpDate;
+            if (dateToUpdate) photographer.professionalDetails.startUpDate = dateToUpdate;
 
             await photographer.save();
 
@@ -188,6 +199,7 @@ class PhotographerController {
                     experience: photographer.professionalDetails.yearsOfExperience,
                     city: photographer.professionalDetails.primaryLocation,
                     status: photographer.status,
+                    signUpDate: photographer.professionalDetails.startUpDate || `${String(photographer.createdAt.getDate()).padStart(2, '0')}/${String(photographer.createdAt.getMonth() + 1).padStart(2, '0')}/${photographer.createdAt.getFullYear()}`,
                     createdAt: photographer.createdAt
                 }
             });
@@ -400,7 +412,7 @@ class PhotographerController {
             });
 
             if (!photographer) {
-                return res.status(404).json({ message: "Photographer not found" });
+                return res.status(200).json({ message: "Photographer not found" });
             }
             res.status(200).json({ message: "Photographer updated successfully", photographer });
         } catch (error) {
@@ -414,7 +426,7 @@ class PhotographerController {
             const { id } = req.params;
             const photographer = await Photographer.findByIdAndDelete(id);
             if (!photographer) {
-                return res.status(404).json({ message: "Photographer not found" });
+                return res.status(200).json({ message: "Photographer not found" });
             }
             res.status(200).json({ message: "Photographer deleted successfully", photographer });
         } catch (error) {

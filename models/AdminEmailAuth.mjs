@@ -25,6 +25,20 @@ const adminEmailAuthSchema = new mongoose.Schema(
       type: Date,
       default: null,
     },
+    role: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Role",
+      default: null
+    },
+    permissions: {
+      type: [String],
+      default: []
+    },
+    createdBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "AdminEmailAuth",
+      default: null
+    }
   },
   {
     timestamps: true,
