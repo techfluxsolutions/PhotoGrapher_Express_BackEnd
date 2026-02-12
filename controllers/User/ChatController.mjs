@@ -149,7 +149,7 @@ class ChatController {
     // Send a message via REST API
     async sendMessage(req, res, next) {
         try {
-            const { bookingId, quoteId, message, type = "text", messageType, budget, startDate, endDate, location, eventType } = req.body;
+            const { bookingId, quoteId, message, type = "text", messageType, budget, startDate, endDate, location, eventType, flatOrHouseNo, streetName, city, state, postalCode } = req.body;
             const userId = req.user.id;
 
             // Robust extraction if message is sent as an object
@@ -162,6 +162,11 @@ class ChatController {
             let finalEventType = eventType;
             let finalQuoteId = quoteId;
             let finalBookingId = bookingId;
+            let finalFlatOrHouseNo = flatOrHouseNo;
+            let finalStreetName = streetName;
+            let finalCity = city;
+            let finalState = state;
+            let finalPostalCode = postalCode;
 
             if (typeof message === "object" && message !== null) {
                 finalMessage = message.message || finalMessage;
@@ -173,6 +178,11 @@ class ChatController {
                 finalEventType = message.eventType || finalEventType;
                 finalQuoteId = message.quoteId || finalQuoteId;
                 finalBookingId = message.bookingId || finalBookingId;
+                finalFlatOrHouseNo = message.flatOrHouseNo || finalFlatOrHouseNo;
+                finalStreetName = message.streetName || finalStreetName;
+                finalCity = message.city || finalCity;
+                finalState = message.state || finalState;
+                finalPostalCode = message.postalCode || finalPostalCode;
             }
 
             const refId = finalBookingId || finalQuoteId;
@@ -207,7 +217,12 @@ class ChatController {
                 endDate: finalEndDate,
                 location: finalLocation,
                 quoteId: finalQuoteId || conversation.quoteId || null,
-                eventType: finalEventType
+                eventType: finalEventType,
+                flatOrHouseNo: finalFlatOrHouseNo,
+                streetName: finalStreetName,
+                city: finalCity,
+                state: finalState,
+                postalCode: finalPostalCode
             });
 
             // Update conversation last message info
