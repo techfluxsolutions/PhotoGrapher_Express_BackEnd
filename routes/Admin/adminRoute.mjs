@@ -13,6 +13,7 @@ import upload from "../../Config/multer.mjs";
 import { downloadInvoice } from "../../controllers/Admin/InvoiceController.mjs";
 import SubscribedUserController from "../../controllers/User/SubscribedUserController.mjs";
 import AdminController from "../../controllers/User/AdminController.mjs";
+import SidebarIconController from "../../controllers/Admin/SidebarIconController.mjs";
 const router = express.Router();
 
 // --- Admin Authentication (No middleware required) ---
@@ -136,6 +137,10 @@ router.get("/getsubscriber/:id", (req, res, next) => SubscribedUserController.ge
 router.get("/getsubscriber/email/:email", (req, res, next) => SubscribedUserController.getSubscriberByEmail(req, res, next));
 router.put("/updatesubscriber/:id", (req, res, next) => SubscribedUserController.updateSubscriber(req, res, next));
 router.delete("/deletesubscriber/:id", (req, res, next) => SubscribedUserController.deleteSubscriber(req, res, next));
+
+// --- Sidebar Icons ---
+router.get("/sidebar-icons", (req, res, next) => SidebarIconController.getAll(req, res, next));
+router.post("/sidebar-icons/seed", (req, res, next) => SidebarIconController.seed(req, res, next));
 
 // --- Admin Management (MUST BE LAST - generic /:id routes) ---
 router.post("/", upload.single("avatar"), (req, res, next) => AdminController.create(req, res, next));
