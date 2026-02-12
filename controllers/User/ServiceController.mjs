@@ -2,7 +2,6 @@ import Service from "../../models/Service.mjs";
 import AdditionalServices from "../../models/AdditionalServices.mjs";
 import nineServices from "../../utils/Site_Static_Data/NineServices.mjs";
 import Photographer from "../../models/Photographer.mjs";
-
 class ServiceController {
   // POST /services
   async create(req, res, next) {
@@ -181,24 +180,43 @@ class ServiceController {
   async getServicePrice(req, res) {
     try {
       const { serviceId, additionalServicesId } = req.query;
-      const servicePrice = await AdditionalServices.findOne({ _id: additionalServicesId, serviceId: serviceId, }).select('serviceCost');
-      if (!servicePrice) {
-        res.status(404).json({
-          success: true,
-          message: "No Service are listed"
-        })
+
+      if (!serviceId) {
+        return res.status(400).json({
+          success: false,
+          message: "serviceId is required"
+        });
       }
+
+      let servicePrice = null;
+
+      // If additional service is provided → fetch from AdditionalServices
+      if (additionalServicesId) {
+        servicePrice = await AdditionalServices.findOne({
+          _id: additionalServicesId,
+          serviceId: serviceId
+        }).select('serviceCost');
+      }
+      // Otherwise → fetch base service price
+      else {
+        servicePrice = await Service.findById(serviceId)
+          .select('serviceCost');
+      }
+
       return res.status(200).json({
-        message: "Service are fetched successfully",
+        message: "Service price fetched successfully",
         success: true,
         data: servicePrice
-
-      })
+      });
 
     } catch (err) {
-      return res.status(500).json({ success: false, message: err.message })
+      return res.status(500).json({
+        success: false,
+        message: err.message
+      });
     }
   }
+
 
   async getServicePriceByServiceId(req, res) {
     try {

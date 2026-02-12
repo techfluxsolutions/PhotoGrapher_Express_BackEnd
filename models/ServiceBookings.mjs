@@ -126,6 +126,10 @@ const serviceBookingSchema = new mongoose.Schema(
       type: Number,
       default: 0
     },
+    bookingSource: {
+      type: String,
+      default: "plain"
+    }
   },
   { timestamps: true }
 );
