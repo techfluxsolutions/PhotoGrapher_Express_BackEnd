@@ -1,6 +1,8 @@
 import Service from "../../models/Service.mjs";
 import AdditionalServices from "../../models/AdditionalServices.mjs";
 import nineServices from "../../utils/Site_Static_Data/NineServices.mjs";
+import Photographer from "../../models/Photographer.mjs";
+
 class ServiceController {
   // POST /services
   async create(req, res, next) {
@@ -139,20 +141,29 @@ class ServiceController {
 
   async getServiceNameOnly(req, res) {
     try {
+      //service name plus photographer profile data
       const serviceNames = await Service.find().select('serviceName');
-      if (!serviceNames) {
-        res.status(404).json({
+      const photographerData = await Photographer.findOne().select('servicesAndStyles');
+
+      if (!serviceNames || serviceNames.length === 0) {
+        return res.status(404).json({
           success: true,
           message: "No Service are listed"
         })
       }
+
+      const servicesWithStyles = serviceNames.map(service => ({
+        _id: service._id,
+        serviceName: service.serviceName,
+        styles: photographerData?.servicesAndStyles?.styles || {},
+        services: photographerData?.servicesAndStyles?.services || {}
+      }));
+
       return res.status(200).json({
         message: "Service are fetched successfully",
         success: true,
-        data: serviceNames
-
+        data: servicesWithStyles
       })
-
     } catch (err) {
       return res.status(500).json({ success: false, message: err.message })
     }
