@@ -152,7 +152,7 @@ class ServiceController {
         })
       }
 
-      const servicesWithStyles = serviceNames.map(service => ({
+      const services = serviceNames.map(service => ({
         _id: service._id,
         serviceName: service.serviceName,
         key: service.serviceName
@@ -160,15 +160,18 @@ class ServiceController {
           .replace(/(?:^\w|[A-Z]|\b\w|\s+)/g, (match, index) =>
             index === 0 ? match.toLowerCase() : match.toUpperCase()
           )
-          .replace(/\s+/g, ''),
-        styles: photographerData?.servicesAndStyles?.styles || {},
-        services: photographerData?.servicesAndStyles?.services || {}
+          .replace(/\s+/g, '')
       }));
+
+      const styles = photographerData?.servicesAndStyles?.styles || {};
+      const photographerServices = photographerData?.servicesAndStyles?.services || {};
 
       return res.status(200).json({
         message: "Service are fetched successfully",
         success: true,
-        data: servicesWithStyles
+        data: services,
+        styles,
+        photographerServices
       })
     } catch (err) {
       return res.status(500).json({ success: false, message: err.message })
