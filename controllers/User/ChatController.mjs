@@ -149,11 +149,15 @@ class ChatController {
     // Send a message via REST API
     async sendMessage(req, res, next) {
         try {
-            const { bookingId, quoteId, message, type = "text", messageType, budget, startDate, endDate, location, eventType, flatOrHouseNo, streetName, city, state, postalCode } = req.body;
+            const { bookingId, quoteId, message, type = "text", messageType, budget, startDate, endDate, location, eventType, flatOrHouseNo, streetName, city, state, postalCode, attachmentUrl, address } = req.body;
             const userId = req.user.id;
 
             // Robust extraction if message is sent as an object
-            let finalMessage = message;
+            let finalMessage = "";
+            if (typeof message === "string") {
+                finalMessage = message;
+            }
+
             let finalMessageType = messageType || type;
             let finalBudget = budget;
             let finalStartDate = startDate;
@@ -162,6 +166,9 @@ class ChatController {
             let finalEventType = eventType;
             let finalQuoteId = quoteId;
             let finalBookingId = bookingId;
+            let finalAttachmentUrl = attachmentUrl;
+
+            // Address fields
             let finalFlatOrHouseNo = flatOrHouseNo;
             let finalStreetName = streetName;
             let finalCity = city;
@@ -178,6 +185,8 @@ class ChatController {
                 finalEventType = message.eventType || finalEventType;
                 finalQuoteId = message.quoteId || finalQuoteId;
                 finalBookingId = message.bookingId || finalBookingId;
+                finalAttachmentUrl = message.attachmentUrl || finalAttachmentUrl;
+
                 finalFlatOrHouseNo = message.flatOrHouseNo || finalFlatOrHouseNo;
                 finalStreetName = message.streetName || finalStreetName;
                 finalCity = message.city || finalCity;
@@ -185,9 +194,18 @@ class ChatController {
                 finalPostalCode = message.postalCode || finalPostalCode;
             }
 
+            if (typeof address === "object" && address !== null) {
+                finalFlatOrHouseNo = address.flatOrHouseNo || finalFlatOrHouseNo;
+                finalStreetName = address.streetName || finalStreetName;
+                finalCity = address.city || finalCity;
+                finalState = address.state || finalState;
+                finalPostalCode = address.postalCode || finalPostalCode;
+            }
+
             const refId = finalBookingId || finalQuoteId;
 
-            if (!refId || !finalMessage) {
+            // Allow empty message for non-text types (like paymentCard)
+            if (!refId || (!finalMessage && finalMessageType === 'text')) {
                 return res.status(400).json({ success: false, message: "bookingId/quoteId and message are required" });
             }
 
@@ -222,7 +240,8 @@ class ChatController {
                 streetName: finalStreetName,
                 city: finalCity,
                 state: finalState,
-                postalCode: finalPostalCode
+                postalCode: finalPostalCode,
+                attachmentUrl: finalAttachmentUrl
             });
 
             // Update conversation last message info
