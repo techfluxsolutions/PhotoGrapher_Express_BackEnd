@@ -12,11 +12,28 @@ class ContactUsController {
             });
         } catch (error) {
             if (error.name === "ValidationError") {
-                const messages = Object.values(error.errors).map((err) => err.message);
+                const formattedErrors = Object.values(error.errors).map((err) => ({
+                    field: err.path,
+                    message: err.message,
+                }));
                 return res.status(400).json({
                     success: false,
-                    message: "Validation Error",
-                    errors: messages,
+                    message: formattedErrors[0].message,
+                    errors: formattedErrors,
+                });
+            }
+            // Handle duplicate key error
+            if (error.code === 11000) {
+                const field = Object.keys(error.keyValue)[0];
+                return res.status(400).json({
+                    success: false,
+                    message: `${field} already exists`,
+                    errors: [
+                        {
+                            field: field,
+                            message: `${field} already exists`,
+                        },
+                    ],
                 });
             }
             next(error);

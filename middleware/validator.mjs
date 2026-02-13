@@ -11,10 +11,15 @@ export const validate = (validations) => {
       return next();
     }
 
+    const formattedErrors = errors.array().map((err) => ({
+      field: err.path || err.param,
+      message: err.msg,
+    }));
+
     res.status(400).json({
       success: false,
-      message: "Validation failed",
-      errors: errors.array(),
+      message: formattedErrors[0].message,
+      errors: formattedErrors,
     });
   };
 };
