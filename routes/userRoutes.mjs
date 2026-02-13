@@ -14,7 +14,15 @@ import AdditionalServicesController from "../controllers/User/AdditionalServices
 import TicketController from "../controllers/User/TicketController.mjs";
 import ReviewAndRatingController from "../controllers/User/ReviewAndRating.mjs";
 import SubscribedUserController from "../controllers/User/SubscribedUserController.mjs";
+import PartnerRegistrationController from "../controllers/PartnerRegistrationController.mjs";
+import ContactUsController from "../controllers/ContactUsController.mjs";
 const router = express.Router();
+
+// Partner Registration (Public)
+router.post("/partner-registration", (req, res, next) => PartnerRegistrationController.create(req, res, next));
+
+// Contact Us (Public)
+router.post("/contact-us", (req, res, next) => ContactUsController.create(req, res, next));
 
 // router.use(authMiddleware); // Removed global auth middleware to allow public routes
 

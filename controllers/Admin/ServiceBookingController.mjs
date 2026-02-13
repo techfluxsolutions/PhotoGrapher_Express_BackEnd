@@ -1,4 +1,5 @@
 import ServiceBooking from "../../models/ServiceBookings.mjs";
+import Gallery from "../../models/Gallery.mjs";
 
 class ServiceBookingController {
   /**
@@ -408,6 +409,38 @@ class ServiceBookingController {
         success: true,
         data: items,
         meta: { total, page, limit },
+      });
+    } catch (err) {
+      return next(err);
+    }
+  }
+
+  /**
+   * Get gallery by booking ID (Admin)
+   * GET /api/admins/bookings/:id/gallery
+   */
+  async getGalleryByBookingId(req, res, next) {
+    try {
+      const { id } = req.params;
+      const gallery = await Gallery.findOne({ booking_id: id });
+
+      if (!gallery) {
+        return res.status(404).json({
+          success: false,
+          message: "Gallery not found for this booking",
+        });
+      }
+
+      const baseUrl = `${req.protocol}://${req.get("host")}`;
+      const galleryData = gallery.toObject();
+
+      galleryData.gallery = galleryData.gallery.map(path =>
+        path.startsWith("http") ? path : `${baseUrl}/${path}`
+      );
+
+      return res.json({
+        success: true,
+        data: galleryData,
       });
     } catch (err) {
       return next(err);

@@ -16,6 +16,8 @@ import AdminController from "../../controllers/User/AdminController.mjs";
 import SidebarIconController from "../../controllers/Admin/SidebarIconController.mjs";
 import RoleController from "../../controllers/Admin/RoleController.mjs";
 import StaffController from "../../controllers/Admin/StaffController.mjs";
+import PartnerRegistrationController from "../../controllers/PartnerRegistrationController.mjs";
+import ContactUsController from "../../controllers/ContactUsController.mjs";
 const router = express.Router();
 
 // --- Admin Authentication (No middleware required) ---
@@ -93,6 +95,7 @@ router.put("/bookings/:id", (req, res, next) => ServiceBookingController.update(
 router.delete("/bookings/:id", (req, res, next) => ServiceBookingController.delete(req, res, next));
 router.get("/getpreviousbookings", (req, res, next) => ServiceBookingController.getPrevious(req, res, next));
 router.get("/completelyPaidBookings", (req, res, next) => ServiceBookingController.getCompletedBookings(req, res, next));
+router.get("/bookings/:id/gallery", (req, res, next) => ServiceBookingController.getGalleryByBookingId(req, res, next));
 
 
 // --- ServiceBooking (alternative endpoint) ---
@@ -159,6 +162,15 @@ router.get("/staff", (req, res, next) => StaffController.getAll(req, res, next))
 router.get("/staff/:id", (req, res, next) => StaffController.getById(req, res, next));
 router.put("/staff/:id", (req, res, next) => StaffController.update(req, res, next));
 router.delete("/staff/:id", (req, res, next) => StaffController.delete(req, res, next));
+
+// --- Partner Registration Management ---
+router.get("/partner-registrations", (req, res, next) => PartnerRegistrationController.getAll(req, res, next));
+router.get("/partner-registrations/:id", (req, res, next) => PartnerRegistrationController.getById(req, res, next));
+
+// --- Contact Us Management ---
+router.get("/contact-submissions", (req, res, next) => ContactUsController.getAll(req, res, next));
+router.get("/contact-submissions/:id", (req, res, next) => ContactUsController.getById(req, res, next));
+router.delete("/contact-submissions/:id", (req, res, next) => ContactUsController.delete(req, res, next));
 
 // --- Admin Management (MUST BE LAST - generic /:id routes) ---
 router.post("/", upload.single("avatar"), (req, res, next) => AdminController.create(req, res, next));

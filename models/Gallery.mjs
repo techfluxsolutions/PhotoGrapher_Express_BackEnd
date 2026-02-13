@@ -13,6 +13,11 @@ const gallerySchema = new mongoose.Schema(
             type: [String],
             default: [],
         },
+        storageType: {
+            type: String,
+            enum: ["server", "cloud"],
+            default: "server",
+        },
         isShared: {
             type: Boolean,
             default: false,
