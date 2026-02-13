@@ -215,6 +215,7 @@ class QuoteController {
         });
       }
 
+      const leanedData = quote.toObject();
       // 🆔 Generate VEROA Booking ID
       const lastBooking = await ServiceBooking
         .findOne({ veroaBookingId: { $exists: true } })
@@ -240,7 +241,9 @@ class QuoteController {
 
         service_id: quote.service_id,
         client_id: quote.clientId,
-        bookingDate: quote.eventDate,
+        bookingDate: leanedData?.eventDate,
+        startDate: leanedData.startDate,
+        endDate: leanedData.endDate,
 
         // Address mapping
         flatOrHouseNo,

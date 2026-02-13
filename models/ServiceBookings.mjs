@@ -23,7 +23,7 @@ const serviceBookingSchema = new mongoose.Schema(
     },
     bookingDate: {
       type: Date,
-      required: true,
+      sparse: true,
     },
     flatOrHouseNo: {
       type: String,
