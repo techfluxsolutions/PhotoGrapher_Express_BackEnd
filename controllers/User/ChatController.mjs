@@ -149,7 +149,7 @@ class ChatController {
     // Send a message via REST API
     async sendMessage(req, res, next) {
         try {
-            const { bookingId, quoteId, message, type = "text", messageType, budget, startDate, endDate, location, eventType, flatOrHouseNo, streetName, city, state, postalCode, attachmentUrl, address } = req.body;
+            const { bookingId, quoteId, message, type = "text", messageType, budget, startDate, endDate, location, eventType, attachmentUrl, address } = req.body;
             const userId = req.user.id;
 
             // Robust extraction if message is sent as an object
@@ -169,11 +169,12 @@ class ChatController {
             let finalAttachmentUrl = attachmentUrl;
 
             // Address fields
-            let finalFlatOrHouseNo = flatOrHouseNo;
-            let finalStreetName = streetName;
-            let finalCity = city;
-            let finalState = state;
-            let finalPostalCode = postalCode;
+            let finalFlatOrHouseNo
+            let finalStreetName
+            let finalCity
+            let finalState
+            let finalPostalCode
+            let finalClientId
 
             if (typeof message === "object" && message !== null) {
                 finalMessage = message.message || finalMessage;
@@ -200,6 +201,7 @@ class ChatController {
                 finalCity = address.city || finalCity;
                 finalState = address.state || finalState;
                 finalPostalCode = address.postalCode || finalPostalCode;
+                finalClientId = address.clientId || finalClientId;
             }
 
             const refId = finalBookingId || finalQuoteId;
@@ -241,7 +243,8 @@ class ChatController {
                 city: finalCity,
                 state: finalState,
                 postalCode: finalPostalCode,
-                attachmentUrl: finalAttachmentUrl
+                attachmentUrl: finalAttachmentUrl,
+                clientId: finalClientId
             });
 
             // Update conversation last message info

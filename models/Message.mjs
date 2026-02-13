@@ -70,6 +70,11 @@ const messageSchema = new mongoose.Schema(
             type: String,
             default: null,
         },
+        clientId: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "User",
+            sparse: true,
+        },
         isRead: {
             type: Boolean,
             default: false,
