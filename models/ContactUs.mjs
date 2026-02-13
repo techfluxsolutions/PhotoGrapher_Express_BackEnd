@@ -13,7 +13,7 @@ const ContactUsSchema = new mongoose.Schema(
                 validator: function (v) {
                     return /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/.test(v);
                 },
-                message: props => `${props.value} is not a valid email!`
+                message: props => `Given email is not valid!`
             },
             required: [true, "Email Address is required"],
         },
