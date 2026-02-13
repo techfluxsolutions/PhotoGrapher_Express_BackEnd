@@ -48,6 +48,8 @@ router.get("/servicename", (req, res, next) => ServiceController.getServiceNameO
 router.get("/services/:id", (req, res, next) => ServiceController.getById(req, res, next));
 
 
+// testinomials unprotected route
+router.get("/getThreeRatings", (req, res, next) => ReviewAndRatingController.getThreeRatings(req, res, next));
 // Protected Routes
 router.use(authMiddleware);
 
@@ -128,7 +130,7 @@ router.get("/getPreviousTickets/:clientId", (req, res, next) => TicketController
 //Review And Rating
 router.post("/reviewAndRating", (req, res, next) => ReviewAndRatingController.create(req, res, next));
 router.get("/getReviewAndRating", (req, res, next) => ReviewAndRatingController.getAll(req, res, next));
-router.get("/getThreeRatings", (req, res, next) => ReviewAndRatingController.getThreeRatings(req, res, next));
+
 
 
 
