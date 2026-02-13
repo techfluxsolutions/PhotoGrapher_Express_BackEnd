@@ -207,7 +207,7 @@ class QuoteController {
         _id: quoteId,
         clientId: clientId,
       });
-
+      console.log(clientId, quoteId);
       if (!quote) {
         return res.status(404).json({
           success: false,
