@@ -78,7 +78,7 @@ class ReviewAndRatingController {
             const reviews = await ReviewAndRating.find()
                 .sort({ createdAt: -1 })
                 .limit(3)
-                .populate('clientId', 'avatar')
+                .populate('clientId', 'avatar username')
                 .lean();
 
             const formattedReviews = reviews.map(review => ({
@@ -86,6 +86,7 @@ class ReviewAndRatingController {
                 ratingCount: review.ratingCount,
                 rateComments: review.rateComments,
                 createdAt: review.createdAt,
+                username: review.clientId?.username || null,
                 clientId: review.clientId?._id || null,
                 avatar: process.env.BASE_URL && review.clientId?.avatar ? `${process.env.BASE_URL}${review.clientId?.avatar}` : "",
             }));

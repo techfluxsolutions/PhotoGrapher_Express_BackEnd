@@ -149,11 +149,15 @@ class ChatController {
     // Send a message via REST API
     async sendMessage(req, res, next) {
         try {
-            const { bookingId, quoteId, message, type = "text", messageType, budget, startDate, endDate, location, eventType } = req.body;
+            const { bookingId, quoteId, message, type = "text", messageType, budget, startDate, endDate, location, eventType, attachmentUrl, address } = req.body;
             const userId = req.user.id;
 
             // Robust extraction if message is sent as an object
-            let finalMessage = message;
+            let finalMessage = "";
+            if (typeof message === "string") {
+                finalMessage = message;
+            }
+
             let finalMessageType = messageType || type;
             let finalBudget = budget;
             let finalStartDate = startDate;
@@ -162,6 +166,15 @@ class ChatController {
             let finalEventType = eventType;
             let finalQuoteId = quoteId;
             let finalBookingId = bookingId;
+            let finalAttachmentUrl = attachmentUrl;
+
+            // Address fields
+            let finalFlatOrHouseNo
+            let finalStreetName
+            let finalCity
+            let finalState
+            let finalPostalCode
+            let finalClientId
 
             if (typeof message === "object" && message !== null) {
                 finalMessage = message.message || finalMessage;
@@ -173,11 +186,28 @@ class ChatController {
                 finalEventType = message.eventType || finalEventType;
                 finalQuoteId = message.quoteId || finalQuoteId;
                 finalBookingId = message.bookingId || finalBookingId;
+                finalAttachmentUrl = message.attachmentUrl || finalAttachmentUrl;
+
+                finalFlatOrHouseNo = message.flatOrHouseNo || finalFlatOrHouseNo;
+                finalStreetName = message.streetName || finalStreetName;
+                finalCity = message.city || finalCity;
+                finalState = message.state || finalState;
+                finalPostalCode = message.postalCode || finalPostalCode;
+            }
+
+            if (typeof address === "object" && address !== null) {
+                finalFlatOrHouseNo = address.flatOrHouseNo || finalFlatOrHouseNo;
+                finalStreetName = address.streetName || finalStreetName;
+                finalCity = address.city || finalCity;
+                finalState = address.state || finalState;
+                finalPostalCode = address.postalCode || finalPostalCode;
+                finalClientId = address.clientId || finalClientId;
             }
 
             const refId = finalBookingId || finalQuoteId;
 
-            if (!refId || !finalMessage) {
+            // Allow empty message for non-text types (like paymentCard)
+            if (!refId || (!finalMessage && finalMessageType === 'text')) {
                 return res.status(400).json({ success: false, message: "bookingId/quoteId and message are required" });
             }
 
@@ -207,7 +237,14 @@ class ChatController {
                 endDate: finalEndDate,
                 location: finalLocation,
                 quoteId: finalQuoteId || conversation.quoteId || null,
-                eventType: finalEventType
+                eventType: finalEventType,
+                flatOrHouseNo: finalFlatOrHouseNo,
+                streetName: finalStreetName,
+                city: finalCity,
+                state: finalState,
+                postalCode: finalPostalCode,
+                attachmentUrl: finalAttachmentUrl,
+                clientId: finalClientId
             });
 
             // Update conversation last message info
@@ -224,6 +261,18 @@ class ChatController {
                 const roomName = `booking_${refId}`;
                 console.log(`📡 Emitting message to room: ${roomName}`);
                 io.to(roomName).emit("receive_message", newMessage);
+
+                // Notify all participants about the conversation update
+                const participants = conversation.participants;
+                participants.forEach(participantId => {
+                    io.to(`user_${participantId}`).emit("conversation:update", {
+                        conversationId: conversation._id,
+                        lastMessage: conversation.lastMessage,
+                        lastMessageAt: conversation.lastMessageAt,
+                        bookingId: conversation.bookingId,
+                        quoteId: conversation.quoteId
+                    });
+                });
             } catch (socketErr) {
                 console.error("❌ Socket notification failed:", socketErr.message);
             }

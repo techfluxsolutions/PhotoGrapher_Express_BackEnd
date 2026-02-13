@@ -41,6 +41,26 @@ const messageSchema = new mongoose.Schema(
             type: String,
             sparse: true,
         },
+        flatOrHouseNo: {
+            type: String,
+            sparse: true,
+        },
+        streetName: {
+            type: String,
+            sparse: true,
+        },
+        city: {
+            type: String,
+            sparse: true,
+        },
+        state: {
+            type: String,
+            sparse: true,
+        },
+        postalCode: {
+            type: String,
+            sparse: true,
+        },
         quoteId: {
             type: mongoose.Schema.Types.ObjectId,
             ref: "Quote",
@@ -49,6 +69,11 @@ const messageSchema = new mongoose.Schema(
         attachmentUrl: {
             type: String,
             default: null,
+        },
+        clientId: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "User",
+            sparse: true,
         },
         isRead: {
             type: Boolean,
