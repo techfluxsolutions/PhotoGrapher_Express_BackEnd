@@ -58,6 +58,8 @@ router.delete("/bookings/:id", (req, res, next) => BookingController.deleteBooki
 // --- Gallery ---
 // 'gallery' is the field name, max 50 files
 router.post("/bookings/:id/gallery", galleryUpload.array('gallery', 50), (req, res, next) => BookingController.uploadGallery(req, res, next));
+router.post("/bookings/:id/gallery/server", galleryUpload.array('gallery', 50), (req, res, next) => BookingController.uploadGalleryToServer(req, res, next));
+router.post("/bookings/:id/gallery/cloud", galleryUpload.array('gallery', 50), (req, res, next) => BookingController.uploadGalleryToCloud(req, res, next));
 router.post("/bookings/:id/gallery/share", (req, res, next) => BookingController.shareGallery(req, res, next));
 
 

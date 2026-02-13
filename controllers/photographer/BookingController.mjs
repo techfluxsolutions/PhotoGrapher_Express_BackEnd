@@ -85,6 +85,14 @@ class BookingController {
             }
 
             const gallery = await Gallery.findOne({ booking_id: id });
+            let formattedGallery = null;
+            if (gallery) {
+                const baseUrl = `${req.protocol}://${req.get("host")}`;
+                formattedGallery = gallery.toObject();
+                formattedGallery.gallery = formattedGallery.gallery.map(path =>
+                    path.startsWith("http") ? path : `${baseUrl}/${path}`
+                );
+            }
 
             // Enhance response with helper fields while keeping original data
             let bookingObj = booking.toObject();
@@ -93,7 +101,7 @@ class BookingController {
 
             return sendSuccessResponse(res, {
                 booking: bookingObj,
-                gallery: gallery ? gallery : null
+                gallery: formattedGallery
             }, "Booking fetched successfully");
         } catch (error) {
             return sendErrorResponse(res, error, 500);
@@ -153,8 +161,8 @@ class BookingController {
         }
     }
 
-    // Upload Gallery
-    async uploadGallery(req, res) {
+    // Upload Gallery to Server
+    async uploadGalleryToServer(req, res) {
         try {
             const { id } = req.params;
             const files = req.files;
@@ -165,72 +173,115 @@ class BookingController {
 
             const booking = await ServiceBooking.findById(id).populate("client_id");
             if (!booking) {
-                // cleanup temp files
-                files.forEach(file => {
-                    if (fs.existsSync(file.path)) fs.unlinkSync(file.path);
-                });
+                files.forEach(file => { if (fs.existsSync(file.path)) fs.unlinkSync(file.path); });
                 return sendErrorResponse(res, { message: "Booking not found" }, 404);
             }
 
-            // Ensure client exists
             if (!booking.client_id) {
-                files.forEach(file => {
-                    if (fs.existsSync(file.path)) fs.unlinkSync(file.path);
-                });
+                files.forEach(file => { if (fs.existsSync(file.path)) fs.unlinkSync(file.path); });
                 return sendErrorResponse(res, { message: "Booking has no associated client" }, 400);
             }
 
             const clientId = booking.client_id._id.toString();
             const bookingId = booking._id.toString();
-
-            // Define target directory: uploads/users/{clientId}/bookings/{bookingId}/
             const targetDir = path.join("uploads", "users", clientId, "bookings", bookingId);
 
-            // Ensure target directory exists
-            if (!fs.existsSync(targetDir)) {
-                fs.mkdirSync(targetDir, { recursive: true });
-            }
+            if (!fs.existsSync(targetDir)) fs.mkdirSync(targetDir, { recursive: true });
 
             const newGalleryPaths = [];
-
-            // Move files
             for (const file of files) {
                 const newFilename = path.basename(file.path);
                 const targetPath = path.join(targetDir, newFilename);
-
                 fs.renameSync(file.path, targetPath);
-
-                // Store relative path "uploads/users/..."
                 newGalleryPaths.push(targetPath.replace(/\\/g, "/"));
             }
 
-            // Update or Create Gallery
             let gallery = await Gallery.findOne({ booking_id: bookingId });
-
             if (!gallery) {
                 gallery = new Gallery({
                     booking_id: bookingId,
                     gallery: newGalleryPaths,
+                    storageType: "server"
                 });
             } else {
                 gallery.gallery.push(...newGalleryPaths);
+                gallery.storageType = "server"; // Update if changed
             }
 
             await gallery.save();
 
-            return sendSuccessResponse(res, {
-                gallery
-            }, "Gallery uploaded successfully");
+            const baseUrl = `${req.protocol}://${req.get("host")}`;
+            const galleryData = gallery.toObject();
+            galleryData.gallery = galleryData.gallery.map(path =>
+                path.startsWith("http") ? path : `${baseUrl}/${path}`
+            );
 
+            return sendSuccessResponse(res, { gallery: galleryData }, "Gallery uploaded to server successfully");
         } catch (error) {
-            // cleanup temp files in case of error
-            if (req.files) {
-                req.files.forEach(file => {
-                    if (fs.existsSync(file.path)) fs.unlinkSync(file.path);
-                });
-            }
+            if (req.files) req.files.forEach(file => { if (fs.existsSync(file.path)) fs.unlinkSync(file.path); });
             return sendErrorResponse(res, error, 500);
         }
+    }
+
+    // Upload Gallery to Cloud (Placeholder for Cloud integration)
+    async uploadGalleryToCloud(req, res) {
+        try {
+            const { id } = req.params;
+            const files = req.files;
+
+            if (!files || files.length === 0) {
+                return sendErrorResponse(res, { message: "No files uploaded" }, 400);
+            }
+
+            const booking = await ServiceBooking.findById(id);
+            if (!booking) {
+                files.forEach(file => { if (fs.existsSync(file.path)) fs.unlinkSync(file.path); });
+                return sendErrorResponse(res, { message: "Booking not found" }, 404);
+            }
+
+            /**
+             * NOTE: Implement Cloud Upload Logic Here (e.g., AWS S3, Cloudinary, etc.)
+             * 1. Upload files to Cloud Provider.
+             * 2. Get the URLs returned by the Cloud Provider.
+             * 3. Save those URLs in the Gallery model.
+             */
+
+            // Simulating Cloud Upload by using temp paths for now
+            const cloudUrls = files.map(file => `cloud_placeholder/${file.filename}`);
+
+            let gallery = await Gallery.findOne({ booking_id: id });
+            if (!gallery) {
+                gallery = new Gallery({
+                    booking_id: id,
+                    gallery: cloudUrls,
+                    storageType: "cloud"
+                });
+            } else {
+                gallery.gallery.push(...cloudUrls);
+                gallery.storageType = "cloud";
+            }
+
+            await gallery.save();
+
+            // Cleanup temp files as they are supposedly "uploaded"
+            files.forEach(file => { if (fs.existsSync(file.path)) fs.unlinkSync(file.path); });
+
+            const baseUrl = `${req.protocol}://${req.get("host")}`;
+            const galleryData = gallery.toObject();
+            galleryData.gallery = galleryData.gallery.map(path =>
+                path.startsWith("http") ? path : `${baseUrl}/${path}`
+            );
+
+            return sendSuccessResponse(res, { gallery: galleryData }, "Gallery uploaded to cloud successfully (Simulation)");
+        } catch (error) {
+            if (req.files) req.files.forEach(file => { if (fs.existsSync(file.path)) fs.unlinkSync(file.path); });
+            return sendErrorResponse(res, error, 500);
+        }
+    }
+
+    // Original Upload Gallery (Kept for compatibility, defaults to server)
+    async uploadGallery(req, res) {
+        return this.uploadGalleryToServer(req, res);
     }
 
 
