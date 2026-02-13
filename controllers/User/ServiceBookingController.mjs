@@ -1,4 +1,5 @@
 import ServiceBooking from "../../models/ServiceBookings.mjs";
+import Quote from "../../models/Quote.mjs";
 const parseDDMMYYYY = (dateStr) => {
   if (!dateStr) return dateStr;
   const [day, month, year] = dateStr.split("-");
@@ -204,19 +205,28 @@ class ServiceBookingController {
     try {
       const { id } = req.params;
       const payload = req.body;
+      let booking;
+      let quote;
       if (payload.bookingDate) {
         payload.bookingDate = parseDDMMYYYY(payload.bookingDate);
       }
-      const booking = await ServiceBooking.findByIdAndUpdate(id, payload, {
+      booking = await ServiceBooking.findByIdAndUpdate(id, payload, {
         new: true,
         runValidators: true,
       });
       if (!booking) {
-        return res
-          .status(404)
-          .json({ success: false, message: "ServiceBooking not found" });
+        quote = await Quote.findByIdAndUpdate(id, payload, {
+          new: true,
+          runValidators: true,
+        });
       }
-      return res.json({ success: true, data: booking });
+      if (booking && booking !== null) {
+        return res.json({ success: true, message: "Booking updated successfully", data: booking });
+      }
+      if (quote && quote !== null) {
+        return res.json({ success: true, message: "Quote updated successfully", data: quote });
+      }
+      return res.status(404).json({ success: false, message: "Booking not found" });
     } catch (err) {
       return next(err);
     }
