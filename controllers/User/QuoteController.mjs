@@ -200,6 +200,7 @@ class QuoteController {
         city,
         state,
         postalCode,
+        totalAmount
       } = req.body;
 
       // 🔎 Step 1: Find quote by _id AND clientId
@@ -251,8 +252,7 @@ class QuoteController {
         city,
         state,
         postalCode,
-
-        totalAmount: quote.budget || 0,
+        totalAmount: totalAmount,
         quoteId: quote._id,
         bookingSource: "quote",
       });
