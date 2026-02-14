@@ -129,6 +129,12 @@ const serviceBookingSchema = new mongoose.Schema(
     bookingSource: {
       type: String,
       default: "plain"
+    },
+    quoteId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Quote",
+      default: null,
+      sparse: true
     }
   },
   { timestamps: true }

@@ -200,6 +200,7 @@ class QuoteController {
         city,
         state,
         postalCode,
+        totalAmount
       } = req.body;
 
       // 🔎 Step 1: Find quote by _id AND clientId
@@ -207,7 +208,7 @@ class QuoteController {
         _id: quoteId,
         clientId: clientId,
       });
-
+      console.log(clientId, quoteId);
       if (!quote) {
         return res.status(404).json({
           success: false,
@@ -251,8 +252,7 @@ class QuoteController {
         city,
         state,
         postalCode,
-
-        totalAmount: quote.budget || 0,
+        totalAmount: totalAmount,
         quoteId: quote._id,
         bookingSource: "quote",
       });
