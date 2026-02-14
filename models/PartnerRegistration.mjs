@@ -4,7 +4,7 @@ const PartnerRegistrationSchema = new mongoose.Schema(
     {
         fullName: {
             type: String,
-            required: [true, "Full Name/ Company Name is required"],
+            required: [true, "Full Name is required"],
         },
         employmentType: {
             type: String,
@@ -13,10 +13,19 @@ const PartnerRegistrationSchema = new mongoose.Schema(
         },
         phoneNumber: {
             type: String,
+            validator: function (v) {
+                return /^\d{10}$/.test(v);
+            },
+            message: props => `Given phone number is not valid!`,
             required: [true, "Phone Number is required"],
         },
         emailId: {
             type: String,
+            validator: function (v) {
+                return /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/.test(v);
+            },
+            message: props => `Given email is not valid!`,
+            required: [true, "Email Address is required"],
         },
         gender: {
             type: String,
@@ -30,7 +39,7 @@ const PartnerRegistrationSchema = new mongoose.Schema(
         willingToTravel: {
             type: String,
             enum: ["Yes (Pan India)", "Yes (Selected Cities)", "No"],
-            required: [true, "Willing to travel for projects is required"],
+            required: [true, "Willing to travel is required"],
         },
         professionalExpertise: {
             type: [String],
