@@ -54,6 +54,8 @@ const allowedOrigins = [
   "http://localhost:3000",
   "http://localhost:3001",
   "http://localhost:5173",
+  "https://dev.veroastudioz.com",
+  "https://veroastudioz.com",
   "https://photographer-admin.vercel.app",
   "https://photo-grapher-user-website.vercel.app",
   "https://user-photographer.techfluxsolutions.com",
