@@ -180,7 +180,7 @@ class ServiceBookingController {
         client_name: booking.client_id?.username || "",
         assigned_photographer: booking.photographer_id?.username || "",
         team_studio: booking.team || "",
-        eventType: booking.shootType || "",
+        eventType: booking.service_id?.name || "",
         eventDate: booking.bookingDate,
         location: booking.city || "",
         note: booking.notes || "",
@@ -265,7 +265,7 @@ class ServiceBookingController {
         endDate: booking.endDate || null,
         bookingAmount: booking.totalAmount,
         paymentMode: booking.paymentMode,
-        paymentType: booking.paymentStatus,
+        paymentStatus: booking.paymentStatus,
         bookingStatus: booking.status,
       }));
 
