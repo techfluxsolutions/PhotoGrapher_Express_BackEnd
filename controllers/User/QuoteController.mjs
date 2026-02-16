@@ -260,15 +260,17 @@ class QuoteController {
       // 🔄 Step 3: Update quote status
       // quote.quoteStatus = "upcommingBookings";
       // await quote.save();
+      let deletedQuote;
       if (booking) {
         // quote.quoteStatus = "upcommingBookings";
-        await quote.deleteOne();
+        deletedQuote = await quote.deleteOne();
       }
 
       return res.status(201).json({
         success: true,
         message: "Booking created successfully from quote",
         data: booking,
+        deletedQuote: deletedQuote
       });
 
     } catch (error) {

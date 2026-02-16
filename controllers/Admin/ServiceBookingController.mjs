@@ -70,36 +70,105 @@ class ServiceBookingController {
    * Get upcoming bookings (bookingDate >= today)
    * GET /api/admins/bookings/upcoming
    */
+  // async getUpcoming(req, res, next) {
+  //   try {
+  //     const page = Math.max(1, parseInt(req.query.page) || 1);
+  //     const limit = Math.max(1, parseInt(req.query.limit) || 20);
+  //     const skip = (page - 1) * limit;
+
+  //     const today = new Date();
+  //     today.setHours(0, 0, 0, 0);
+
+  //     let filter = {
+  //       bookingDate: { $gte: today },
+  //     };
+
+  //     // Add date range filter if provided
+  //     if (req.query.fromDate && req.query.toDate) {
+  //       const fromDate = new Date(req.query.fromDate);
+  //       const toDate = new Date(req.query.toDate);
+  //       toDate.setHours(23, 59, 59, 999);
+
+  //       filter.bookingDate = {
+  //         $gte: fromDate,
+  //         $lte: toDate,
+  //       };
+  //     }
+
+  //     const [items, total] = await Promise.all([
+  //       ServiceBooking.find(filter)
+  //         .skip(skip)
+  //         .limit(limit)
+  //         .sort({ createdAt: -1 })
+  //         .populate("service_id client_id photographer_id"),
+  //       ServiceBooking.countDocuments(filter),
+  //     ]);
+
+  //     const formattedItems = items.map(booking => ({
+  //       bookingId: booking._id,
+  //       veroaBookingId: booking.veroaBookingId,
+  //       client_id: booking.client_id ? booking.client_id._id : null,
+  //       client_name: booking.client_id ? booking.client_id.username : "",
+  //       assigned_photographer: booking.photographer_id ? booking.photographer_id.username : "",
+  //       team_studio: booking.team || "",
+  //       eventType: booking.shootType || "",
+  //       eventDate: booking.bookingDate,
+  //       location: booking.city || "",
+  //       note: booking.notes || "",
+  //       status: booking.status,
+  //       date: "",
+  //       bookingAmount: booking.totalAmount,
+  //       paymenyMode: booking.paymentMode,
+  //       paymentType: booking.paymentStatus,
+  //       bookingStatus: booking.status,
+
+  //     }));
+
+  //     return res.json({
+  //       success: true,
+  //       data: formattedItems,
+  //       meta: { total, page, limit },
+  //     });
+  //   } catch (err) {
+  //     return next(err);
+  //   }
+  // }
+
+
   async getUpcoming(req, res, next) {
     try {
       const page = Math.max(1, parseInt(req.query.page) || 1);
       const limit = Math.max(1, parseInt(req.query.limit) || 20);
       const skip = (page - 1) * limit;
 
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
+      let filter = {};
 
-      let filter = {
-        bookingDate: { $gte: today },
-      };
-
-      // Add date range filter if provided
       if (req.query.fromDate && req.query.toDate) {
+        // 📅 Custom date range filter
         const fromDate = new Date(req.query.fromDate);
         const toDate = new Date(req.query.toDate);
         toDate.setHours(23, 59, 59, 999);
 
-        filter.bookingDate = {
-          $gte: fromDate,
-          $lte: toDate,
-        };
+        filter.$or = [
+          { bookingDate: { $gte: fromDate, $lte: toDate } },
+          { startDate: { $gte: fromDate, $lte: toDate } }
+        ];
+      } else {
+        // 📅 Upcoming from today
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        filter.$or = [
+          { bookingDate: { $gte: today } },
+          { startDate: { $gte: today } }
+        ];
       }
 
       const [items, total] = await Promise.all([
         ServiceBooking.find(filter)
           .skip(skip)
           .limit(limit)
-          .sort({ createdAt: -1 })
+          .sort({ bookingDate: 1 }) // upcoming → ascending makes more sense
           .populate("service_id client_id photographer_id"),
         ServiceBooking.countDocuments(filter),
       ]);
@@ -107,21 +176,22 @@ class ServiceBookingController {
       const formattedItems = items.map(booking => ({
         bookingId: booking._id,
         veroaBookingId: booking.veroaBookingId,
-        client_id: booking.client_id ? booking.client_id._id : null,
-        client_name: booking.client_id ? booking.client_id.username : "",
-        assigned_photographer: booking.photographer_id ? booking.photographer_id.username : "",
+        client_id: booking.client_id?._id || null,
+        client_name: booking.client_id?.username || "",
+        assigned_photographer: booking.photographer_id?.username || "",
         team_studio: booking.team || "",
         eventType: booking.shootType || "",
         eventDate: booking.bookingDate,
         location: booking.city || "",
         note: booking.notes || "",
         status: booking.status,
-        date: "",
+        date: booking.bookingDate || null,
+        startDate: booking.startDate || null,
+        endDate: booking.endDate || null,
         bookingAmount: booking.totalAmount,
-        paymenyMode: booking.paymentMode,
+        paymentMode: booking.paymentMode,
         paymentType: booking.paymentStatus,
         bookingStatus: booking.status,
-
       }));
 
       return res.json({
@@ -129,10 +199,12 @@ class ServiceBookingController {
         data: formattedItems,
         meta: { total, page, limit },
       });
+
     } catch (err) {
       return next(err);
     }
   }
+
 
   /**
    * Get previous bookings (bookingDate < today)
@@ -146,59 +218,42 @@ class ServiceBookingController {
 
       let filter = {};
 
-      // Add date range filter if provided
       if (req.query.fromDate && req.query.toDate) {
+        // 📅 Custom date filter
         const fromDate = new Date(req.query.fromDate);
         const toDate = new Date(req.query.toDate);
         toDate.setHours(23, 59, 59, 999);
 
         filter.$or = [
-          {
-            bookingDate: {
-              $gte: fromDate,
-              $lte: toDate,
-            },
-          },
-          {
-            startDate: {
-              $gte: fromDate,
-              $lte: toDate,
-            },
-          },
+          { bookingDate: { $gte: fromDate, $lte: toDate } },
+          { startDate: { $gte: fromDate, $lte: toDate } }
         ];
-      }
-      let items;
-      let total;
-      if (req.query.fromDate && req.query.toDate) {
-        [items, total] = await Promise.all([
-          ServiceBooking.find(filter)
-            .skip(skip)
-            .limit(limit)
-            .sort({ bookingDate: -1 })
-            .populate("service_id client_id photographer_id"),
-          ServiceBooking.countDocuments(filter),
-        ]);
       } else {
-        // get all previous bookings by todays date
+        // 📅 Previous bookings compared to today
         const today = new Date();
         today.setHours(0, 0, 0, 0);
-        filter.bookingDate = { $lt: today };
-        [items, total] = await Promise.all([
-          ServiceBooking.find(filter)
-            .skip(skip)
-            .limit(limit)
-            .sort({ bookingDate: -1 })
-            .populate("service_id client_id photographer_id"),
-          ServiceBooking.countDocuments(filter),
-        ]);
+
+        filter.$or = [
+          { bookingDate: { $lt: today } },
+          { startDate: { $lt: today } }
+        ];
       }
+
+      const [items, total] = await Promise.all([
+        ServiceBooking.find(filter)
+          .skip(skip)
+          .limit(limit)
+          .sort({ bookingDate: -1 })
+          .populate("service_id client_id photographer_id"),
+        ServiceBooking.countDocuments(filter),
+      ]);
 
       const formattedItems = items.map(booking => ({
         bookingId: booking._id,
         veroaBookingId: booking.veroaBookingId,
-        client_id: booking.client_id ? booking.client_id._id : null,
-        client_name: booking.client_id ? booking.client_id.username : "",
-        assigned_photographer: booking.photographer_id ? booking.photographer_id.username : "",
+        client_id: booking.client_id?._id || null,
+        client_name: booking.client_id?.username || "",
+        assigned_photographer: booking.photographer_id?.username || "",
         team_studio: booking.team || "",
         eventType: booking.shootType || "",
         eventDate: booking.bookingDate,
@@ -209,10 +264,9 @@ class ServiceBookingController {
         startDate: booking.startDate || null,
         endDate: booking.endDate || null,
         bookingAmount: booking.totalAmount,
-        paymenyMode: booking.paymentMode,
+        paymentMode: booking.paymentMode,
         paymentType: booking.paymentStatus,
         bookingStatus: booking.status,
-
       }));
 
       return res.json({
@@ -220,10 +274,12 @@ class ServiceBookingController {
         data: formattedItems,
         meta: { total, page, limit },
       });
+
     } catch (err) {
       return next(err);
     }
   }
+
 
   /**
    * Get single service booking by ID
