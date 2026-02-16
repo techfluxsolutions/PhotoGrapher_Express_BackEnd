@@ -18,6 +18,7 @@ import RoleController from "../../controllers/Admin/RoleController.mjs";
 import StaffController from "../../controllers/Admin/StaffController.mjs";
 import PartnerRegistrationController from "../../controllers/PartnerRegistrationController.mjs";
 import ContactUsController from "../../controllers/ContactUsController.mjs";
+import CustomerController from "../../controllers/Admin/CustomerController.mjs";
 const router = express.Router();
 
 // --- Admin Authentication (No middleware required) ---
@@ -28,7 +29,7 @@ router.post("/uploadNineServices", (req, res, next) => ServiceController.uploadN
 // Handle OPTIONS preflight requests for CORS (before authentication)
 // router.use((req, res, next) => {
 //   if (req.method === "OPTIONS") {
-//     return res.status(200).end();
+//     return res.status(200).end();/customers
 //   }
 //   next();
 // });
