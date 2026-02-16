@@ -124,7 +124,7 @@ router.get("/payments/:id", (req, res, next) => PaymentController.getById(req, r
 router.put("/payments/:id", (req, res, next) => PaymentController.update(req, res, next));
 router.delete("/payments/:id", (req, res, next) => PaymentController.delete(req, res, next));
 
-// --- Customers Management (Admin Controller) ---
+// --- Customers Management (Admin Controller) ---//
 router.post("/customers", (req, res, next) => CustomerController.create(req, res, next));
 router.get("/customers", (req, res, next) => CustomerController.list(req, res, next));
 router.get("/customers/verified", (req, res, next) => CustomerController.getVerified(req, res, next));
