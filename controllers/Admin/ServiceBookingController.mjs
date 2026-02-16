@@ -167,15 +167,31 @@ class ServiceBookingController {
           },
         ];
       }
-
-      const [items, total] = await Promise.all([
-        ServiceBooking.find(filter)
-          .skip(skip)
-          .limit(limit)
-          .sort({ bookingDate: -1 })
-          .populate("service_id client_id photographer_id"),
-        ServiceBooking.countDocuments(filter),
-      ]);
+      let items;
+      let total;
+      if (req.query.fromDate && req.query.toDate) {
+        [items, total] = await Promise.all([
+          ServiceBooking.find(filter)
+            .skip(skip)
+            .limit(limit)
+            .sort({ bookingDate: -1 })
+            .populate("service_id client_id photographer_id"),
+          ServiceBooking.countDocuments(filter),
+        ]);
+      } else {
+        // get all previous bookings by todays date
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        filter.bookingDate = { $lt: today };
+        [items, total] = await Promise.all([
+          ServiceBooking.find(filter)
+            .skip(skip)
+            .limit(limit)
+            .sort({ bookingDate: -1 })
+            .populate("service_id client_id photographer_id"),
+          ServiceBooking.countDocuments(filter),
+        ]);
+      }
 
       const formattedItems = items.map(booking => ({
         bookingId: booking._id,
