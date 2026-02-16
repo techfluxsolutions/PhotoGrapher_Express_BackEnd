@@ -258,8 +258,12 @@ class QuoteController {
       });
 
       // 🔄 Step 3: Update quote status
-      quote.quoteStatus = "upcommingBookings";
-      await quote.save();
+      // quote.quoteStatus = "upcommingBookings";
+      // await quote.save();
+      if (booking) {
+        // quote.quoteStatus = "upcommingBookings";
+        await quote.deleteOne();
+      }
 
       return res.status(201).json({
         success: true,
