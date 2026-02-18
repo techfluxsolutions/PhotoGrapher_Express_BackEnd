@@ -116,7 +116,10 @@ class UserController {
       if (req.file) {
         updates.avatar = `/uploads/userProfile/${req.file.filename}`;
       }
-
+      if (updates.dateOfBirth) {
+        // convert to date
+        updates.dateOfBirth = new Date(updates.dateOfBirth);
+      }
       console.log(updates);
       const user = await User.findByIdAndUpdate(id, updates, {
         new: true,
