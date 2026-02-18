@@ -8,7 +8,7 @@ class QuoteController {
   async create(req, res, next) {
     try {
       const payload = req.body;
-      
+
       // Parse dates if needed (handle various date formats)
       const parseDateIfNeeded = (dateStr) => {
         if (!dateStr) return dateStr;
@@ -36,14 +36,14 @@ class QuoteController {
       }
 
       const quote = await Quote.create(payload);
-      
+
       // Populate after creation
       const populatedQuote = await Quote.findById(quote._id)
         .populate("service_id clientId");
-      
-      return res.status(201).json({ 
-        success: true, 
-        data: populatedQuote 
+
+      return res.status(201).json({
+        success: true,
+        data: populatedQuote
       });
     } catch (err) {
       return next(err);
@@ -64,7 +64,7 @@ class QuoteController {
         Quote.find({})
           .skip(skip)
           .limit(limit)
-          .sort({ eventDate: -1 })
+          .sort({ createdAt: -1 })
           .populate("service_id clientId"),
         Quote.countDocuments(),
       ]);
@@ -130,7 +130,7 @@ class QuoteController {
         const fromDate = new Date(req.query.fromDate);
         const toDate = new Date(req.query.toDate);
         toDate.setHours(23, 59, 59, 999);
-        
+
         filter.eventDate = {
           $gte: fromDate,
           $lte: toDate,
@@ -175,7 +175,7 @@ class QuoteController {
         const fromDate = new Date(req.query.fromDate);
         const toDate = new Date(req.query.toDate);
         toDate.setHours(23, 59, 59, 999);
-        
+
         filter.eventDate = {
           $gte: fromDate,
           $lte: toDate,
@@ -208,20 +208,20 @@ class QuoteController {
   async getById(req, res, next) {
     try {
       const { id } = req.params;
-      
+
       const quote = await Quote.findById(id)
         .populate("service_id clientId");
-      
+
       if (!quote) {
-        return res.status(404).json({ 
-          success: false, 
-          message: "Quote not found" 
+        return res.status(404).json({
+          success: false,
+          message: "Quote not found"
         });
       }
-      
-      return res.json({ 
-        success: true, 
-        data: quote 
+
+      return res.json({
+        success: true,
+        data: quote
       });
     } catch (err) {
       return next(err);
@@ -236,7 +236,7 @@ class QuoteController {
     try {
       const { id } = req.params;
       const payload = req.body;
-      
+
       // Parse dates if needed
       const parseDateIfNeeded = (dateStr) => {
         if (!dateStr) return dateStr;
@@ -266,17 +266,17 @@ class QuoteController {
         new: true,
         runValidators: true,
       }).populate("service_id clientId");
-      
+
       if (!quote) {
-        return res.status(404).json({ 
-          success: false, 
-          message: "Quote not found" 
+        return res.status(404).json({
+          success: false,
+          message: "Quote not found"
         });
       }
-      
-      return res.json({ 
-        success: true, 
-        data: quote 
+
+      return res.json({
+        success: true,
+        data: quote
       });
     } catch (err) {
       return next(err);
@@ -290,20 +290,20 @@ class QuoteController {
   async delete(req, res, next) {
     try {
       const { id } = req.params;
-      
+
       const quote = await Quote.findByIdAndDelete(id);
-      
+
       if (!quote) {
-        return res.status(404).json({ 
-          success: false, 
-          message: "Quote not found" 
+        return res.status(404).json({
+          success: false,
+          message: "Quote not found"
         });
       }
-      
-      return res.json({ 
-        success: true, 
+
+      return res.json({
+        success: true,
         message: "Quote deleted successfully",
-        data: null 
+        data: null
       });
     } catch (err) {
       return next(err);

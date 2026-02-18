@@ -144,31 +144,35 @@ class ServiceBookingController {
       let filter = {};
 
       if (req.query.fromDate && req.query.toDate) {
-        // 📅 Custom date range filter
+        // 📅 Strict custom date range (overlapping safe logic)
+
         const fromDate = new Date(req.query.fromDate);
+        fromDate.setUTCHours(0, 0, 0, 0);
+
         const toDate = new Date(req.query.toDate);
-        toDate.setHours(23, 59, 59, 999);
+        toDate.setUTCHours(23, 59, 59, 999);
 
-        // filter.$or = [
-        //   { bookingDate: { $gte: fromDate, $lte: toDate } },
-        //   { startDate: { $gte: fromDate, $lte: toDate } }
-        // ];
+        filter = {
+          startDate: { $lte: toDate },   // booking starts before range ends
+          endDate: { $gte: fromDate }    // booking ends after range starts
+        };
+
       } else {
-        // 📅 Upcoming from today
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
+        // 📅 Upcoming from today (strict upcoming logic)
 
-        filter.$or = [
-          { bookingDate: { $gte: today } },
-          { startDate: { $gte: today } }
-        ];
+        const today = new Date();
+        today.setUTCHours(0, 0, 0, 0);
+
+        filter = {
+          endDate: { $gte: today }
+        };
       }
 
       const [items, total] = await Promise.all([
         ServiceBooking.find(filter)
           .skip(skip)
           .limit(limit)
-          .sort({ bookingDate: 1 }) // upcoming → ascending makes more sense
+          .sort({ startDate: 1 }) // better to sort by event start date
           .populate("service_id client_id photographer_id"),
         ServiceBooking.countDocuments(filter),
       ]);
@@ -200,9 +204,14 @@ class ServiceBookingController {
         meta: { total, page, limit },
       });
 
-    } catch (err) {
-      return next(err);
+    } catch (error) {
+      return res.status(500).json({
+        success: false,
+        message: "Something went wrong",
+        error: error.message,
+      });
     }
+
   }
 
 
