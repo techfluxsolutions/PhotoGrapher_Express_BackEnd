@@ -22,9 +22,6 @@ class UserController {
       if (req.file) {
         payload.avatar = `/uploads/${req.file.filename}`;
       }
-      if (payload.dateOfBirth) {
-        payload.dateOfBirth = new Date(payload.dateOfBirth);
-      }
 
       const user = await User.create(payload);
       return sendSuccessResponse(res, user, "User created successfully");
@@ -119,10 +116,7 @@ class UserController {
       if (req.file) {
         updates.avatar = `/uploads/userProfile/${req.file.filename}`;
       }
-      if (updates.dateOfBirth) {
-        // convert to date
-        updates.dateOfBirth = new Date(updates.dateOfBirth);
-      }
+
       console.log(updates);
       const user = await User.findByIdAndUpdate(id, updates, {
         new: true,
