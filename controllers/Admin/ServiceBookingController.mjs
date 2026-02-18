@@ -149,10 +149,10 @@ class ServiceBookingController {
         const toDate = new Date(req.query.toDate);
         toDate.setHours(23, 59, 59, 999);
 
-        filter.$or = [
-          { bookingDate: { $gte: fromDate, $lte: toDate } },
-          { startDate: { $gte: fromDate, $lte: toDate } }
-        ];
+        // filter.$or = [
+        //   { bookingDate: { $gte: fromDate, $lte: toDate } },
+        //   { startDate: { $gte: fromDate, $lte: toDate } }
+        // ];
       } else {
         // 📅 Upcoming from today
         const today = new Date();
