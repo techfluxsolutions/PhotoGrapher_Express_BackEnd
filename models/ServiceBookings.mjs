@@ -88,7 +88,7 @@ const serviceBookingSchema = new mongoose.Schema(
     },
     paymentMode: {
       type: String,
-      enum: ["cash", "online"],
+      enum: ["cash", "online", "NA"],
       default: "NA"
     },
     cancellationCharge: {
