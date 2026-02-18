@@ -22,6 +22,9 @@ class UserController {
       if (req.file) {
         payload.avatar = `/uploads/${req.file.filename}`;
       }
+      if (payload.dateOfBirth) {
+        payload.dateOfBirth = new Date(payload.dateOfBirth);
+      }
 
       const user = await User.create(payload);
       return sendSuccessResponse(res, user, "User created successfully");
