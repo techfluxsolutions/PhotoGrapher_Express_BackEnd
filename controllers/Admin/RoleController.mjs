@@ -29,7 +29,7 @@ class RoleController {
             if (permissions && permissions.length > 0) {
                 const validPermissions = [
                     'Dashboard', 'Photographers', 'Customers', 'Bookings', 'Payments',
-                    'Services', 'Quotes', 'Commission', 'Subscribers', 'Roles'
+                    'Services', 'Quotes', 'Commission', 'Subscribers', 'Roles', "Staff", "Review"
                 ];
                 const invalidPermissions = permissions.filter(p => !validPermissions.includes(p));
                 if (invalidPermissions.length > 0) {
