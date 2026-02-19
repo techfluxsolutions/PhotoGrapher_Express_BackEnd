@@ -17,13 +17,16 @@ const roleSchema = new mongoose.Schema({
             'Dashboard',
             'Photographers',
             'Customers',
-            'Bookings',
+            'Shoot Booking',
             'Payments',
             'Services',
-            'Quotes',
+            'My Quote',
             'Commission',
             'Subscribers',
-            'Roles'
+            'Roles',
+            'Staff',
+            'Queries',
+            'Storage Management'
         ],
         default: []
     }
