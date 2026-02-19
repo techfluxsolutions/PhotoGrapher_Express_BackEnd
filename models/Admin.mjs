@@ -12,7 +12,6 @@ const adminSchema = new mongoose.Schema(
     mobileNumber: {
       type: String,
       required: false,
-      unique: true,
       trim: true,
       sparse: true,
       lowercase: true,
@@ -70,6 +69,6 @@ adminSchema.virtual("fullName").get(function () {
 });
 
 // Index
-adminSchema.index({ username: 1, email: 1 });
+adminSchema.index({ username: 1, email: 1, mobileNumber: 1 });
 
 export default mongoose.model("Admin", adminSchema);

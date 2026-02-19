@@ -45,28 +45,16 @@ class SidebarIconController {
                     order: 1
                 },
                 {
-                    name: "Photographers",
-                    activeIcon: "/assests/sidebar/photographer-active.png",
-                    inactiveIcon: "/assests/sidebar/photographer-inactive.png",
-                    order: 8
-                },
-                {
-                    name: "Customers",
-                    activeIcon: "/assests/sidebar/customer-active.png",
-                    inactiveIcon: "/assests/sidebar/customer-inactive.png",
-                    order: 6
-                },
-                {
-                    name: "Bookings",
+                    name: "Shoot Booking",
                     activeIcon: "/assests/sidebar/camera-active.png",
                     inactiveIcon: "/assests/sidebar/camera-inactive.png",
                     order: 2
                 },
                 {
-                    name: "Payments",
-                    activeIcon: "/assests/sidebar/payment-active.png",
-                    inactiveIcon: "/assests/sidebar/payment-inactive.png",
-                    order: 5
+                    name: "My Quote",
+                    activeIcon: "/assests/sidebar/quote-active.png",
+                    inactiveIcon: "/assests/sidebar/quote-inactive.png",
+                    order: 3
                 },
                 {
                     name: "Services",
@@ -75,16 +63,16 @@ class SidebarIconController {
                     order: 4
                 },
                 {
-                    name: "Quotes",
-                    activeIcon: "/assests/sidebar/quote-active.png",
-                    inactiveIcon: "/assests/sidebar/quote-inactive.png",
-                    order: 3
+                    name: "Payments",
+                    activeIcon: "/assests/sidebar/payment-active.png",
+                    inactiveIcon: "/assests/sidebar/payment-inactive.png",
+                    order: 5
                 },
                 {
-                    name: "Commission",
-                    activeIcon: "/assests/sidebar/commission-active.png",
-                    inactiveIcon: "/assests/sidebar/commission-inactive.png",
-                    order: 10
+                    name: "Customers",
+                    activeIcon: "/assests/sidebar/customer-active.png",
+                    inactiveIcon: "/assests/sidebar/customer-inactive.png",
+                    order: 6
                 },
                 {
                     name: "Subscribers",
@@ -93,10 +81,22 @@ class SidebarIconController {
                     order: 7
                 },
                 {
+                    name: "Photographers",
+                    activeIcon: "/assests/sidebar/photographer-active.png",
+                    inactiveIcon: "/assests/sidebar/photographer-inactive.png",
+                    order: 8
+                },
+                {
                     name: "Roles",
                     activeIcon: "/assests/sidebar/role-active.png",
                     inactiveIcon: "/assests/sidebar/role-inactive.png",
                     order: 9
+                },
+                {
+                    name: "Commission",
+                    activeIcon: "/assests/sidebar/commission-active.png",
+                    inactiveIcon: "/assests/sidebar/commission-inactive.png",
+                    order: 10
                 },
                 {
                     name: "Staff",
@@ -105,10 +105,16 @@ class SidebarIconController {
                     order: 11
                 },
                 {
-                    name: "Review",
-                    activeIcon: "/assests/sidebar/Review_active.png",
-                    inactiveIcon: "/assests/sidebar/Review_inactive.png",
+                    name: "Queries",
+                    activeIcon: "/assests/sidebar/queries-active.png",
+                    inactiveIcon: "/assests/sidebar/queries-inactive.png",
                     order: 12
+                },
+                {
+                    name: "Storage Management",
+                    activeIcon: "/assests/sidebar/storageManagement-active.png",
+                    inactiveIcon: "/assests/sidebar/storageManagement-inactive.png",
+                    order: 13
                 }
             ];
 
