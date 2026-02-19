@@ -14,6 +14,35 @@ const OTP_RESEND_COOLDOWN_SECONDS = Number(process.env.OTP_RESEND_COOLDOWN_SECON
 const OTP_MAX_ATTEMPTS = Number(process.env.OTP_MAX_ATTEMPTS) || 5;
 const OTP_LOCK_MINUTES = Number(process.env.OTP_LOCK_MINUTES) || 15;
 
+const PROVIDER_MESSAGES = {
+  200: { message: "Login successful.", status: 200 },
+
+  400: { message: "Something went wrong. Please try again.", status: 400 },
+
+  409: { message: "Request already submitted.", status: 409 },
+
+  500: { message: "Server error. Please try again later.", status: 500 },
+
+  501: { message: "Service unavailable. Please try again later.", status: 500 },
+
+  505: { message: "Session expired. Please request a new OTP.", status: 400 },
+
+  506: { message: "Please wait before requesting another OTP.", status: 429 },
+
+  511: { message: "Invalid phone number.", status: 400 },
+
+  700: { message: "Verification failed. Try again.", status: 400 },
+
+  702: { message: "Incorrect OTP entered.", status: 400 },
+
+  703: { message: "Phone number already verified.", status: 400 },
+
+  705: { message: "OTP expired. Request a new one.", status: 400 },
+
+  800: { message: "Too many attempts. Try again later.", status: 429 },
+};
+
+
 class AuthController {
   // Production Routes
   async sendOTP(req, res, next) {
@@ -153,9 +182,13 @@ class AuthController {
 
       if (response.status !== 200 || responseCode !== 200 || !verificationId) {
         console.error("❌ Invalid SEND response:", data);
-        return res.status(502).json({
-          success: false,
+        const mappedError = PROVIDER_MESSAGES[responseCode] || {
           message: "Failed to send OTP",
+          status: 502,
+        };
+        return res.status(mappedError.status).json({
+          success: false,
+          message: mappedError.message,
           provider: data,
         });
       }
@@ -347,12 +380,14 @@ class AuthController {
         console.error("Provider Status:", err.response?.status);
         console.error("Provider Response:", providerData);
 
-        return res.status(400).json({
+        const mappedError = PROVIDER_MESSAGES[providerCode] || {
+          message: "Invalid or expired OTP",
+          status: 400,
+        };
+
+        return res.status(mappedError.status).json({
           success: false,
-          message:
-            providerData?.message ||
-            providerData?.data?.message ||
-            "Invalid or expired OTP",
+          message: mappedError.message,
           providerCode,
         });
       }
@@ -367,26 +402,39 @@ class AuthController {
       );
 
       if (response.status !== 200 || providerCode !== 200) {
-        user.otpAttempts = (user.otpAttempts || 0) + 1;
-        if (user.otpAttempts >= OTP_MAX_ATTEMPTS) {
-          user.lockUntil = new Date(
-            Date.now() + OTP_LOCK_MINUTES * 60 * 1000
-          );
-          user.otpAttempts = 0; // Reset attempts after locking
+        // Handle specific failure cases
+        if (providerCode === 702) {
+          // WRONG_OTP_PROVIDED
+          user.otpAttempts = (user.otpAttempts || 0) + 1;
+          if (user.otpAttempts >= OTP_MAX_ATTEMPTS) {
+            user.lockUntil = new Date(
+              Date.now() + OTP_LOCK_MINUTES * 60 * 1000
+            );
+            user.otpAttempts = 0; // Reset attempts after locking
+            await user.save();
+            return res.status(403).json({
+              success: false,
+              message: `Maximum verification attempts exceeded. Account locked for ${OTP_LOCK_MINUTES} minutes.`,
+              code: "ACCOUNT_LOCKED",
+            });
+          }
           await user.save();
-          return res.status(403).json({
+          return res.status(400).json({
             success: false,
-            message: `Maximum verification attempts exceeded. Account locked for ${OTP_LOCK_MINUTES} minutes.`,
+            message: `WRONG_OTP_PROVIDED. You have ${OTP_MAX_ATTEMPTS - user.otpAttempts
+              } attempts remaining.`,
+            providerCode,
           });
         }
-        await user.save();
 
-        return res.status(400).json({
+        const mappedError = PROVIDER_MESSAGES[providerCode] || {
+          message: "Invalid or expired OTP",
+          status: 400,
+        };
+
+        return res.status(mappedError.status).json({
           success: false,
-          message:
-            data?.message ||
-            data?.data?.message ||
-            `Invalid OTP. You have ${OTP_MAX_ATTEMPTS - user.otpAttempts} attempts remaining.`,
+          message: mappedError.message,
           providerCode,
         });
       }
