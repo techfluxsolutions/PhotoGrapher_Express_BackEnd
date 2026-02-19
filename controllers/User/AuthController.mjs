@@ -72,6 +72,17 @@ class AuthController {
         });
       }
 
+      /* Rate Limiting: Prevent spamming OTP requests */
+      if (user.verificationExpiry && new Date(user.verificationExpiry).getTime() > Date.now()) {
+        const waitSeconds = Math.ceil(
+          (new Date(user.verificationExpiry).getTime() - Date.now()) / 1000
+        );
+        return res.status(429).json({
+          success: false,
+          message: `Please wait ${waitSeconds} seconds before requesting a new OTP.`,
+        });
+      }
+
       /* 5️⃣ Send OTP via MessageCentral */
       const params = new URLSearchParams({
         customerId,
