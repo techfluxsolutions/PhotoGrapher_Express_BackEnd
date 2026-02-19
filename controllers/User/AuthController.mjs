@@ -421,7 +421,7 @@ class AuthController {
           await user.save();
           return res.status(400).json({
             success: false,
-            message: `WRONG_OTP_PROVIDED. You have ${OTP_MAX_ATTEMPTS - user.otpAttempts
+            message: `Wrong OTP entered. You have ${OTP_MAX_ATTEMPTS - user.otpAttempts
               } attempts remaining.`,
             providerCode,
           });
