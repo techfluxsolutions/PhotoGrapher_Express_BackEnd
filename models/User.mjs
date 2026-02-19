@@ -71,6 +71,17 @@ const userSchema = new mongoose.Schema(
       enum: ["user", "photographer", "admin"],
       default: "user",
     },
+    // OTP Security Fields
+    otpAttempts: {
+      type: Number,
+      default: 0
+    },
+    lockUntil: {
+      type: Date
+    },
+    lastOtpSentAt: {
+      type: Date
+    },
   },
   {
     timestamps: true,

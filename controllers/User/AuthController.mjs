@@ -9,7 +9,10 @@ const OTP_BYPASS_NUMBERS = (process.env.OTP_BYPASS_NUMBERS || "")
   .filter(Boolean);
 const OTP_BYPASS_CODE = process.env.OTP_BYPASS_CODE || "000000";
 
-const OTP_EXPIRY_MS = 60 * 1000; // 1 minute
+const OTP_VALIDITY_MINUTES = Number(process.env.OTP_VALIDITY_MINUTES) || 5;
+const OTP_RESEND_COOLDOWN_SECONDS = Number(process.env.OTP_RESEND_COOLDOWN_SECONDS) || 30;
+const OTP_MAX_ATTEMPTS = Number(process.env.OTP_MAX_ATTEMPTS) || 5;
+const OTP_LOCK_MINUTES = Number(process.env.OTP_LOCK_MINUTES) || 15;
 
 class AuthController {
   // Production Routes
@@ -62,7 +65,10 @@ class AuthController {
       /* 4️⃣ OTP Bypass */
       if (OTP_BYPASS_ENABLED && OTP_BYPASS_NUMBERS.includes(cleanedMobile)) {
         user.verificationId = "bypass_verification_id";
-        user.verificationExpiry = new Date(Date.now() + OTP_EXPIRY_MS);
+
+        user.verificationExpiry = new Date(
+          Date.now() + OTP_VALIDITY_MINUTES * 60 * 1000
+        );
         await user.save();
 
         return res.status(200).json({
@@ -72,10 +78,26 @@ class AuthController {
         });
       }
 
-      /* Rate Limiting: Prevent spamming OTP requests */
-      if (user.verificationExpiry && new Date(user.verificationExpiry).getTime() > Date.now()) {
+      /* Rate Limiting & Security Checks */
+      if (user.lockUntil && new Date(user.lockUntil) > new Date()) {
+        const waitMinutes = Math.ceil(
+          (new Date(user.lockUntil) - new Date()) / (60 * 1000)
+        );
+        return res.status(429).json({
+          success: false,
+          message: `Account locked due to too many failed attempts. Please try again in ${waitMinutes} minutes.`,
+        });
+      }
+
+      if (
+        user.lastOtpSentAt &&
+        Date.now() - new Date(user.lastOtpSentAt).getTime() <
+        OTP_RESEND_COOLDOWN_SECONDS * 1000
+      ) {
         const waitSeconds = Math.ceil(
-          (new Date(user.verificationExpiry).getTime() - Date.now()) / 1000
+          (OTP_RESEND_COOLDOWN_SECONDS * 1000 -
+            (Date.now() - new Date(user.lastOtpSentAt).getTime())) /
+          1000
         );
         return res.status(429).json({
           success: false,
@@ -140,7 +162,11 @@ class AuthController {
 
       /* 7️⃣ Save verification details */
       user.verificationId = verificationId;
-      user.verificationExpiry = new Date(Date.now() + OTP_EXPIRY_MS);
+      user.verificationExpiry = new Date(
+        Date.now() + OTP_VALIDITY_MINUTES * 60 * 1000
+      );
+      user.lastOtpSentAt = new Date();
+      user.otpAttempts = 0; // Reset attempts on new OTP send
       // Ensure our canonical isVerified flag is false when sending OTP
       user.isVerified = false;
       await user.save();
@@ -165,14 +191,22 @@ class AuthController {
       const { mobileNumber, otp, fcmToken } = req.body;
 
       /* 1️⃣ Validate input */
-      if (!mobileNumber || !otp) {
+      if (!mobileNumber) {
         return res.status(400).json({
           success: false,
-          message: "Mobile number and OTP are required",
+          message: "Mobile number is required",
+        });
+      }
+
+      if (!otp) {
+        return res.status(400).json({
+          success: false,
+          message: "OTP is required",
         });
       }
 
       const cleanedMobile = mobileNumber.toString().replace(/\D/g, "");
+
       if (!/^[6-9]\d{9}$/.test(cleanedMobile)) {
         return res.status(400).json({
           success: false,
@@ -182,6 +216,7 @@ class AuthController {
 
       /* 2️⃣ Find user */
       const user = await User.findOne({ mobileNumber: cleanedMobile });
+
       if (!user) {
         return res.status(404).json({
           success: false,
@@ -189,21 +224,33 @@ class AuthController {
         });
       }
 
+      /* 2.1️⃣ Check Lock Status */
+      if (user.lockUntil && new Date(user.lockUntil) > new Date()) {
+        const waitMinutes = Math.ceil(
+          (new Date(user.lockUntil) - new Date()) / (60 * 1000)
+        );
+        return res.status(429).json({
+          success: false,
+          message: `Account locked due to too many failed attempts. Please try again in ${waitMinutes} minutes.`,
+        });
+      }
       /* 3️⃣ OTP BYPASS (DEV / QA) */
       if (
-        OTP_BYPASS_ENABLED &&
-        OTP_BYPASS_NUMBERS.includes(cleanedMobile) &&
-        otp === OTP_BYPASS_CODE
+        process.env.OTP_BYPASS_ENABLED === "true" &&
+        process.env.OTP_BYPASS_NUMBERS?.split(",").includes(cleanedMobile) &&
+        otp === process.env.OTP_BYPASS_CODE
       ) {
         user.isVerified = true;
         user.verificationId = null;
         user.verificationExpiry = null;
+
         if (fcmToken) user.fcmToken = fcmToken;
 
         const token = signToken({
           id: user._id,
           mobileNumber: user.mobileNumber,
           userType: user.userType,
+          isAdmin: !!user.isAdmin,
         });
 
         user.token = token;
@@ -253,41 +300,94 @@ class AuthController {
       const customerId = process.env.MESSAGE_CENTRAL_CUSTOMER_ID;
 
       if (!baseUrl || !authToken || !customerId) {
+        console.error("❌ MessageCentral not configured properly");
         return res.status(500).json({
           success: false,
           message: "SMS service not configured",
         });
       }
 
-      /* 7️⃣ VERIFY OTP (AuthToken in QUERY PARAM — IMPORTANT) */
+      /* 7️⃣ VERIFY OTP */
       const verifyUrl = `${baseUrl}/verification/v3/validateOtp?customerId=${customerId}&verificationId=${user.verificationId}&code=${otp}`;
 
       let response;
+
       try {
         response = await axios.get(verifyUrl, {
           headers: { authToken },
           timeout: 10000,
         });
       } catch (err) {
-        console.error("❌ MessageCentral VERIFY error:", err);
+        console.error("❌ MessageCentral VERIFY error:");
+
+        // 🔹 Timeout
+        if (err.code === "ECONNABORTED") {
+          return res.status(503).json({
+            success: false,
+            message: "OTP verification service timeout. Please try again.",
+          });
+        }
+
+        // 🔹 Network / DNS error
+        if (!err.response) {
+          return res.status(503).json({
+            success: false,
+            message:
+              "Unable to reach OTP verification service. Please try again later.",
+          });
+        }
+
+        // 🔹 Provider responded with error
+        const providerData = err.response?.data || {};
+        const providerCode =
+          providerData?.responseCode ||
+          providerData?.data?.responseCode ||
+          err.response?.status;
+
+        console.error("Provider Status:", err.response?.status);
+        console.error("Provider Response:", providerData);
+
         return res.status(400).json({
           success: false,
-          message: err.response?.data?.message || "Invalid OTP",
-          provider: err.response?.data,
+          message:
+            providerData?.message ||
+            providerData?.data?.message ||
+            "Invalid or expired OTP",
+          providerCode,
         });
       }
 
-      /* 8️⃣ Validate provider response */
-      const data = response.data;
-      const responseCode = Number(
-        data?.responseCode || data?.data?.responseCode || 0
+      /* 8️⃣ Validate provider success response */
+      const data = response?.data || {};
+
+      const providerCode = Number(
+        data?.responseCode ||
+        data?.data?.responseCode ||
+        0
       );
 
-      if (response.status !== 200 || responseCode !== 200) {
+      if (response.status !== 200 || providerCode !== 200) {
+        user.otpAttempts = (user.otpAttempts || 0) + 1;
+        if (user.otpAttempts >= OTP_MAX_ATTEMPTS) {
+          user.lockUntil = new Date(
+            Date.now() + OTP_LOCK_MINUTES * 60 * 1000
+          );
+          user.otpAttempts = 0; // Reset attempts after locking
+          await user.save();
+          return res.status(403).json({
+            success: false,
+            message: `Maximum verification attempts exceeded. Account locked for ${OTP_LOCK_MINUTES} minutes.`,
+          });
+        }
+        await user.save();
+
         return res.status(400).json({
           success: false,
-          message: data?.message || "Invalid OTP",
-          provider: data,
+          message:
+            data?.message ||
+            data?.data?.message ||
+            `Invalid OTP. You have ${OTP_MAX_ATTEMPTS - user.otpAttempts} attempts remaining.`,
+          providerCode,
         });
       }
 
@@ -295,6 +395,9 @@ class AuthController {
       user.isVerified = true;
       user.verificationId = null;
       user.verificationExpiry = null;
+      user.otpAttempts = 0;
+      user.lockUntil = null;
+
       if (fcmToken) user.fcmToken = fcmToken;
 
       const token = signToken({
@@ -307,19 +410,29 @@ class AuthController {
       user.token = token;
       await user.save();
 
+      res.cookie("token", token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "strict",
+        maxAge: 7 * 24 * 60 * 60 * 1000,
+      });
+
       return res.status(200).json({
         success: true,
         message: "OTP verified successfully",
         token,
         user,
       });
+
     } catch (error) {
+      console.error("❌ verifyOTP internal error:", error);
       return res.status(500).json({
         success: false,
         message: "Internal server error",
       });
     }
   }
+
 
   // Developement Routes
 
