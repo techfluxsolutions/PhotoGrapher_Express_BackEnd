@@ -24,7 +24,6 @@ router.post("/partner-registration", (req, res, next) => PartnerRegistrationCont
 
 // Contact Us (Public)
 router.post("/contact-us", (req, res, next) => ContactUsController.create(req, res, next));
-
 // router.use(authMiddleware); // Removed global auth middleware to allow public routes
 
 
@@ -47,7 +46,7 @@ const uploadTicketAttachment = createUploader({
 router.get("/services", (req, res, next) => ServiceController.getAll(req, res, next));
 router.get("/faqs", (req, res, next) => FAQController.getAll(req, res, next));
 router.get("/reviews", (req, res, next) => ReviewController.getAll(req, res, next));
-router.post('/getToken', (req, res, next) => AuthController.getToken(req, res, next))
+
 // Subscribed User
 router.post("/subscribe", (req, res, next) => SubscribedUserController.createSubscriber(req, res, next));
 

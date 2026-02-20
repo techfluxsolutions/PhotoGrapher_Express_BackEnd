@@ -11,4 +11,8 @@ router.post("/verify", (req, res, next) =>
   AuthController.verifyOTP(req, res, next)
 );
 
+// getToken route
+router.post('/getToken', (req, res, next) => AuthController.getToken(req, res, next));
+
+
 export default router;
