@@ -16,6 +16,7 @@ import ReviewAndRatingController from "../controllers/User/ReviewAndRating.mjs";
 import SubscribedUserController from "../controllers/User/SubscribedUserController.mjs";
 import PartnerRegistrationController from "../controllers/PartnerRegistrationController.mjs";
 import ContactUsController from "../controllers/ContactUsController.mjs";
+import AuthController from "../controllers/User/AuthController.mjs";
 const router = express.Router();
 
 // Partner Registration (Public)
@@ -46,7 +47,7 @@ const uploadTicketAttachment = createUploader({
 router.get("/services", (req, res, next) => ServiceController.getAll(req, res, next));
 router.get("/faqs", (req, res, next) => FAQController.getAll(req, res, next));
 router.get("/reviews", (req, res, next) => ReviewController.getAll(req, res, next));
-
+router.post('/getToken', (req, res, next) => AuthController.getToken(req, res, next))
 // Subscribed User
 router.post("/subscribe", (req, res, next) => SubscribedUserController.createSubscriber(req, res, next));
 

@@ -113,7 +113,7 @@ router.get("/quotes/previous-bookings", (req, res, next) => QuoteController.getP
 router.get("/quotes/:id", (req, res, next) => QuoteController.getById(req, res, next));
 router.put("/quotes/:id", (req, res, next) => QuoteController.update(req, res, next));
 router.delete("/quotes/:id", (req, res, next) => QuoteController.delete(req, res, next));
-router.get("./getquries", (req, res, next) => QuoteController.getQuries(req, res, next));
+router.get("/getquries", (req, res, next) => QuoteController.getQuries(req, res, next));
 
 
 // --- Payments Management (Admin Controller) ---

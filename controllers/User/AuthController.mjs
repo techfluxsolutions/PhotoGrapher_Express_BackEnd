@@ -2,6 +2,7 @@ import { signToken } from "../../utils/jwt.mjs";
 import roleModelMap from "../../utils/roleModelMap.mjs";
 import User from "../../models/User.mjs";
 import axios from "axios";
+import { verifyToken } from "../../utils/jwt.mjs";
 const OTP_BYPASS_ENABLED = process.env.OTP_BYPASS_ENABLED === "true";
 const OTP_BYPASS_NUMBERS = (process.env.OTP_BYPASS_NUMBERS || "")
   .split(",")
@@ -680,5 +681,55 @@ class AuthController {
 
 
   //static 1234 OTP And Verify Code Ends
+
+  // get Token API for a longer session
+
+  async getToken(req, res) {
+    try {
+      const { token } = req.body;
+
+      if (!token) {
+        return res.status(400).json({
+          success: false,
+          message: "Token is required",
+        });
+      }
+
+      let decoded;
+
+      try {
+        // 🔍 Verify token (this automatically checks expiry)
+        decoded = verifyToken(token);
+      } catch (err) {
+        return res.status(401).json({
+          success: false,
+          message: "Session expired",
+        });
+      }
+
+      const user = await User.findById(decoded.id);
+
+      if (!user) {
+        return res.status(404).json({
+          success: false,
+          message: "User not found",
+        });
+      }
+
+      // ✅ Session is valid — return same token + id
+      return res.status(200).json({
+        success: true,
+        message: "Session active",
+        token: token,   // return same token
+        id: user._id,
+      });
+
+    } catch (error) {
+      return res.status(500).json({
+        success: false,
+        message: error.message || "Internal server error",
+      });
+    }
+  }
 }
 export default new AuthController();
