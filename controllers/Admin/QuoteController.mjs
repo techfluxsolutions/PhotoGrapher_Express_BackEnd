@@ -61,12 +61,12 @@ class QuoteController {
       const skip = (page - 1) * limit;
 
       const [items, total] = await Promise.all([
-        Quote.find({})
+        Quote.find({ isFinalized: true })
           .skip(skip)
           .limit(limit)
           .sort({ createdAt: -1 })
           .populate("service_id clientId"),
-        Quote.countDocuments(),
+        Quote.countDocuments({ isFinalized: true }),
       ]);
 
       return res.json({
@@ -447,6 +447,30 @@ class QuoteController {
         success: true,
         data: items,
         meta: { total, page, limit, startDate, endDate },
+      });
+    } catch (err) {
+      return next(err);
+    }
+  }
+  async getQuries(req, res, next) {
+    try {
+      const page = Math.max(1, parseInt(req.query.page) || 1);
+      const limit = Math.max(1, parseInt(req.query.limit) || 20);
+      const skip = (page - 1) * limit;
+
+      const [items, total] = await Promise.all([
+        Quote.find({ isFinalized: false })
+          .skip(skip)
+          .limit(limit)
+          .sort({ eventDate: -1 })
+          .populate("service_id clientId"),
+        Quote.countDocuments({ isFinalized: false }),
+      ]);
+
+      return res.json({
+        success: true,
+        data: items,
+        meta: { total, page, limit },
       });
     } catch (err) {
       return next(err);

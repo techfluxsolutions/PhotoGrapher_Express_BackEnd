@@ -116,7 +116,7 @@ if (process.env.MONGODB_URI) {
     .catch((err) => console.error("MongoDB connection error:", err));
 }
 
-// Sample route
+// Sample routeƒ
 app.get("/", (req, res) => {
   res.send("Hello World!");
 });
