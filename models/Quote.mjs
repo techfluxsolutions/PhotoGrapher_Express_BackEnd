@@ -58,6 +58,10 @@ const quoteSchema = new mongoose.Schema(
       enum: ["quotes", "personalizedQuotes"],
       default: "quotes"
     },
+    isQuoteFinal: {
+      type: Boolean,
+      default: false
+    }
 
   },
   {
