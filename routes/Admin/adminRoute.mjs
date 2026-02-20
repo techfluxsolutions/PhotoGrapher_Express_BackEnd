@@ -131,6 +131,7 @@ router.get("/customers/verified", (req, res, next) => CustomerController.getVeri
 router.get("/customers/unverified", (req, res, next) => CustomerController.getUnverified(req, res, next));
 router.get("/customers/search", (req, res, next) => CustomerController.search(req, res, next));
 router.get("/customers/statistics", (req, res, next) => CustomerController.getStatistics(req, res, next));
+router.get("/customers/:clientId/booked-services", (req, res, next) => ServiceBookingController.getCustomerServicesSummary(req, res, next));
 router.get("/customers/:id", (req, res, next) => CustomerController.getById(req, res, next));
 router.put("/customers/:id", (req, res, next) => CustomerController.update(req, res, next));
 router.delete("/customers/:id", (req, res, next) => CustomerController.delete(req, res, next));

@@ -529,6 +529,35 @@ class ServiceBookingController {
       return next(err);
     }
   }
+
+  /**
+   * Get brief summary of all services booked by a customer
+   * GET /api/admin/customers/:clientId/booked-services
+   */
+  async getCustomerServicesSummary(req, res, next) {
+    try {
+      const { clientId } = req.params;
+
+      const bookings = await ServiceBooking.find({ client_id: clientId })
+        .populate("service_id", "serviceName serviceDescription")
+        .sort({ createdAt: -1 });
+
+      const summary = bookings.map((booking) => ({
+        serviceName: booking.service_id?.serviceName || "",
+        cost: booking.totalAmount,
+        description: booking.service_id?.serviceDescription || "",
+        bookingDate: booking.bookingDate,
+        status: booking.status,
+      }));
+
+      return res.json({
+        success: true,
+        data: summary,
+      });
+    } catch (err) {
+      return next(err);
+    }
+  }
 }
 
 export default new ServiceBookingController();

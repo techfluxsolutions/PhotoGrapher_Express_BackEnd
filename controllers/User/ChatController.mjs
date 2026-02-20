@@ -22,7 +22,21 @@ class ChatController {
                 .populate("participants", "username avatar")
                 .sort({ lastMessageAt: -1 });
 
-            return res.json({ success: true, data: conversations });
+            const baseUrl = `${req.protocol}://${req.get("host")}`;
+            const formattedConversations = conversations.map(conv => {
+                const convObj = conv.toObject();
+                if (convObj.participants) {
+                    convObj.participants = convObj.participants.map(p => {
+                        if (p.avatar && !p.avatar.startsWith("http")) {
+                            p.avatar = `${baseUrl}/${p.avatar.replace(/\\/g, "/")}`;
+                        }
+                        return p;
+                    });
+                }
+                return convObj;
+            });
+
+            return res.json({ success: true, data: formattedConversations });
         } catch (err) {
             next(err);
         }
@@ -85,10 +99,19 @@ class ChatController {
                 .limit(limit)
                 .populate("senderId", "username avatar"); // To show sender details
 
+            const baseUrl = `${req.protocol}://${req.get("host")}`;
+            const formattedMessages = messages.map(msg => {
+                const msgObj = msg.toObject();
+                if (msgObj.senderId && msgObj.senderId.avatar && !msgObj.senderId.avatar.startsWith("http")) {
+                    msgObj.senderId.avatar = `${baseUrl}/${msgObj.senderId.avatar.replace(/\\/g, "/")}`;
+                }
+                return msgObj;
+            });
+
             return res.json({
                 success: true,
                 pinned: pinedBookings,
-                data: messages.reverse(), // Client usually expects chronological order for chat
+                data: formattedMessages.reverse(), // Client usually expects chronological order for chat
                 meta: { total, page, limit },
             });
         } catch (err) {
@@ -255,12 +278,18 @@ class ChatController {
             // Populate sender details for the response
             await newMessage.populate("senderId", "username avatar");
 
+            const baseUrl = `${req.protocol}://${req.get("host")}`;
+            const messageObj = newMessage.toObject();
+            if (messageObj.senderId && messageObj.senderId.avatar && !messageObj.senderId.avatar.startsWith("http")) {
+                messageObj.senderId.avatar = `${baseUrl}/${messageObj.senderId.avatar.replace(/\\/g, "/")}`;
+            }
+
             // Notify others via socket
             try {
                 const io = getIO();
                 const roomName = `booking_${refId}`;
                 console.log(`📡 Emitting message to room: ${roomName}`);
-                io.to(roomName).emit("receive_message", newMessage);
+                io.to(roomName).emit("receive_message", messageObj);
 
                 // Notify all participants about the conversation update
                 const participants = conversation.participants;
@@ -277,7 +306,7 @@ class ChatController {
                 console.error("❌ Socket notification failed:", socketErr.message);
             }
 
-            return res.status(201).json({ success: true, data: newMessage });
+            return res.status(201).json({ success: true, data: messageObj });
         } catch (err) {
             next(err);
         }

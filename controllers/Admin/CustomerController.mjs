@@ -1,4 +1,5 @@
 import User from "../../models/User.mjs";
+import ServiceBooking from "../../models/ServiceBookings.mjs";
 
 class CustomerController {
   /**
@@ -8,7 +9,7 @@ class CustomerController {
   async create(req, res, next) {
     try {
       const payload = req.body;
-      
+
       // Parse date of birth if provided in DD-MM-YYYY format
       if (payload.dateOfBirth && typeof payload.dateOfBirth === 'string') {
         const parseDDMMYYYY = (dateStr) => {
@@ -43,10 +44,10 @@ class CustomerController {
       }
 
       const user = await User.create(payload);
-      
-      return res.status(201).json({ 
-        success: true, 
-        data: user 
+
+      return res.status(201).json({
+        success: true,
+        data: user
       });
     } catch (err) {
       return next(err);
@@ -95,20 +96,29 @@ class CustomerController {
   async getById(req, res, next) {
     try {
       const { id } = req.params;
-      
+
       const user = await User.findById(id)
         .select('-password -otp -otpExpiresAt');
-      
+
       if (!user) {
-        return res.status(404).json({ 
-          success: false, 
-          message: "Customer not found" 
+        return res.status(404).json({
+          success: false,
+          message: "Customer not found"
         });
       }
-      
-      return res.json({ 
-        success: true, 
-        data: user 
+
+      // Fetch all bookings for this customer
+      const bookings = await ServiceBooking.find({ client_id: id })
+        .populate("service_id photographer_id")
+        .sort({ createdAt: -1 });
+
+      const userData = user.toObject();
+      userData.bookings = bookings;
+      userData.hasMultipleBookings = bookings.length > 1;
+
+      return res.json({
+        success: true,
+        data: userData
       });
     } catch (err) {
       return next(err);
@@ -123,7 +133,7 @@ class CustomerController {
     try {
       const { id } = req.params;
       const payload = req.body;
-      
+
       // Parse date of birth if provided in DD-MM-YYYY format
       if (payload.dateOfBirth && typeof payload.dateOfBirth === 'string') {
         const parseDDMMYYYY = (dateStr) => {
@@ -139,7 +149,7 @@ class CustomerController {
 
       // Check if mobile number is being changed and already exists
       if (payload.mobileNumber) {
-        const existingUser = await User.findOne({ 
+        const existingUser = await User.findOne({
           mobileNumber: payload.mobileNumber,
           _id: { $ne: id }
         });
@@ -153,7 +163,7 @@ class CustomerController {
 
       // Check if email is being changed and already exists
       if (payload.email) {
-        const existingEmail = await User.findOne({ 
+        const existingEmail = await User.findOne({
           email: payload.email,
           _id: { $ne: id }
         });
@@ -174,17 +184,17 @@ class CustomerController {
         new: true,
         runValidators: true,
       }).select('-password -otp -otpExpiresAt');
-      
+
       if (!user) {
-        return res.status(404).json({ 
-          success: false, 
-          message: "Customer not found" 
+        return res.status(404).json({
+          success: false,
+          message: "Customer not found"
         });
       }
-      
-      return res.json({ 
-        success: true, 
-        data: user 
+
+      return res.json({
+        success: true,
+        data: user
       });
     } catch (err) {
       return next(err);
@@ -198,20 +208,20 @@ class CustomerController {
   async delete(req, res, next) {
     try {
       const { id } = req.params;
-      
+
       const user = await User.findByIdAndDelete(id);
-      
+
       if (!user) {
-        return res.status(404).json({ 
-          success: false, 
-          message: "Customer not found" 
+        return res.status(404).json({
+          success: false,
+          message: "Customer not found"
         });
       }
-      
-      return res.json({ 
-        success: true, 
+
+      return res.json({
+        success: true,
         message: "Customer deleted successfully",
-        data: null 
+        data: null
       });
     } catch (err) {
       return next(err);
