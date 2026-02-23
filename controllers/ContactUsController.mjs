@@ -91,6 +91,8 @@ class ContactUsController {
             next(error);
         }
     }
+
+    
 }
 
 export default new ContactUsController();

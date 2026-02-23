@@ -478,10 +478,10 @@ class PhotographerController {
                 { upsert: true, new: true }
             );
 
-            res.status(200).json({ message: "Commissions updated successfully" });
+            res.status(200).json({success: true, message: "Commissions updated successfully" });
         } catch (error) {
             console.error("Error updating commissions:", error);
-            res.status(500).json({ message: "Failed to update commissions", error: error.message });
+            res.status(500).json({ success: false, message: "Failed to update commissions", error: error.message });
         }
     }
     async getCommissions(req, res) {
@@ -493,7 +493,7 @@ class PhotographerController {
             });
         } catch (error) {
             console.error("Error fetching commissions:", error);
-            res.status(500).json({ message: "Failed to fetch commissions", error: error.message });
+            res.status(500).json({ success: false, message: "Failed to fetch commissions", error: error.message });
         }
     }
 }
