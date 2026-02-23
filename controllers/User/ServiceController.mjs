@@ -140,7 +140,6 @@ class ServiceController {
 
   async getServiceNameOnly(req, res) {
     try {
-      //service name plus photographer profile data
       const serviceNames = await Service.find().select('serviceName');
       const photographerData = await Photographer.findOne().select('servicesAndStyles');
 
@@ -151,7 +150,43 @@ class ServiceController {
         })
       }
 
-      const services = serviceNames.map(service => ({
+      // Predefined order as requested
+      const preferredOrder = [
+        "wedding photography",
+        "maternity and baby shoot",
+        "event photography",
+        "fashion photography",
+        "corporate photography",
+        "sports photography",
+        "automobile photography",
+        "food photography",
+        "product photography"
+      ];
+
+      // Sort serviceNames based on preferredOrder
+      const sortedServiceNames = [...serviceNames].sort((a, b) => {
+        const nameA = a.serviceName.toLowerCase();
+        const nameB = b.serviceName.toLowerCase();
+
+        const indexA = preferredOrder.indexOf(nameA);
+        const indexB = preferredOrder.indexOf(nameB);
+
+        // If both are in preferredOrder, compare their indices
+        if (indexA !== -1 && indexB !== -1) {
+          return indexA - indexB;
+        }
+
+        // If only a is in preferredOrder, a comes first
+        if (indexA !== -1) return -1;
+
+        // If only b is in preferredOrder, b comes first
+        if (indexB !== -1) return 1;
+
+        // If neither is in preferredOrder, sort alphabetically
+        return nameA.localeCompare(nameB);
+      });
+
+      const services = sortedServiceNames.map(service => ({
         _id: service._id,
         serviceName: service.serviceName,
         key: service.serviceName
@@ -259,9 +294,35 @@ class ServiceController {
   async getServiceNamesAndAdditional(req, res, next) {
     try {
       const data = await Service.find().select("serviceName isAdditionalServices");
+
+      const preferredOrder = [
+        "wedding photography",
+        "maternity and baby shoot",
+        "event photography",
+        "fashion photography",
+        "corporate photography",
+        "sports photography",
+        "automobile photography",
+        "food photography",
+        "product photography"
+      ];
+
+      const sortedData = [...data].sort((a, b) => {
+        const nameA = a.serviceName.toLowerCase();
+        const nameB = b.serviceName.toLowerCase();
+
+        const indexA = preferredOrder.indexOf(nameA);
+        const indexB = preferredOrder.indexOf(nameB);
+
+        if (indexA !== -1 && indexB !== -1) return indexA - indexB;
+        if (indexA !== -1) return -1;
+        if (indexB !== -1) return 1;
+        return nameA.localeCompare(nameB);
+      });
+
       res.status(200).json({
         success: true,
-        data,
+        data: sortedData,
       });
     } catch (error) {
       next(error);

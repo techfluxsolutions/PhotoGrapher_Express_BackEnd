@@ -53,6 +53,14 @@ const quoteSchema = new mongoose.Schema(
     budget: {
       type: String,
     },
+    requirements: {
+      type: [String],
+      required: false
+    },
+    editingPreferences: {
+      type: Boolean,
+      default: false
+    },
     quoteType: {
       type: String,
       enum: ["quotes", "personalizedQuotes"],
@@ -61,7 +69,7 @@ const quoteSchema = new mongoose.Schema(
     isQuoteFinal: {
       type: Boolean,
       default: false
-    }
+    },
 
   },
   {
