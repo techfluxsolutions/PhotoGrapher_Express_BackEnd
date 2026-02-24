@@ -633,15 +633,27 @@ class ServiceBookingController {
             },
           },
           { $unwind: { path: "$photographer_id", preserveNullAndEmptyArrays: true } },
-          {
-            $project: {
-              allMessages: 0,
-              unreadMessages: 0,
-            },
-          },
           { $sort: { unreadCount: -1, "conversation.lastMessageAt": -1, createdAt: -1 } },
           { $skip: skip },
           { $limit: limit },
+          {
+            $project: {
+              _id: 0,
+              id: "$_id",
+              "bookingId": "$veroaBookingId",
+              "clientName": "$client_id.username",
+              "eventType": "$service_id.serviceName",
+              "eventDate": "$bookingDate",
+              "eventLocation": { $concat: ["$city", ", ", "$state"] },
+              "bookingAmount": "$totalAmount",
+              "paymentMode": "$paymentMode",
+              "bookingStatus": "$status",
+              "paymentStatus": "$paymentStatus",
+              "assignPhotographer": "$photographer_id.basicInfo.fullName",
+              "team": "$team",
+              "unreadmessages": "$unreadCount",
+            },
+          },
         ]),
         ServiceBooking.countDocuments(),
       ]);

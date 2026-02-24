@@ -42,7 +42,9 @@ class QuoteController {
       // const filter = {};
       // if (enquiryId) filter.job_id = enquiryId;
       // if (photographerId) filter.photographer_id = photographerId;
-      const items = await Quote.find({ clientId: id }).sort({ createdAt: -1 });
+      const items = await Quote.find({ clientId: id })
+        .populate("service_id")
+        .sort({ createdAt: -1 });
       return res.json({ success: true, data: items });
     } catch (err) {
       return next(err);
@@ -54,7 +56,7 @@ class QuoteController {
       const { id } = req.params;
       // return res.json({ success: true, data: id });
       console.log("paramsß", req.params)
-      const quote = await Quote.findById(id);
+      const quote = await Quote.findById(id).populate("service_id");
       if (!quote) {
         return res
           .status(404)

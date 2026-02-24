@@ -275,6 +275,36 @@ class ChatController {
             conversation.lastMessageAt = new Date();
             await conversation.save();
 
+            // If it's a quote-related message, update the Quote document but keep it as a Query (isQuoteFinal: false)
+            if (finalQuoteId) {
+                const parseDDMMYYYY = (dateStr) => {
+                    if (!dateStr || typeof dateStr !== 'string' || !dateStr.includes('-')) return dateStr;
+                    const parts = dateStr.split("-");
+                    if (parts.length !== 3) return dateStr;
+                    const [day, month, year] = parts;
+                    return new Date(`${year}-${month}-${day}`);
+                };
+
+                const quoteUpdate = {
+                    isQuoteFinal: false // Always stay in Queries
+                };
+
+                if (finalBudget) quoteUpdate.currentBudget = finalBudget;
+                if (finalStartDate) quoteUpdate.startDate = parseDDMMYYYY(finalStartDate);
+                if (finalEndDate) quoteUpdate.endDate = parseDDMMYYYY(finalEndDate);
+                if (finalLocation) quoteUpdate.location = finalLocation;
+                if (finalEventType) quoteUpdate.eventType = finalEventType;
+                if (finalCity) quoteUpdate.city = finalCity;
+                if (finalState) quoteUpdate.state = finalState;
+                if (finalPostalCode) quoteUpdate.postalCode = finalPostalCode;
+                if (finalStreetName) quoteUpdate.streetName = finalStreetName;
+                if (finalFlatOrHouseNo) quoteUpdate.flatOrHouseNo = finalFlatOrHouseNo;
+
+                await Quote.findByIdAndUpdate(finalQuoteId, quoteUpdate).catch(err => {
+                    console.error("⚠️ Failed to update Quote from Chat:", err.message);
+                });
+            }
+
             // Populate sender details for the response
             await newMessage.populate("senderId", "username avatar");
 

@@ -95,7 +95,7 @@ class QuoteController {
         Quote.find({ quoteStatus: "yourQuotes" })
           .skip(skip)
           .limit(limit)
-          .sort({ eventDate: -1 })
+          .sort({ createdAt: -1 })
           .populate("service_id clientId"),
         Quote.countDocuments({ quoteStatus: "yourQuotes" }),
       ]);
@@ -143,7 +143,7 @@ class QuoteController {
         Quote.find(filter)
           .skip(skip)
           .limit(limit)
-          .sort({ eventDate: 1 })
+          .sort({ createdAt: -1 })
           .populate("service_id clientId"),
         Quote.countDocuments(filter),
       ]);
@@ -464,7 +464,7 @@ class QuoteController {
         Quote.find({ isQuoteFinal: false })
           .skip(skip)
           .limit(limit)
-          .sort({ eventDate: -1 })
+          .sort({ createdAt: -1 })
           .populate("service_id clientId"),
         Quote.countDocuments({ isQuoteFinal: false }),
       ]);
@@ -534,14 +534,36 @@ class QuoteController {
             },
           },
           { $unwind: { path: "$clientId", preserveNullAndEmptyArrays: true } },
-          {
-            $project: {
-              unreadMessages: 0,
-            },
-          },
           { $sort: { unreadCount: -1, "conversation.lastMessageAt": -1, createdAt: -1 } },
           { $skip: skip },
           { $limit: limit },
+          {
+            $project: {
+              _id: 0,
+              id: "$_id",
+              eventType: { $ifNull: ["$service_id.serviceName", "$eventType", ""] },
+              eventDate: { $ifNull: ["$eventDate", ""] },
+              startDate: { $ifNull: ["$startDate", ""] },
+              endDate: { $ifNull: ["$endDate", ""] },
+              eventLocation: { $ifNull: ["$location", ""] },
+              city: { $ifNull: ["$city", ""] },
+              state: { $ifNull: ["$state", ""] },
+              postalCode: { $ifNull: ["$postalCode", ""] },
+              streetName: { $ifNull: ["$streetName", ""] },
+              flatOrHouseNo: { $ifNull: ["$flatOrHouseNo", ""] },
+              requirements: { $ifNull: ["$requirements", []] },
+              currentBudget: { $ifNull: ["$currentBudget", ""] },
+              previousBudget: { $ifNull: ["$previousBudget", ""] },
+              budget: { $ifNull: ["$budget", ""] },
+              name: { $ifNull: ["$clientId.username", "$clientName", ""] },
+              phone: { $ifNull: ["$phoneNumber", ""] },
+              email: { $ifNull: ["$email", ""] },
+              unreadMessages: "$unreadCount",
+              editingPreferences: { $ifNull: ["$editingPreferences", false] },
+              quoteType: { $ifNull: ["$quoteType", ""] },
+              eventDuration: { $ifNull: ["$eventDuration", ""] },
+            },
+          },
         ]),
         Quote.countDocuments({ isQuoteFinal: false }),
       ]);
