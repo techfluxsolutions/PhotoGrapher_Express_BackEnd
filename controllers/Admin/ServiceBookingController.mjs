@@ -194,7 +194,7 @@ class ServiceBookingController {
         endDate: booking.endDate || null,
         bookingAmount: booking.totalAmount,
         paymentMode: booking.paymentMode,
-        paymentType: booking.paymentStatus,
+        paymentStatus: booking.paymentStatus,
         bookingStatus: booking.status,
       }));
 

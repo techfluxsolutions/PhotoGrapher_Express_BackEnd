@@ -70,6 +70,34 @@ const quoteSchema = new mongoose.Schema(
       type: Boolean,
       default: false
     },
+    flatOrHouseNo: {
+      type: String,
+      default: ""
+    },
+    streetName: {
+      type: String,
+      default: ""
+    },
+    city: {
+      type: String,
+      default: ""
+    },
+    state: {
+      type: String,
+      default: ""
+    },
+    postalCode: {
+      type: String,
+      default: ""
+    },
+    currentBudget: {
+      type: String,
+      default: ""
+    },
+    previousBudget: {
+      type: String,
+      default: ""
+    },
 
   },
   {

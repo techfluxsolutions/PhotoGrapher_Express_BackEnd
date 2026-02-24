@@ -61,12 +61,12 @@ class QuoteController {
       const skip = (page - 1) * limit;
 
       const [items, total] = await Promise.all([
-        Quote.find({ isFinalized: true })
+        Quote.find({ isQuoteFinal: true })
           .skip(skip)
           .limit(limit)
           .sort({ createdAt: -1 })
           .populate("service_id clientId"),
-        Quote.countDocuments({ isFinalized: true }),
+        Quote.countDocuments({ isQuoteFinal: true }),
       ]);
 
       return res.json({
@@ -459,12 +459,12 @@ class QuoteController {
       const skip = (page - 1) * limit;
 
       const [items, total] = await Promise.all([
-        Quote.find({ isFinalized: false })
+        Quote.find({ isQuoteFinal: false })
           .skip(skip)
           .limit(limit)
           .sort({ eventDate: -1 })
           .populate("service_id clientId"),
-        Quote.countDocuments({ isFinalized: false }),
+        Quote.countDocuments({ isQuoteFinal: false }),
       ]);
 
       return res.json({
