@@ -1,4 +1,6 @@
 import Quote from "../../models/Quote.mjs";
+import Message from "../../models/Message.mjs";
+import Conversation from "../../models/Conversation.mjs";
 
 class QuoteController {
   /**
@@ -464,6 +466,83 @@ class QuoteController {
           .limit(limit)
           .sort({ eventDate: -1 })
           .populate("service_id clientId"),
+        Quote.countDocuments({ isQuoteFinal: false }),
+      ]);
+
+      return res.json({
+        success: true,
+        data: items,
+        meta: { total, page, limit },
+      });
+    } catch (err) {
+      return next(err);
+    }
+  }
+  async getQuotesWithUnreadCount(req, res, next) {
+    try {
+      const page = Math.max(1, parseInt(req.query.page) || 1);
+      const limit = Math.max(1, parseInt(req.query.limit) || 20);
+      const skip = (page - 1) * limit;
+
+      const [items, total] = await Promise.all([
+        Quote.aggregate([
+          { $match: { isQuoteFinal: false } },
+          {
+            $lookup: {
+              from: "conversations",
+              localField: "_id",
+              foreignField: "quoteId",
+              as: "conversation",
+            },
+          },
+          { $unwind: { path: "$conversation", preserveNullAndEmptyArrays: true } },
+          {
+            $lookup: {
+              from: "messages",
+              let: { convId: "$conversation._id" },
+              pipeline: [
+                {
+                  $match: {
+                    $expr: { $eq: ["$conversationId", "$$convId"] },
+                    isRead: false,
+                  },
+                },
+              ],
+              as: "unreadMessages",
+            },
+          },
+          {
+            $addFields: {
+              unreadCount: { $size: "$unreadMessages" },
+            },
+          },
+          {
+            $lookup: {
+              from: "services",
+              localField: "service_id",
+              foreignField: "_id",
+              as: "service_id",
+            },
+          },
+          { $unwind: { path: "$service_id", preserveNullAndEmptyArrays: true } },
+          {
+            $lookup: {
+              from: "users",
+              localField: "clientId",
+              foreignField: "_id",
+              as: "clientId",
+            },
+          },
+          { $unwind: { path: "$clientId", preserveNullAndEmptyArrays: true } },
+          {
+            $project: {
+              unreadMessages: 0,
+            },
+          },
+          { $sort: { unreadCount: -1, "conversation.lastMessageAt": -1, createdAt: -1 } },
+          { $skip: skip },
+          { $limit: limit },
+        ]),
         Quote.countDocuments({ isQuoteFinal: false }),
       ]);
 

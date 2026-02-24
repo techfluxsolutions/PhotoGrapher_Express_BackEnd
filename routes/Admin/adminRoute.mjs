@@ -97,6 +97,7 @@ router.put("/bookings/:id", (req, res, next) => ServiceBookingController.update(
 router.delete("/bookings/:id", (req, res, next) => ServiceBookingController.delete(req, res, next));
 router.get("/getpreviousbookings", (req, res, next) => ServiceBookingController.getPrevious(req, res, next));
 router.get("/completelyPaidBookings", (req, res, next) => ServiceBookingController.getCompletedBookings(req, res, next));
+router.get("/bookings-chat-count", (req, res, next) => ServiceBookingController.getServiceBookingsWithChatCount(req, res, next));
 router.get("/bookings/:id/gallery", (req, res, next) => ServiceBookingController.getGalleryByBookingId(req, res, next));
 
 
@@ -116,6 +117,7 @@ router.get("/quotes/:id", (req, res, next) => QuoteController.getById(req, res, 
 router.put("/quotes/:id", (req, res, next) => QuoteController.update(req, res, next));
 router.delete("/quotes/:id", (req, res, next) => QuoteController.delete(req, res, next));
 router.get("/getquries", (req, res, next) => QuoteController.getQuries(req, res, next));
+router.get("/quotes-unread-count", (req, res, next) => QuoteController.getQuotesWithUnreadCount(req, res, next));
 
 
 // --- Payments Management (Admin Controller) ---

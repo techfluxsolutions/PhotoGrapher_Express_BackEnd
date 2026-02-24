@@ -1,5 +1,7 @@
 import ServiceBooking from "../../models/ServiceBookings.mjs";
 import Gallery from "../../models/Gallery.mjs";
+import Message from "../../models/Message.mjs";
+import Conversation from "../../models/Conversation.mjs";
 
 class ServiceBookingController {
   /**
@@ -553,6 +555,101 @@ class ServiceBookingController {
       return res.json({
         success: true,
         data: summary,
+      });
+    } catch (err) {
+      return next(err);
+    }
+  }
+  async getServiceBookingsWithChatCount(req, res, next) {
+    try {
+      const page = Math.max(1, parseInt(req.query.page) || 1);
+      const limit = Math.max(1, parseInt(req.query.limit) || 20);
+      const skip = (page - 1) * limit;
+
+      const [items, total] = await Promise.all([
+        ServiceBooking.aggregate([
+          {
+            $lookup: {
+              from: "conversations",
+              localField: "_id",
+              foreignField: "bookingId",
+              as: "conversation",
+            },
+          },
+          { $unwind: { path: "$conversation", preserveNullAndEmptyArrays: true } },
+          {
+            $lookup: {
+              from: "messages",
+              localField: "conversation._id",
+              foreignField: "conversationId",
+              as: "allMessages",
+            },
+          },
+          {
+            $lookup: {
+              from: "messages",
+              let: { convId: "$conversation._id" },
+              pipeline: [
+                {
+                  $match: {
+                    $expr: { $eq: ["$conversationId", "$$convId"] },
+                    isRead: false,
+                  },
+                },
+              ],
+              as: "unreadMessages",
+            },
+          },
+          {
+            $addFields: {
+              messageCount: { $size: "$allMessages" },
+              unreadCount: { $size: "$unreadMessages" },
+            },
+          },
+          {
+            $lookup: {
+              from: "services",
+              localField: "service_id",
+              foreignField: "_id",
+              as: "service_id",
+            },
+          },
+          { $unwind: { path: "$service_id", preserveNullAndEmptyArrays: true } },
+          {
+            $lookup: {
+              from: "users",
+              localField: "client_id",
+              foreignField: "_id",
+              as: "client_id",
+            },
+          },
+          { $unwind: { path: "$client_id", preserveNullAndEmptyArrays: true } },
+          {
+            $lookup: {
+              from: "photographers",
+              localField: "photographer_id",
+              foreignField: "_id",
+              as: "photographer_id",
+            },
+          },
+          { $unwind: { path: "$photographer_id", preserveNullAndEmptyArrays: true } },
+          {
+            $project: {
+              allMessages: 0,
+              unreadMessages: 0,
+            },
+          },
+          { $sort: { unreadCount: -1, "conversation.lastMessageAt": -1, createdAt: -1 } },
+          { $skip: skip },
+          { $limit: limit },
+        ]),
+        ServiceBooking.countDocuments(),
+      ]);
+
+      return res.json({
+        success: true,
+        data: items,
+        meta: { total, page, limit },
       });
     } catch (err) {
       return next(err);
