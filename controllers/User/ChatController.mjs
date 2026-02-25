@@ -201,12 +201,12 @@ class ChatController {
             let finalIsQuoteFinal = req.body.isQuoteFinal || false;
 
             // Address fields
-            let finalFlatOrHouseNo
-            let finalStreetName
-            let finalCity
-            let finalState
-            let finalPostalCode
-            let finalClientId
+            let finalFlatOrHouseNo = req.body.flatOrHouseNo;
+            let finalStreetName = req.body.streetName;
+            let finalCity = req.body.city;
+            let finalState = req.body.state;
+            let finalPostalCode = req.body.postalCode;
+            let finalClientId = req.body.clientId;
 
             if (typeof message === "object" && message !== null) {
                 finalMessage = message.message || finalMessage;
@@ -250,26 +250,7 @@ class ChatController {
             });
 
             if (!conversation) {
-                // If conversation doesn't exist, try to auto-initiate it
-                const quote = await Quote.findById(refId);
-                const booking = !quote ? await ServiceBooking.findById(refId) : null;
-
-                if (!quote && !booking) {
-                    return res.status(404).json({ success: false, message: "Conversation not found and no valid Quote/Booking found for ID: " + refId });
-                }
-
-                // Get all admins to add to the conversation
-                const admins = await AdminEmailAuth.find({}, "_id");
-                const adminIds = admins.map(admin => admin._id);
-                const participants = [...new Set([userId, ...adminIds])];
-
-                conversation = await Conversation.create({
-                    quoteId: quote ? quote._id : null,
-                    bookingId: booking ? booking._id : null,
-                    participants: participants
-                });
-
-                console.log(`🆕 Auto-created conversation for ${quote ? 'Quote' : 'Booking'}: ${refId}`);
+                return res.status(404).json({ success: false, message: "Conversation not found for ID: " + refId });
             }
 
             // Check if user is a participant
@@ -278,11 +259,30 @@ class ChatController {
                 return res.status(403).json({ success: false, message: "Access denied" });
             }
 
-            // If isQuoteFinal is true, update the associated Quote
-            if (finalIsQuoteFinal && finalQuoteId) {
-                await Quote.findByIdAndUpdate(finalQuoteId, { isQuoteFinal: true });
-            } else if (finalIsQuoteFinal && conversation.quoteId) {
-                await Quote.findByIdAndUpdate(conversation.quoteId, { isQuoteFinal: true });
+            // If isQuoteFinal is true, update the associated Quote with all final details
+            if (finalIsQuoteFinal && (finalQuoteId || conversation.quoteId)) {
+                const targetQuoteId = finalQuoteId || conversation.quoteId;
+                const quoteUpdateData = {
+                    isQuoteFinal: true,
+                    budget: finalBudget,
+                    startDate: finalStartDate,
+                    endDate: finalEndDate,
+                    location: finalLocation,
+                    eventType: finalEventType,
+                    flatOrHouseNo: finalFlatOrHouseNo,
+                    streetName: finalStreetName,
+                    city: finalCity,
+                    state: finalState,
+                    postalCode: finalPostalCode
+                };
+
+                // Remove undefined fields to avoid overwriting with null
+                Object.keys(quoteUpdateData).forEach(key => {
+                    if (quoteUpdateData[key] === undefined) delete quoteUpdateData[key];
+                });
+
+                await Quote.findByIdAndUpdate(targetQuoteId, { $set: quoteUpdateData });
+                console.log(`✅ Quote ${targetQuoteId} finalized and updated with new details.`);
             }
 
             // Create the message
