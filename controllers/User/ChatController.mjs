@@ -180,7 +180,30 @@ class ChatController {
     // Send a message via REST API
     async sendMessage(req, res, next) {
         try {
-            const { bookingId, quoteId, message, type = "text", messageType, budget, startDate, endDate, location, eventType, attachmentUrl, address } = req.body;
+            const {
+                bookingId,
+                quoteId,
+                message,
+                type = "text",
+                messageType,
+                budget,
+                startDate,
+                endDate,
+                location,
+                eventType,
+                attachmentUrl,
+                address,
+                requirements,
+                editingPreferences,
+                currentBudget,
+                previousBudget,
+                eventDuration,
+                quoteType,
+                phoneNumber,
+                email,
+                clientName,
+                eventDate
+            } = req.body;
             const userId = req.user.id;
 
             // Robust extraction if message is sent as an object
@@ -199,6 +222,18 @@ class ChatController {
             let finalBookingId = bookingId;
             let finalAttachmentUrl = attachmentUrl;
             let finalIsQuoteFinal = req.body.isQuoteFinal || false;
+
+            // Additional fields
+            let finalRequirements = requirements;
+            let finalEditingPreferences = editingPreferences;
+            let finalCurrentBudget = currentBudget;
+            let finalPreviousBudget = previousBudget;
+            let finalEventDuration = eventDuration;
+            let finalQuoteType = quoteType;
+            let finalPhoneNumber = phoneNumber;
+            let finalEmail = email;
+            let finalClientName = clientName;
+            let finalEventDate = eventDate;
 
             // Address fields
             let finalFlatOrHouseNo = req.body.flatOrHouseNo;
@@ -226,6 +261,17 @@ class ChatController {
                 finalCity = message.city || finalCity;
                 finalState = message.state || finalState;
                 finalPostalCode = message.postalCode || finalPostalCode;
+
+                finalRequirements = message.requirements || finalRequirements;
+                finalEditingPreferences = message.editingPreferences !== undefined ? message.editingPreferences : finalEditingPreferences;
+                finalCurrentBudget = message.currentBudget || finalCurrentBudget;
+                finalPreviousBudget = message.previousBudget || finalPreviousBudget;
+                finalEventDuration = message.eventDuration || finalEventDuration;
+                finalQuoteType = message.quoteType || finalQuoteType;
+                finalPhoneNumber = message.phoneNumber || finalPhoneNumber;
+                finalEmail = message.email || finalEmail;
+                finalClientName = message.clientName || finalClientName;
+                finalEventDate = message.eventDate || finalEventDate;
             }
 
             if (typeof address === "object" && address !== null) {
@@ -273,7 +319,17 @@ class ChatController {
                     streetName: finalStreetName,
                     city: finalCity,
                     state: finalState,
-                    postalCode: finalPostalCode
+                    postalCode: finalPostalCode,
+                    requirements: finalRequirements,
+                    editingPreferences: finalEditingPreferences,
+                    currentBudget: finalCurrentBudget,
+                    previousBudget: finalPreviousBudget,
+                    eventDuration: finalEventDuration,
+                    quoteType: finalQuoteType,
+                    phoneNumber: finalPhoneNumber,
+                    email: finalEmail,
+                    clientName: finalClientName,
+                    eventDate: finalEventDate
                 };
 
                 // Remove undefined fields to avoid overwriting with null
@@ -302,6 +358,16 @@ class ChatController {
                 city: finalCity,
                 state: finalState,
                 postalCode: finalPostalCode,
+                requirements: finalRequirements,
+                editingPreferences: finalEditingPreferences,
+                currentBudget: finalCurrentBudget,
+                previousBudget: finalPreviousBudget,
+                eventDuration: finalEventDuration,
+                quoteType: finalQuoteType,
+                phoneNumber: finalPhoneNumber,
+                email: finalEmail,
+                clientName: finalClientName,
+                eventDate: finalEventDate,
                 attachmentUrl: finalAttachmentUrl,
                 clientId: finalClientId,
                 isAdminRead: req.user.isAdmin ? true : false,
