@@ -83,6 +83,10 @@ const messageSchema = new mongoose.Schema(
             type: Boolean,
             default: false,
         },
+        isQuoteFinal: {
+            type: Boolean,
+            default: false,
+        },
     },
     { timestamps: true, collection: "messages" }
 );
