@@ -68,6 +68,29 @@ class PhotographerController {
         };
     }
 
+    // Get photographer status only
+    async getPhotographerStatus(req, res) {
+        try {
+            const id = req.params.id || req.user?.id || req.user?._id || req.photographer?._id;
+
+            if (!id) {
+                return res.status(400).json({ success: false, message: "Photographer ID required" });
+            }
+
+            const photographer = await Photographer.findById(id).select('status');
+            if (!photographer) {
+                return res.status(404).json({ success: false, message: "Photographer not found" });
+            }
+
+            res.status(200).json({
+                success: true,
+                isActive: photographer.status === 'active'
+            });
+        } catch (error) {
+            res.status(500).json({ success: false, message: "Failed to fetch photographer status", error: error.message });
+        }
+    }
+
     // get photographer by id (Supports Admin/Public via :id, or Self via Auth)
     async getPhotographerById(req, res) {
         try {
@@ -478,7 +501,7 @@ class PhotographerController {
                 { upsert: true, new: true }
             );
 
-            res.status(200).json({success: true, message: "Commissions updated successfully" });
+            res.status(200).json({ success: true, message: "Commissions updated successfully" });
         } catch (error) {
             console.error("Error updating commissions:", error);
             res.status(500).json({ success: false, message: "Failed to update commissions", error: error.message });
