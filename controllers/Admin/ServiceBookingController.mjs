@@ -593,7 +593,7 @@ class ServiceBookingController {
                 {
                   $match: {
                     $expr: { $eq: ["$conversationId", "$$convId"] },
-                    isRead: false,
+                    isAdminRead: false,
                   },
                 },
               ],

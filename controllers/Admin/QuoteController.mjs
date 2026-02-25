@@ -504,7 +504,7 @@ class QuoteController {
                 {
                   $match: {
                     $expr: { $eq: ["$conversationId", "$$convId"] },
-                    isRead: false,
+                    isAdminRead: false,
                   },
                 },
               ],

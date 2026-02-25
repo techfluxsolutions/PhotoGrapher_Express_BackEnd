@@ -72,6 +72,14 @@ class ChatController {
                 return res.status(403).json({ success: false, message: "Access denied" });
             }
 
+            // If the user is an admin viewing these messages, mark them as read by admin
+            if (req.user.isAdmin) {
+                await Message.updateMany(
+                    { conversationId: conversation._id, isAdminRead: false },
+                    { $set: { isAdminRead: true } }
+                );
+            }
+
             const total = await Message.countDocuments({ conversationId: conversation._id });
             //
 
