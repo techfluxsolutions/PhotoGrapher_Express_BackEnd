@@ -84,10 +84,52 @@ class PhotographerController {
 
             res.status(200).json({
                 success: true,
-                isActive: photographer.status === 'active'
+                isActive: photographer.status === 'active',
+                status: photographer.status
             });
         } catch (error) {
             res.status(500).json({ success: false, message: "Failed to fetch photographer status", error: error.message });
+        }
+    }
+
+    // Update photographer status
+    async updatePhotographerStatus(req, res) {
+        try {
+            const id = req.params.id || req.user?.id || req.user?._id || req.photographer?._id;
+            const { status } = req.body;
+
+            if (!id) {
+                return res.status(400).json({ success: false, message: "Photographer ID required" });
+            }
+
+            if (!status) {
+                return res.status(400).json({ success: false, message: "Status is required" });
+            }
+
+            // Validate status enum
+            const validStatuses = ["active", "inactive", "pending"];
+            if (!validStatuses.includes(status)) {
+                return res.status(400).json({ success: false, message: `Invalid status. Must be one of: ${validStatuses.join(", ")}` });
+            }
+
+            const photographer = await Photographer.findByIdAndUpdate(
+                id,
+                { $set: { status } },
+                { new: true, runValidators: true }
+            ).select('status');
+
+            if (!photographer) {
+                return res.status(404).json({ success: false, message: "Photographer not found" });
+            }
+
+            res.status(200).json({
+                success: true,
+                message: "Photographer status updated successfully",
+                status: photographer.status,
+                isActive: photographer.status === 'active'
+            });
+        } catch (error) {
+            res.status(500).json({ success: false, message: "Failed to update photographer status", error: error.message });
         }
     }
 

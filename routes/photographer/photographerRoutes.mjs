@@ -24,6 +24,8 @@ router.post("/auth/reset-password", (req, res, next) => PhotographerAuthControll
 
 // --- Status Check (Can be used by anyone if ID provided, or Self if authenticated) ---
 router.get("/status/:id", (req, res, next) => PhotographerController.getPhotographerStatus(req, res, next));
+router.put("/status/:id", (req, res, next) => PhotographerController.updatePhotographerStatus(req, res, next));
+router.post("/status/:id", (req, res, next) => PhotographerController.updatePhotographerStatus(req, res, next));
 
 // Apply Auth and Photographer check for subsequent routes
 router.use(authMiddleware, isPhotographer);
@@ -32,6 +34,8 @@ router.use(authMiddleware, isPhotographer);
 // Note: Photographer management (CRUD) is mostly Admin, but Photographers can update themselves
 router.get("/me", (req, res, next) => PhotographerController.getPhotographerById(req, res, next));
 router.get("/status", (req, res, next) => PhotographerController.getPhotographerStatus(req, res, next));
+router.put("/status", (req, res, next) => PhotographerController.updatePhotographerStatus(req, res, next));
+router.post("/status", (req, res, next) => PhotographerController.updatePhotographerStatus(req, res, next));
 router.put("/me", upload.single('profilePhoto'), (req, res, next) => PhotographerController.updatePhotographer(req, res, next));
 
 // --- Availability ---
