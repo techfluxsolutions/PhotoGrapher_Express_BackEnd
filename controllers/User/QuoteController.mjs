@@ -120,11 +120,13 @@ class QuoteController {
       // Budget negotiation logic
       if (payload.budget || payload.currentBudget) {
         const newBudget = payload.currentBudget || payload.budget;
-        if (existingQuote.currentBudget && existingQuote.currentBudget !== newBudget) {
-          payload.previousBudget = existingQuote.currentBudget;
+        const currentEffectiveBudget = existingQuote.currentBudget || existingQuote.budget;
+        if (currentEffectiveBudget && currentEffectiveBudget !== newBudget) {
+          payload.previousBudget = currentEffectiveBudget;
         }
         if (!payload.currentBudget) payload.currentBudget = newBudget;
       }
+
 
       const quote = await Quote.findByIdAndUpdate(id, payload, {
         new: true,

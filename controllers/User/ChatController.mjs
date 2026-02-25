@@ -315,13 +315,14 @@ class ChatController {
 
                     // Budget Negotiation Logic:
                     // If a new budget is provided, or a new currentBudget is provided,
-                    // we shift the existing currentBudget to previousBudget.
+                    // we shift the existing budget/currentBudget to previousBudget.
                     if (finalBudget !== undefined || finalCurrentBudget !== undefined) {
                         const newBudget = finalCurrentBudget !== undefined ? finalCurrentBudget : finalBudget;
+                        const currentEffectiveBudget = existingQuote.currentBudget || existingQuote.budget;
 
-                        // Only shift if the new budget is actually different from the current one
-                        if (existingQuote.currentBudget && existingQuote.currentBudget !== newBudget) {
-                            quoteUpdateData.previousBudget = existingQuote.currentBudget;
+                        // Only shift if the new budget is actually different from what we had
+                        if (currentEffectiveBudget && currentEffectiveBudget !== newBudget) {
+                            quoteUpdateData.previousBudget = currentEffectiveBudget;
                         } else if (!existingQuote.previousBudget && finalPreviousBudget) {
                             // If client explicitly sent previousBudget and we don't have one
                             quoteUpdateData.previousBudget = finalPreviousBudget;
@@ -336,6 +337,7 @@ class ChatController {
                     } else if (finalPreviousBudget !== undefined) {
                         quoteUpdateData.previousBudget = finalPreviousBudget;
                     }
+
 
                     // If currentBudget is still empty but budget exists, initialize it
                     if (!quoteUpdateData.currentBudget && !existingQuote.currentBudget && (finalBudget || existingQuote.budget)) {
