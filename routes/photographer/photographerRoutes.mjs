@@ -10,6 +10,7 @@ import galleryUpload from "../../Config/galleryMulter.mjs";
 import authMiddleware from "../../middleware/authmiddleware.mjs";
 import { isPhotographer } from "../../middleware/isValid.Middleware.mjs";
 import ServiceController from "../../controllers/User/ServiceController.mjs";
+import NotificationController from "../../controllers/photographer/NotificationController.mjs";
 
 const router = express.Router();
 
@@ -54,6 +55,12 @@ router.delete("/payouts/:id", (req, res, next) => PayoutController.delete(req, r
 
 // --- Bookings ---
 router.get("/bookings", (req, res, next) => BookingController.getAllBookings(req, res, next));
+router.get("/bookings/pending", (req, res, next) => BookingController.getPendingBookings(req, res, next));
+router.get("/bookings/accepted", (req, res, next) => BookingController.getAcceptedBookings(req, res, next));
+router.get("/bookings/rejected", (req, res, next) => BookingController.getRejectedBookings(req, res, next));
+router.patch("/bookings/:id/status", (req, res, next) => BookingController.updateBookingStatus(req, res, next));
+router.post("/bookings/initialize-status", (req, res, next) => BookingController.initializePreviousBookingsStatus(req, res, next));
+
 router.get("/bookings/:id", (req, res, next) => BookingController.getBookingById(req, res, next));
 router.post("/bookings", (req, res, next) => BookingController.createBooking(req, res, next));
 router.put("/bookings/:id", (req, res, next) => BookingController.updateBooking(req, res, next));
@@ -69,6 +76,10 @@ router.post("/bookings/:id/gallery/share", (req, res, next) => BookingController
 
 // --- Invoice (For their bookings) ---
 router.get("/invoices/:bookingId", (req, res, next) => BookingController.downloadInvoice(req, res, next));
+
+// --- Notifications ---
+router.get("/notifications", (req, res, next) => NotificationController.getNotifications(req, res, next));
+router.patch("/notifications/:id/read", (req, res, next) => NotificationController.markAsRead(req, res, next));
 
 // --- Services ---
 router.get("/servicename", (req, res, next) => ServiceController.getServiceNameOnly(req, res, next));
