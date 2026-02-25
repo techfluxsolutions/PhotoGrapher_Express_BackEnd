@@ -275,7 +275,8 @@ class ChatController {
                 state: finalState,
                 postalCode: finalPostalCode,
                 attachmentUrl: finalAttachmentUrl,
-                clientId: finalClientId
+                clientId: finalClientId,
+                isAdminRead: req.user.isAdmin ? true : false
             });
 
             // Update conversation last message info
