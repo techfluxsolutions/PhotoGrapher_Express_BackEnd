@@ -11,7 +11,7 @@ import { downloadInvoice } from "../../controllers/Admin/InvoiceController.mjs";
 
 class BookingController {
     // Get all bookings (with pagination and filter for photographer)
-    async getAllBookings(req, res) {
+    async getAllBookings(req, res, forcedStatus = null) {
         try {
             const page = Math.max(1, parseInt(req.query.page) || 1);
             const limit = Math.max(1, parseInt(req.query.limit) || 10);
@@ -19,24 +19,33 @@ class BookingController {
 
             let filter = {};
 
-            // Filter by photographer_id if available (assuming generic approach or passed in query/body/user)
+            // Filter by photographer_id if available
             if (req.user && req.user._id) {
                 filter.photographer_id = req.user._id;
-            } else if (req.query.photographer_id) {
-                filter.photographer_id = req.query.photographer_id;
             }
 
-            // Filter by status if provided
+            // Status Filtering: Prioritize forcedStatus (from specific API endpoints)
+            const statusToFilter = forcedStatus || req.query.bookingStatus;
+
+            if (statusToFilter) {
+                const statuses = statusToFilter.split(",");
+                if (statuses.length > 1) {
+                    filter.bookingStatus = { $in: statuses };
+                } else if (statuses[0]) {
+                    filter.bookingStatus = statuses[0];
+                }
+            }
+
+            // Legacy status filter (confirmed, pending, etc.)
             if (req.query.status) {
                 filter.status = req.query.status;
             }
 
             const [bookings, total] = await Promise.all([
                 ServiceBooking.find(filter)
-                    .select("-gallery -images") // Optimize: Exclude heavy fields
+                    .select("-gallery -images")
                     .populate("client_id", "username email mobileNumber avatar")
-                    .populate("service_id", "serviceName") // Select serviceName for Event Type
-                    .populate("additionalServicesId")
+                    .populate("service_id", "serviceName")
                     .populate("photographer_id", "username")
                     .sort({ createdAt: -1 })
                     .skip(skip)
@@ -44,21 +53,17 @@ class BookingController {
                 ServiceBooking.countDocuments(filter),
             ]);
 
-            // Fetch galleries for these bookings (Optional: typically list view doesn't show full gallery, maybe just count or boolean)
-            // For list view, we might not need gallery details.
-
-            // Format response to match UI requirements
             const formattedBookings = bookings.map(booking => ({
                 _id: booking._id,
                 bookingId: booking.veroaBookingId,
                 client_id: booking.client_id,
-                eventType: booking.service_id?.serviceName || "N/A", // Map Service Name to Event Type
-                requirements: booking.notes || "No requirements", // Map Notes to Requirements
+                eventType: booking.service_id?.serviceName || "N/A",
+                requirements: booking.notes || "No requirements",
                 date: booking.bookingDate,
                 city: booking.city,
                 status: booking.status,
-                daysLeft: "Calculated Frontend", // Frontend logically handles this, but we can compute if needed
-                // data: booking // original data if needed
+                bookingStatus: booking.bookingStatus,
+                daysLeft: "Calculated Frontend"
             }));
 
             return sendSuccessResponse(res, {
@@ -302,6 +307,69 @@ class BookingController {
 
             return sendSuccessResponse(res, { gallery }, "Gallery shared with user successfully");
 
+        } catch (error) {
+            return sendErrorResponse(res, error, 500);
+        }
+    }
+
+    // Get Pending Bookings
+    async getPendingBookings(req, res) {
+        return this.getAllBookings(req, res, "pending");
+    }
+
+    // Get Accepted Bookings
+    async getAcceptedBookings(req, res) {
+        return this.getAllBookings(req, res, "accepted");
+    }
+
+    // Get Rejected Bookings
+    async getRejectedBookings(req, res) {
+        return this.getAllBookings(req, res, "rejected");
+    }
+
+    // Update Booking Status (Accept/Reject)
+    async updateBookingStatus(req, res) {
+        try {
+            const { id } = req.params;
+            const { bookingStatus } = req.body; // 'accepted' or 'rejected'
+
+            if (!["accepted", "rejected", "pending"].includes(bookingStatus)) {
+                return sendErrorResponse(res, { message: "Invalid booking status" }, 400);
+            }
+
+            const updateData = { bookingStatus };
+
+            // If accepted, also update the main status to confirmed
+            if (bookingStatus === "accepted") {
+                updateData.status = "confirmed";
+            } else if (bookingStatus === "rejected") {
+                updateData.status = "canceled";
+            }
+
+            const booking = await ServiceBooking.findByIdAndUpdate(
+                id,
+                updateData,
+                { new: true }
+            );
+
+            if (!booking) {
+                return sendErrorResponse(res, { message: "Booking not found" }, 404);
+            }
+
+            return sendSuccessResponse(res, { booking }, `Booking ${bookingStatus} successfully`);
+        } catch (error) {
+            return sendErrorResponse(res, error, 500);
+        }
+    }
+
+    // Initialize/Update previous bookings to have 'pending' status
+    async initializePreviousBookingsStatus(req, res) {
+        try {
+            const result = await ServiceBooking.updateMany(
+                { bookingStatus: { $exists: false } }, // Or those that are null/empty
+                { $set: { bookingStatus: "pending" } }
+            );
+            return sendSuccessResponse(res, result, "Previous bookings updated successfully");
         } catch (error) {
             return sendErrorResponse(res, error, 500);
         }
