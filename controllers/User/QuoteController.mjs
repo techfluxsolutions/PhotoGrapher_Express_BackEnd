@@ -19,6 +19,10 @@ class QuoteController {
       payload.eventDate = parseDDMMYYYY(payload.eventDate);
       payload.clientId = id;
 
+      if (payload.budget && !payload.currentBudget) {
+        payload.currentBudget = payload.budget;
+      }
+
       const quote = await Quote.create(payload);
 
       return res.status(201).json({
@@ -106,6 +110,22 @@ class QuoteController {
     try {
       const { id } = req.params;
       const payload = req.body;
+      const existingQuote = await Quote.findById(id);
+      if (!existingQuote) {
+        return res
+          .status(404)
+          .json({ success: false, message: "Quote not found" });
+      }
+
+      // Budget negotiation logic
+      if (payload.budget || payload.currentBudget) {
+        const newBudget = payload.currentBudget || payload.budget;
+        if (existingQuote.currentBudget && existingQuote.currentBudget !== newBudget) {
+          payload.previousBudget = existingQuote.currentBudget;
+        }
+        if (!payload.currentBudget) payload.currentBudget = newBudget;
+      }
+
       const quote = await Quote.findByIdAndUpdate(id, payload, {
         new: true,
         runValidators: true,

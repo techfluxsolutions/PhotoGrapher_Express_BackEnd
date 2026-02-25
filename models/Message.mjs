@@ -75,6 +75,46 @@ const messageSchema = new mongoose.Schema(
             ref: "User",
             sparse: true,
         },
+        requirements: {
+            type: [String],
+            sparse: true,
+        },
+        editingPreferences: {
+            type: Boolean,
+            sparse: true,
+        },
+        currentBudget: {
+            type: String,
+            sparse: true,
+        },
+        previousBudget: {
+            type: String,
+            sparse: true,
+        },
+        eventDuration: {
+            type: Number,
+            sparse: true,
+        },
+        quoteType: {
+            type: String,
+            sparse: true,
+        },
+        phoneNumber: {
+            type: String,
+            sparse: true,
+        },
+        email: {
+            type: String,
+            sparse: true,
+        },
+        clientName: {
+            type: String,
+            sparse: true,
+        },
+        eventDate: {
+            type: String,
+            sparse: true,
+        },
         isRead: {
             type: Boolean,
             default: false,

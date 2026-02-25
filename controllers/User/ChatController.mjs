@@ -305,40 +305,70 @@ class ChatController {
                 return res.status(403).json({ success: false, message: "Access denied" });
             }
 
-            // If isQuoteFinal is true, update the associated Quote with all final details
-            if (finalIsQuoteFinal && (finalQuoteId || conversation.quoteId)) {
-                const targetQuoteId = finalQuoteId || conversation.quoteId;
-                const quoteUpdateData = {
-                    isQuoteFinal: true,
-                    budget: finalBudget,
-                    startDate: finalStartDate,
-                    endDate: finalEndDate,
-                    location: finalLocation,
-                    eventType: finalEventType,
-                    flatOrHouseNo: finalFlatOrHouseNo,
-                    streetName: finalStreetName,
-                    city: finalCity,
-                    state: finalState,
-                    postalCode: finalPostalCode,
-                    requirements: finalRequirements,
-                    editingPreferences: finalEditingPreferences,
-                    currentBudget: finalCurrentBudget,
-                    previousBudget: finalPreviousBudget,
-                    eventDuration: finalEventDuration,
-                    quoteType: finalQuoteType,
-                    phoneNumber: finalPhoneNumber,
-                    email: finalEmail,
-                    clientName: finalClientName,
-                    eventDate: finalEventDate
-                };
+            // --- Update Quote Document logic ---
+            // If this is a quote conversation, update the Quote document with any budget or event details provided
+            const targetQuoteId = finalQuoteId || conversation.quoteId;
+            if (targetQuoteId) {
+                const existingQuote = await Quote.findById(targetQuoteId);
+                if (existingQuote) {
+                    const quoteUpdateData = {};
 
-                // Remove undefined fields to avoid overwriting with null
-                Object.keys(quoteUpdateData).forEach(key => {
-                    if (quoteUpdateData[key] === undefined) delete quoteUpdateData[key];
-                });
+                    // Budget Negotiation Logic:
+                    // If a new budget is provided, or a new currentBudget is provided,
+                    // we shift the existing currentBudget to previousBudget.
+                    if (finalBudget !== undefined || finalCurrentBudget !== undefined) {
+                        const newBudget = finalCurrentBudget !== undefined ? finalCurrentBudget : finalBudget;
 
-                await Quote.findByIdAndUpdate(targetQuoteId, { $set: quoteUpdateData });
-                console.log(`✅ Quote ${targetQuoteId} finalized and updated with new details.`);
+                        // Only shift if the new budget is actually different from the current one
+                        if (existingQuote.currentBudget && existingQuote.currentBudget !== newBudget) {
+                            quoteUpdateData.previousBudget = existingQuote.currentBudget;
+                        } else if (!existingQuote.previousBudget && finalPreviousBudget) {
+                            // If client explicitly sent previousBudget and we don't have one
+                            quoteUpdateData.previousBudget = finalPreviousBudget;
+                        }
+
+                        quoteUpdateData.currentBudget = newBudget;
+
+                        // If finalBudget was provided, update the main budget field as well
+                        if (finalBudget !== undefined) {
+                            quoteUpdateData.budget = finalBudget;
+                        }
+                    } else if (finalPreviousBudget !== undefined) {
+                        quoteUpdateData.previousBudget = finalPreviousBudget;
+                    }
+
+                    // If currentBudget is still empty but budget exists, initialize it
+                    if (!quoteUpdateData.currentBudget && !existingQuote.currentBudget && (finalBudget || existingQuote.budget)) {
+                        quoteUpdateData.currentBudget = finalBudget || existingQuote.budget;
+                    }
+
+                    // If finalizing, include all other fields
+                    if (finalIsQuoteFinal) {
+                        quoteUpdateData.isQuoteFinal = true;
+                        if (finalStartDate !== undefined) quoteUpdateData.startDate = finalStartDate;
+                        if (finalEndDate !== undefined) quoteUpdateData.endDate = finalEndDate;
+                        if (finalLocation !== undefined) quoteUpdateData.location = finalLocation;
+                        if (finalEventType !== undefined) quoteUpdateData.eventType = finalEventType;
+                        if (finalFlatOrHouseNo !== undefined) quoteUpdateData.flatOrHouseNo = finalFlatOrHouseNo;
+                        if (finalStreetName !== undefined) quoteUpdateData.streetName = finalStreetName;
+                        if (finalCity !== undefined) quoteUpdateData.city = finalCity;
+                        if (finalState !== undefined) quoteUpdateData.state = finalState;
+                        if (finalPostalCode !== undefined) quoteUpdateData.postalCode = finalPostalCode;
+                        if (finalRequirements !== undefined) quoteUpdateData.requirements = finalRequirements;
+                        if (finalEditingPreferences !== undefined) quoteUpdateData.editingPreferences = finalEditingPreferences;
+                        if (finalEventDuration !== undefined) quoteUpdateData.eventDuration = finalEventDuration;
+                        if (finalQuoteType !== undefined) quoteUpdateData.quoteType = finalQuoteType;
+                        if (finalPhoneNumber !== undefined) quoteUpdateData.phoneNumber = finalPhoneNumber;
+                        if (finalEmail !== undefined) quoteUpdateData.email = finalEmail;
+                        if (finalClientName !== undefined) quoteUpdateData.clientName = finalClientName;
+                        if (finalEventDate !== undefined) quoteUpdateData.eventDate = finalEventDate;
+                    }
+
+                    if (Object.keys(quoteUpdateData).length > 0) {
+                        await Quote.findByIdAndUpdate(targetQuoteId, { $set: quoteUpdateData });
+                        console.log(`✅ Quote ${targetQuoteId} updated with ${Object.keys(quoteUpdateData).join(", ")}.`);
+                    }
+                }
             }
 
             // Create the message
@@ -351,7 +381,7 @@ class ChatController {
                 startDate: finalStartDate,
                 endDate: finalEndDate,
                 location: finalLocation,
-                quoteId: finalQuoteId || conversation.quoteId || null,
+                quoteId: targetQuoteId || null,
                 eventType: finalEventType,
                 flatOrHouseNo: finalFlatOrHouseNo,
                 streetName: finalStreetName,

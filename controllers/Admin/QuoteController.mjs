@@ -37,6 +37,10 @@ class QuoteController {
         payload.eventDate = parseDateIfNeeded(payload.eventDate);
       }
 
+      if (payload.budget && !payload.currentBudget) {
+        payload.currentBudget = payload.budget;
+      }
+
       const quote = await Quote.create(payload);
 
       // Populate after creation
@@ -262,6 +266,23 @@ class QuoteController {
       }
       if (payload.eventDate) {
         payload.eventDate = parseDateIfNeeded(payload.eventDate);
+      }
+
+      const existingQuote = await Quote.findById(id);
+      if (!existingQuote) {
+        return res.status(404).json({
+          success: false,
+          message: "Quote not found"
+        });
+      }
+
+      // Budget negotiation logic
+      if (payload.budget || payload.currentBudget) {
+        const newBudget = payload.currentBudget || payload.budget;
+        if (existingQuote.currentBudget && existingQuote.currentBudget !== newBudget) {
+          payload.previousBudget = existingQuote.currentBudget;
+        }
+        if (!payload.currentBudget) payload.currentBudget = newBudget;
       }
 
       const quote = await Quote.findByIdAndUpdate(id, payload, {
@@ -552,7 +573,13 @@ class QuoteController {
               streetName: { $ifNull: ["$streetName", ""] },
               flatOrHouseNo: { $ifNull: ["$flatOrHouseNo", ""] },
               requirements: { $ifNull: ["$requirements", []] },
-              currentBudget: { $ifNull: ["$currentBudget", ""] },
+              currentBudget: {
+                $cond: {
+                  if: { $or: [{ $eq: ["$currentBudget", ""] }, { $not: ["$currentBudget"] }] },
+                  then: { $ifNull: ["$budget", ""] },
+                  else: "$currentBudget"
+                }
+              },
               previousBudget: { $ifNull: ["$previousBudget", ""] },
               budget: { $ifNull: ["$budget", ""] },
               name: { $ifNull: ["$clientId.username", "$clientName", ""] },
