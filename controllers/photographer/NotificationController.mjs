@@ -60,35 +60,73 @@ class NotificationController {
                 }
             ];
 
-            // Helper to format date to IST
+            // Helper to format date to IST (Separate Date and Time)
             const formatIST = (date) => {
-                return new Intl.DateTimeFormat("en-IN", {
+                const d = new Date(date);
+                const datePart = new Intl.DateTimeFormat("en-IN", {
                     timeZone: "Asia/Kolkata",
-                    hour: "2-digit",
-                    minute: "2-digit",
-                    hour12: true,
                     day: "2-digit",
                     month: "2-digit",
                     year: "numeric"
-                }).format(new Date(date));
+                }).format(d);
+
+                const timePart = new Intl.DateTimeFormat("en-IN", {
+                    timeZone: "Asia/Kolkata",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                    hour12: true
+                }).format(d);
+
+                return { date: datePart, time: timePart };
+            };
+
+            // Helper for Time Ago
+            const getTimeAgo = (date) => {
+                const seconds = Math.floor((new Date() - new Date(date)) / 1000);
+                let interval = Math.floor(seconds / 31536000);
+
+                if (interval > 1) return interval + " years ago";
+                interval = Math.floor(seconds / 2592000);
+                if (interval > 1) return interval + " months ago";
+                interval = Math.floor(seconds / 86400);
+                if (interval > 1) return interval + " days ago";
+                interval = Math.floor(seconds / 3600);
+                if (interval > 1) return interval + " hours ago";
+                interval = Math.floor(seconds / 60);
+                if (interval > 1) return interval + " minutes ago";
+                return Math.floor(seconds) + " seconds ago";
             };
 
             // Combine real data with demo data (real data first)
-            // Formatting real data to match demo structure if needed
-            const formattedReal = realNotifications.map(n => ({
-                _id: n._id,
-                event: n.notification_type.replace("_", " ").toUpperCase(),
-                message: n.notification_message,
-                time: formatIST(n.createdAt), // Formatted to India Time
-                type: n.notification_type,
-                read_status: n.read_status,
-                createdAt: n.createdAt
-            }));
+            const formattedReal = realNotifications.map(n => {
+                const ist = formatIST(n.createdAt);
+                return {
+                    _id: n._id,
+                    event: n.notification_type.replace("_", " ").toUpperCase(),
+                    message: n.notification_message,
+                    date: ist.date,
+                    time: ist.time,
+                    timeAgo: getTimeAgo(n.createdAt),
+                    type: n.notification_type,
+                    read_status: n.read_status,
+                    createdAt: n.createdAt
+                };
+            });
 
-            const allNotifications = [...formattedReal, ...demoNotifications.map(d => ({
-                ...d,
-                time: formatIST(d.createdAt) // Also format demo times for consistency
-            }))];
+            const allNotifications = [
+                ...formattedReal,
+                ...demoNotifications.map(d => {
+                    const ist = formatIST(d.createdAt);
+                    return {
+                        ...d,
+                        date: ist.date,
+                        time: ist.time,
+                        timeAgo: getTimeAgo(d.createdAt)
+                    };
+                })
+            ];
+
+
 
 
             return sendSuccessResponse(res, {

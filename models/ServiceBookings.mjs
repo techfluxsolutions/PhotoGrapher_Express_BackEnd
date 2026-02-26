@@ -144,6 +144,39 @@ const serviceBookingSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
+
+// Virtual: IST Booking Date
+serviceBookingSchema.virtual("ist_bookingDate").get(function () {
+  if (!this.bookingDate) return "N/A";
+  return new Intl.DateTimeFormat("en-IN", {
+    timeZone: "Asia/Kolkata",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: true,
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  }).format(new Date(this.bookingDate));
+});
+
+// Virtual: IST CreatedAt
+serviceBookingSchema.virtual("ist_createdAt").get(function () {
+  if (!this.createdAt) return "N/A";
+  return new Intl.DateTimeFormat("en-IN", {
+    timeZone: "Asia/Kolkata",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: true,
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  }).format(new Date(this.createdAt));
+});
+
+// Configure to include virtuals
+serviceBookingSchema.set("toJSON", { virtuals: true });
+serviceBookingSchema.set("toObject", { virtuals: true });
+
 serviceBookingSchema.index({ service_id: 1 });
 serviceBookingSchema.index({ client_id: 1 });
 

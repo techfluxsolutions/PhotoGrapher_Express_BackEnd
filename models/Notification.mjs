@@ -51,6 +51,24 @@ notificationSchema.virtual("recipientType").get(function () {
   return "unknown";
 });
 
+// Virtual: Time Ago
+notificationSchema.virtual("time_ago").get(function () {
+  if (!this.createdAt) return null;
+  const seconds = Math.floor((new Date() - new Date(this.createdAt)) / 1000);
+  let interval = Math.floor(seconds / 31536000);
+
+  if (interval > 1) return interval + " years ago";
+  interval = Math.floor(seconds / 2592000);
+  if (interval > 1) return interval + " months ago";
+  interval = Math.floor(seconds / 86400);
+  if (interval > 1) return interval + " days ago";
+  interval = Math.floor(seconds / 3600);
+  if (interval > 1) return interval + " hours ago";
+  interval = Math.floor(seconds / 60);
+  if (interval > 1) return interval + " minutes ago";
+  return Math.floor(seconds) + " seconds ago";
+});
+
 // Virtual: IST Time
 notificationSchema.virtual("ist_time").get(function () {
   if (!this.createdAt) return null;
@@ -68,6 +86,7 @@ notificationSchema.virtual("ist_time").get(function () {
 // Configure to include virtuals
 notificationSchema.set("toJSON", { virtuals: true });
 notificationSchema.set("toObject", { virtuals: true });
+
 
 // Index
 notificationSchema.index({

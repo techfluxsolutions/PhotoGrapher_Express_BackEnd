@@ -53,18 +53,45 @@ class BookingController {
                 ServiceBooking.countDocuments(filter),
             ]);
 
-            const formattedBookings = bookings.map(booking => ({
-                _id: booking._id,
-                bookingId: booking.veroaBookingId,
-                client_id: booking.client_id,
-                eventType: booking.service_id?.serviceName || "N/A",
-                requirements: booking.notes || "No requirements",
-                date: booking.bookingDate,
-                city: booking.city,
-                status: booking.status,
-                bookingStatus: booking.bookingStatus,
-                daysLeft: "Calculated Frontend"
-            }));
+            // Helper to format date to IST (Separate Date and Time)
+            const formatIST = (date) => {
+                if (!date) return { date: "N/A", time: "N/A" };
+                const d = new Date(date);
+                const datePart = new Intl.DateTimeFormat("en-IN", {
+                    timeZone: "Asia/Kolkata",
+                    day: "2-digit",
+                    month: "2-digit",
+                    year: "numeric"
+                }).format(d);
+
+                const timePart = new Intl.DateTimeFormat("en-IN", {
+                    timeZone: "Asia/Kolkata",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                    hour12: true
+                }).format(d);
+
+                return { date: datePart, time: timePart };
+            };
+
+            const formattedBookings = bookings.map(booking => {
+                const ist = formatIST(booking.bookingDate);
+                return {
+                    _id: booking._id,
+                    bookingId: booking.veroaBookingId,
+                    client_id: booking.client_id,
+                    eventType: booking.service_id?.serviceName || "N/A",
+                    requirements: booking.notes || "No requirements",
+                    date: ist.date,
+                    time: ist.time,
+                    city: booking.city,
+                    status: booking.status,
+                    bookingStatus: booking.bookingStatus,
+                    daysLeft: "Calculated Frontend"
+                };
+            });
+
+
 
             return sendSuccessResponse(res, {
                 bookings: formattedBookings,
@@ -100,9 +127,21 @@ class BookingController {
             }
 
             // Enhance response with helper fields while keeping original data
-            let bookingObj = booking.toObject();
+            let bookingObj = booking.toObject({ virtuals: true });
             bookingObj.eventType = booking.service_id?.serviceName || "N/A";
             bookingObj.requirements = booking.notes || "No requirements";
+
+            // Format IST explicitly to separate Date and Time
+            if (booking.bookingDate) {
+                const d = new Date(booking.bookingDate);
+                bookingObj.date = new Intl.DateTimeFormat("en-IN", { timeZone: "Asia/Kolkata", day: "2-digit", month: "2-digit", year: "numeric" }).format(d);
+                bookingObj.time = new Intl.DateTimeFormat("en-IN", { timeZone: "Asia/Kolkata", hour: "2-digit", minute: "2-digit", hour12: true }).format(d);
+            } else {
+                bookingObj.date = "N/A";
+                bookingObj.time = "N/A";
+            }
+
+
 
             return sendSuccessResponse(res, {
                 booking: bookingObj,
