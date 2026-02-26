@@ -31,15 +31,11 @@ const notificationSchema = new mongoose.Schema(
 );
 
 // Pre-save hook: ensure at least one recipient is set
-notificationSchema.pre("validate", function (next) {
+notificationSchema.pre("validate", function () {
   if (!this.user_id && !this.photographer_id && !this.admin_id) {
-    next(
-      new Error(
-        "At least one recipient (user, photographer, or admin) must be set"
-      )
+    throw new Error(
+      "At least one recipient (user, photographer, or admin) must be set"
     );
-  } else {
-    next();
   }
 });
 

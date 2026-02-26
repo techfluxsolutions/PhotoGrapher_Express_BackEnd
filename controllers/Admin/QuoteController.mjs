@@ -47,7 +47,7 @@ class QuoteController {
       const populatedQuote = await Quote.findById(quote._id)
         .populate("service_id clientId");
 
-      return res.status(201).json({
+      return res.status(200).json({
         success: true,
         data: populatedQuote
       });
@@ -606,6 +606,8 @@ class QuoteController {
       return next(err);
     }
   }
+
+
 }
 
 export default new QuoteController();

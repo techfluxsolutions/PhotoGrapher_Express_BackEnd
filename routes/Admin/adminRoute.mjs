@@ -118,6 +118,7 @@ router.put("/quotes/:id", (req, res, next) => QuoteController.update(req, res, n
 router.delete("/quotes/:id", (req, res, next) => QuoteController.delete(req, res, next));
 router.get("/getquries", (req, res, next) => QuoteController.getQuries(req, res, next));
 router.get("/quotes-unread-count", (req, res, next) => QuoteController.getQuotesWithUnreadCount(req, res, next));
+router.post("/admin-quote", (req, res, next) => QuoteController.create(req, res, next));
 
 
 // --- Payments Management (Admin Controller) ---

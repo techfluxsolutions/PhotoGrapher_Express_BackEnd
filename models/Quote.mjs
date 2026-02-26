@@ -116,11 +116,10 @@ quoteSchema.index({ photographer_id: 1 });
 quoteSchema.index({ job_id: 1 });
 
 // Pre-save hook to initialize currentBudget
-quoteSchema.pre("save", function (next) {
+quoteSchema.pre("save", function () {
   if (this.budget && (!this.currentBudget || this.currentBudget === "")) {
     this.currentBudget = this.budget;
   }
-  next();
 });
 
 export default mongoose.model("Quote", quoteSchema);

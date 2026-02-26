@@ -308,6 +308,11 @@ class QuoteController {
   }
 
 
+  // admin side qoute 
+
+
+
+
 }
 
 export default new QuoteController();

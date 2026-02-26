@@ -36,11 +36,9 @@ const availabilitySchema = new mongoose.Schema(
 );
 
 // Pre-save hook: validate time range
-availabilitySchema.pre("validate", function (next) {
+availabilitySchema.pre("validate", function () {
   if (this.available_time_start >= this.available_time_end) {
-    next(new Error("Start time must be before end time"));
-  } else {
-    next();
+    throw new Error("Start time must be before end time");
   }
 });
 
