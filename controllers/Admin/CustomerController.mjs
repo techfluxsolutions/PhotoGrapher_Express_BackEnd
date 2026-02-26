@@ -101,7 +101,7 @@ class CustomerController {
         .select('-password -otp -otpExpiresAt');
 
       if (!user) {
-        return res.status(404).json({
+        return res.status(200).json({
           success: false,
           message: "Customer not found"
         });
@@ -154,7 +154,7 @@ class CustomerController {
           _id: { $ne: id }
         });
         if (existingUser) {
-          return res.status(400).json({
+          return res.status(200).json({
             success: false,
             message: "Mobile number already exists",
           });
@@ -168,7 +168,7 @@ class CustomerController {
           _id: { $ne: id }
         });
         if (existingEmail) {
-          return res.status(400).json({
+          return res.status(200).json({
             success: false,
             message: "Email already exists",
           });
@@ -186,7 +186,7 @@ class CustomerController {
       }).select('-password -otp -otpExpiresAt');
 
       if (!user) {
-        return res.status(404).json({
+        return res.status(200).json({
           success: false,
           message: "Customer not found"
         });
@@ -212,7 +212,7 @@ class CustomerController {
       const user = await User.findByIdAndDelete(id);
 
       if (!user) {
-        return res.status(404).json({
+        return res.status(200).json({
           success: false,
           message: "Customer not found"
         });
@@ -242,7 +242,7 @@ class CustomerController {
       // Validate userType
       const validTypes = ["user", "photographer", "admin"];
       if (!validTypes.includes(userType)) {
-        return res.status(400).json({
+        return res.status(200).json({
           success: false,
           message: `Invalid user type. Must be one of: ${validTypes.join(", ")}`,
         });
@@ -337,7 +337,7 @@ class CustomerController {
       const skip = (page - 1) * limit;
 
       if (!q) {
-        return res.status(400).json({
+        return res.status(200).json({
           success: false,
           message: "Search query 'q' is required",
         });
@@ -387,7 +387,7 @@ class CustomerController {
       if (city) filter.city = city;
 
       if (Object.keys(filter).length === 0) {
-        return res.status(400).json({
+        return res.status(200).json({
           success: false,
           message: "At least one of 'state' or 'city' is required",
         });
