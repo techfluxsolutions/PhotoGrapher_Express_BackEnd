@@ -12,7 +12,7 @@ class NotificationController {
 
   async getAll(req, res, next) {
     try {
-      const data = await Notification.find();
+      const data = await Notification.find().sort({ createdAt: -1 }).limit(20);
       res.status(200).json({ success: true, data });
     } catch (error) {
       next(error);

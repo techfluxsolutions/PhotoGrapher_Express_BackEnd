@@ -51,6 +51,24 @@ notificationSchema.virtual("recipientType").get(function () {
   return "unknown";
 });
 
+// Virtual: IST Time
+notificationSchema.virtual("ist_time").get(function () {
+  if (!this.createdAt) return null;
+  return new Intl.DateTimeFormat("en-IN", {
+    timeZone: "Asia/Kolkata",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: true,
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  }).format(this.createdAt);
+});
+
+// Configure to include virtuals
+notificationSchema.set("toJSON", { virtuals: true });
+notificationSchema.set("toObject", { virtuals: true });
+
 // Index
 notificationSchema.index({
   user_id: 1,

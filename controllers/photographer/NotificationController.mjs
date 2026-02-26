@@ -60,19 +60,36 @@ class NotificationController {
                 }
             ];
 
+            // Helper to format date to IST
+            const formatIST = (date) => {
+                return new Intl.DateTimeFormat("en-IN", {
+                    timeZone: "Asia/Kolkata",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                    hour12: true,
+                    day: "2-digit",
+                    month: "2-digit",
+                    year: "numeric"
+                }).format(new Date(date));
+            };
+
             // Combine real data with demo data (real data first)
             // Formatting real data to match demo structure if needed
             const formattedReal = realNotifications.map(n => ({
                 _id: n._id,
                 event: n.notification_type.replace("_", " ").toUpperCase(),
                 message: n.notification_message,
-                time: "Just now", // In a real app, use a helper like timeAgo
+                time: formatIST(n.createdAt), // Formatted to India Time
                 type: n.notification_type,
                 read_status: n.read_status,
                 createdAt: n.createdAt
             }));
 
-            const allNotifications = [...formattedReal, ...demoNotifications];
+            const allNotifications = [...formattedReal, ...demoNotifications.map(d => ({
+                ...d,
+                time: formatIST(d.createdAt) // Also format demo times for consistency
+            }))];
+
 
             return sendSuccessResponse(res, {
                 notifications: allNotifications,
