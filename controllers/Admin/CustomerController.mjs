@@ -26,7 +26,7 @@ class CustomerController {
       // Check if mobile number already exists
       const existingUser = await User.findOne({ mobileNumber: payload.mobileNumber });
       if (existingUser) {
-        return res.status(400).json({
+        return res.status(200).json({
           success: false,
           message: "Mobile number already exists",
         });
@@ -36,7 +36,7 @@ class CustomerController {
       if (payload.email) {
         const existingEmail = await User.findOne({ email: payload.email });
         if (existingEmail) {
-          return res.status(400).json({
+          return res.status(200).json({
             success: false,
             message: "Email already exists",
           });
