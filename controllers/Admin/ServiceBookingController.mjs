@@ -1,8 +1,12 @@
 import ServiceBooking from "../../models/ServiceBookings.mjs";
 import Gallery from "../../models/Gallery.mjs";
-import Message from "../../models/Message.mjs";
-import Conversation from "../../models/Conversation.mjs";
 
+
+const parseDDMMYYYY = (dateStr) => {
+  if (!dateStr) return dateStr;
+  const [day, month, year] = dateStr.split("-");
+  return new Date(`${year}-${month}-${day}`);
+};
 class ServiceBookingController {
   /**
    * Create a new service booking
@@ -10,30 +14,44 @@ class ServiceBookingController {
    */
   async create(req, res, next) {
     try {
-      const parseDDMMYYYY = (dateStr) => {
-        if (!dateStr) return dateStr;
-        // Handle DD-MM-YYYY format
-        const [day, month, year] = dateStr.split("-");
-        return new Date(`${year}-${month}-${day}`);
-      };
-
       const payload = req.body;
+      payload.bookingDate = parseDDMMYYYY(payload.bookingDate);
 
-      // Parse booking date if provided in DD-MM-YYYY format
-      if (payload.bookingDate && typeof payload.bookingDate === 'string') {
-        payload.bookingDate = parseDDMMYYYY(payload.bookingDate);
+      // Get last booking
+      const lastBooking = await ServiceBooking
+        .findOne({ veroaBookingId: { $exists: true } })
+        .sort({ createdAt: -1 })
+        .select("veroaBookingId");
+
+      let nextNumber = 1;
+
+      if (lastBooking?.veroaBookingId) {
+        // Example: VEROA-BK-000001 → extract 000001
+        const lastNumber = parseInt(
+          lastBooking.veroaBookingId.split("-").pop(),
+          10
+        );
+        nextNumber = lastNumber + 1;
+      }
+
+      // Pad number to 6 digits
+      const formattedNumber = String(nextNumber).padStart(6, "0");
+
+      payload.veroaBookingId = `VEROA-BK-${formattedNumber}`;
+
+      if (payload.startDate === payload.endDate) {
+        payload.bookingDate = parseDDMMYYYY(payload.startDate);
+        payload.endDate = "";
+        payload.startDate = "";
       }
 
       const booking = await ServiceBooking.create(payload);
 
-      // Populate after creation
-      const populatedBooking = await ServiceBooking.findById(booking._id)
-        .populate("service_id client_id photographer_id");
-
       return res.status(201).json({
         success: true,
-        data: populatedBooking
+        data: booking,
       });
+
     } catch (err) {
       return next(err);
     }
