@@ -196,7 +196,6 @@ class ServiceBookingController {
           .populate("service_id client_id photographer_id"),
         ServiceBooking.countDocuments(filter),
       ]);
-
       const formattedItems = items.map(booking => ({
         bookingId: booking._id,
         veroaBookingId: booking.veroaBookingId,
@@ -204,7 +203,7 @@ class ServiceBookingController {
         client_name: booking.client_id?.username || "",
         assigned_photographer: booking.photographer_id?.username || "",
         team_studio: booking.team || "",
-        eventType: booking.service_id?.name || "",
+        eventType: booking.service_id?.serviceName || "",
         eventDate: booking.bookingDate,
         location: booking.city || "",
         note: booking.notes || "",
