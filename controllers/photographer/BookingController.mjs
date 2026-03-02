@@ -1,4 +1,5 @@
 
+import mongoose from "mongoose";
 import ServiceBooking from "../../models/ServiceBookings.mjs";
 import Gallery from "../../models/Gallery.mjs";
 import {
@@ -28,11 +29,21 @@ class BookingController {
             const statusToFilter = forcedStatus || req.query.bookingStatus;
 
             if (statusToFilter) {
-                const statuses = statusToFilter.split(",");
-                if (statuses.length > 1) {
-                    filter.bookingStatus = { $in: statuses };
-                } else if (statuses[0]) {
-                    filter.bookingStatus = statuses[0];
+                const statuses = statusToFilter.split(",").filter(s => s);
+                if (statuses.includes("completed")) {
+                    filter.status = "completed";
+                    const otherStatuses = statuses.filter(s => s !== "completed");
+                    if (otherStatuses.length > 1) {
+                        filter.bookingStatus = { $in: otherStatuses };
+                    } else if (otherStatuses.length === 1) {
+                        filter.bookingStatus = otherStatuses[0];
+                    }
+                } else {
+                    if (statuses.length > 1) {
+                        filter.bookingStatus = { $in: statuses };
+                    } else if (statuses.length === 1) {
+                        filter.bookingStatus = statuses[0];
+                    }
                 }
             }
 
@@ -106,6 +117,11 @@ class BookingController {
     async getBookingById(req, res) {
         try {
             const { id } = req.params;
+
+            if (!mongoose.Types.ObjectId.isValid(id)) {
+                return sendErrorResponse(res, { message: "Invalid booking ID" }, 400);
+            }
+
             const booking = await ServiceBooking.findById(id)
                 .populate("client_id", "username email mobileNumber avatar")
                 .populate("service_id", "serviceName") // Ensure serviceName is selected
@@ -169,6 +185,11 @@ class BookingController {
     async updateBooking(req, res) {
         try {
             const { id } = req.params;
+
+            if (!mongoose.Types.ObjectId.isValid(id)) {
+                return sendErrorResponse(res, { message: "Invalid booking ID" }, 400);
+            }
+
             const updates = req.body;
 
             const booking = await ServiceBooking.findByIdAndUpdate(id, updates, {
@@ -193,6 +214,11 @@ class BookingController {
     async deleteBooking(req, res) {
         try {
             const { id } = req.params;
+
+            if (!mongoose.Types.ObjectId.isValid(id)) {
+                return sendErrorResponse(res, { message: "Invalid booking ID" }, 400);
+            }
+
             const booking = await ServiceBooking.findByIdAndDelete(id);
 
             if (!booking) {
@@ -209,6 +235,11 @@ class BookingController {
     async uploadGalleryToServer(req, res) {
         try {
             const { id } = req.params;
+
+            if (!mongoose.Types.ObjectId.isValid(id)) {
+                return sendErrorResponse(res, { message: "Invalid booking ID" }, 400);
+            }
+
             const files = req.files;
 
             if (!files || files.length === 0) {
@@ -271,6 +302,11 @@ class BookingController {
     async uploadGalleryToCloud(req, res) {
         try {
             const { id } = req.params;
+
+            if (!mongoose.Types.ObjectId.isValid(id)) {
+                return sendErrorResponse(res, { message: "Invalid booking ID" }, 400);
+            }
+
             const files = req.files;
 
             if (!files || files.length === 0) {
@@ -334,6 +370,10 @@ class BookingController {
         try {
             const { id } = req.params;
 
+            if (!mongoose.Types.ObjectId.isValid(id)) {
+                return sendErrorResponse(res, { message: "Invalid booking ID" }, 400);
+            }
+
             // Find Gallery by booking_id
             let gallery = await Gallery.findOne({ booking_id: id });
 
@@ -366,10 +406,21 @@ class BookingController {
         return this.getAllBookings(req, res, "rejected");
     }
 
+    // Get Completed Bookings
+    async getCompletedBookings(req, res) {
+        return this.getAllBookings(req, res, "completed");
+    }
+
+
     // Update Booking Status (Accept/Reject)
     async updateBookingStatus(req, res) {
         try {
             const { id } = req.params;
+
+            if (!mongoose.Types.ObjectId.isValid(id)) {
+                return sendErrorResponse(res, { message: "Invalid booking ID" }, 400);
+            }
+
             const { bookingStatus } = req.body; // 'accepted' or 'rejected'
 
             if (!["accepted", "rejected", "pending"].includes(bookingStatus)) {
