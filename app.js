@@ -13,7 +13,7 @@ import {
   authRoutes,
   chatRoutes,
 } from "./routes/index.js";
-import serviceRoutes from "./routes/serviceRoutes.mjs";
+//import serviceRoutes from "./routes/serviceRoutes.mjs";
 
 
 //
@@ -125,7 +125,7 @@ app.get("/", (req, res) => {
 });
 
 // Global Error Handler
-import globalErrorHandler from "./middleware/errorMiddleware.mjs";
+import globalErrorHandler from "./middleware/errorMiddleware.mjs"
 import AppError from "./utils/AppError.mjs";
 
 // Handle 404
