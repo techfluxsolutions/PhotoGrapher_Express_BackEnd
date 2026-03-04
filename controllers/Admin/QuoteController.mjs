@@ -70,7 +70,7 @@ class QuoteController {
         Quote.find({ isQuoteFinal: true })
           .skip(skip)
           .limit(limit)
-          .sort({ createdAt: -1 })
+          .sort({ finalizeAt: -1 })
           .populate("service_id clientId"),
         Quote.countDocuments({ isQuoteFinal: true }),
       ]);

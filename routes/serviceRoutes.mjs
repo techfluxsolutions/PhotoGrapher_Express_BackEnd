@@ -1,29 +1,38 @@
 import express from "express";
-import ServiceController from "../controllers/ServiceController.mjs";
-import authMiddleware from "../middleware/authmiddleware.mjs";
-import { validate } from "../middleware/validator.mjs";
-import { check } from "express-validator";
+import StandardAndPremiumController from "../controllers/Admin/StandardAndPremiumController.mjs";
+import HourlyServicesController from "../controllers/Admin/HourlyServicesController.mjs";
+import serviceUpload from "../middleware/serviceUpload.mjs";
 
 const router = express.Router();
 
-// Public
-router.get("/", ServiceController.getAll);
-router.get("/:id", ServiceController.getOne);
-
-import upload from "../middleware/multerConfig.mjs";
-
-// Protected
-router.use(authMiddleware);
+// Standard And Premium Routes
 router.post(
-  "/",
-  upload.single("image"),
-  validate([
-    check("serviceName").notEmpty().withMessage("Service name is required"),
-    check("serviceCost").notEmpty().withMessage("Service cost is required"),
-  ]),
-  ServiceController.create
+  "/standard-premium",
+  serviceUpload.array("images", 10),
+  StandardAndPremiumController.createPackage
 );
-router.put("/:id", upload.single("image"), ServiceController.update);
-router.delete("/:id", ServiceController.delete);
+router.get("/standard-premium", StandardAndPremiumController.getAllPackages);
+router.get("/standard-premium/:id", StandardAndPremiumController.getPackageById);
+router.put(
+  "/standard-premium/:id",
+  serviceUpload.array("images", 10),
+  StandardAndPremiumController.updatePackage
+);
+router.delete("/standard-premium/:id", StandardAndPremiumController.deletePackage);
+
+// Hourly Services Routes
+router.post(
+  "/hourly-services",
+  serviceUpload.array("images", 10),
+  HourlyServicesController.createService
+);
+router.get("/hourly-services", HourlyServicesController.getAllServices);
+router.get("/hourly-services/:id", HourlyServicesController.getServiceById);
+router.put(
+  "/hourly-services/:id",
+  serviceUpload.array("images", 10),
+  HourlyServicesController.updateService
+);
+router.delete("/hourly-services/:id", HourlyServicesController.deleteService);
 
 export default router;

@@ -98,6 +98,10 @@ const quoteSchema = new mongoose.Schema(
       type: String,
       default: ""
     },
+    finalizeAt: {
+      type: Date,
+      default: null
+    }
 
   },
   {
@@ -120,6 +124,15 @@ quoteSchema.pre("save", function () {
   if (this.budget && (!this.currentBudget || this.currentBudget === "")) {
     this.currentBudget = this.budget;
   }
+});
+
+quoteSchema.pre("save", function (next) {
+  // If quote is being finalized now
+  if (this.isModified("isQuoteFinal") && this.isQuoteFinal === true) {
+    this.finalizeAt = new Date(); // 👈 stores current date + time
+  }
+
+  next();
 });
 
 export default mongoose.model("Quote", quoteSchema);

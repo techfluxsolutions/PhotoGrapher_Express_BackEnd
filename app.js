@@ -13,6 +13,7 @@ import {
   authRoutes,
   chatRoutes,
 } from "./routes/index.js";
+import serviceRoutes from "./routes/serviceRoutes.mjs";
 
 
 //
@@ -106,6 +107,8 @@ app.use("/api/admins", adminRoutes);
 app.use("/api/photographers", photographerRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/chat", chatRoutes); // Mount Chat Routes
+//hiding it for now
+// app.use("/api/service-management", serviceRoutes);
 
 
 // Optional mongoose connection if MONGODB_URI is provided
