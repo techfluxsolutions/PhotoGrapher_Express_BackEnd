@@ -1,6 +1,7 @@
 import Photographer from "../../models/Photographer.mjs";
 import PlatformSettings from "../../models/PlatformSettings.mjs";
 import bcrypt from "bcrypt";
+import { sendWelcomeEmail } from "../../utils/emailService.mjs";
 
 class PhotographerController {
     // Get All Photographers (Unified endpoint with filtering)
@@ -383,6 +384,8 @@ class PhotographerController {
     async createPhotographer(req, res) {
         try {
             const payload = req.body;
+            const plainPassword = payload.password; // Capture plain password before hashing
+
             // Check if username already exists
             const existingUser = await Photographer.findOne({ username: payload.username });
             if (existingUser) {
@@ -397,6 +400,12 @@ class PhotographerController {
 
             const photographer = new Photographer(payload);
             await photographer.save();
+
+            // Send welcome email if password was provided
+            if (plainPassword && photographer.email) {
+                await sendWelcomeEmail(photographer.email, photographer.username || photographer.email, plainPassword);
+            }
+
             res.status(201).json({ message: "Photographer created successfully", photographer });
         } catch (error) {
             res.status(500).json({ message: "Failed to create photographer", error: error.message });
