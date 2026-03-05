@@ -6,7 +6,7 @@ dotenv.config();
 const transporter = nodemailer.createTransport({
     host: process.env.SMTP_Host,
     port: process.env.SMTP_Port,
-    secure: 587, // true for 465, false for other ports
+    secure: process.env.SMTP_Port === '465', // true for 465, false for other ports
     auth: {
         user: process.env.SMTP_Username,
         pass: process.env.SMTP_Password,
