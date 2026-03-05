@@ -131,8 +131,6 @@ quoteSchema.pre("save", function (next) {
   if (this.isModified("isQuoteFinal") && this.isQuoteFinal === true) {
     this.finalizeAt = new Date(); // 👈 stores current date + time
   }
-
-  next();
 });
 
 export default mongoose.model("Quote", quoteSchema);
