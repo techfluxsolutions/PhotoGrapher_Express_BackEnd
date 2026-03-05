@@ -4,6 +4,7 @@ import Admin from '../../models/Admin.mjs';
 import Role from '../../models/Role.mjs';
 import bcrypt from 'bcrypt';
 import { sendErrorResponse, sendSuccessResponse } from '../../utils/handleResponce.mjs';
+import { sendWelcomeEmail } from '../../utils/emailService.mjs';
 
 class StaffController {
     /**
@@ -72,6 +73,13 @@ class StaffController {
                     createdBy: creatorProfileId,
                     status: 'active'
                 });
+
+                // Send welcome email with credentials
+                try {
+                    await sendWelcomeEmail(email, name, password);
+                } catch (emailError) {
+                    console.error("Error sending welcome email to staff:", emailError);
+                }
 
                 return sendSuccessResponse(res, {
                     staff: {

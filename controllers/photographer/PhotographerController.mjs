@@ -313,6 +313,15 @@ class PhotographerController {
 
             await photographer.save();
 
+            // Send welcome email with login credentials
+            try {
+                if (password && photographer.email) {
+                    await sendWelcomeEmail(photographer.email, photographer.username, password);
+                }
+            } catch (emailError) {
+                console.error("Error sending welcome email during verification:", emailError);
+            }
+
             res.status(200).json({
                 success: true,
                 message: "Photographer verified and activated successfully",

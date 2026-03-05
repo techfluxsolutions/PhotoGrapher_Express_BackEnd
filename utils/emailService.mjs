@@ -4,18 +4,18 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 const transporter = nodemailer.createTransport({
-    host: process.env.SMTP_HOST,
-    port: process.env.SMTP_PORT,
-    secure: process.env.SMTP_PORT === '465', // true for 465, false for other ports
+    host: process.env.SMTP_Host,
+    port: process.env.SMTP_Port,
+    secure: process.env.SMTP_Port === '465', // true for 465, false for other ports
     auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS,
+        user: process.env.SMTP_Username,
+        pass: process.env.SMTP_Password,
     },
 });
 
 export const sendWelcomeEmail = async (email, username, password) => {
     const mailOptions = {
-        from: `"${process.env.SMTP_FROM_NAME || 'PhotoGrapher Admin'}" <${process.env.SMTP_FROM}>`,
+        from: `"${process.env.SMTP_FROM_NAME || 'PhotoGrapher Admin'}" <${process.env.SMTP_Username}>`,
         to: email,
         subject: 'Welcome to PhotoGrapher - Your Account Credentials',
         html: `
