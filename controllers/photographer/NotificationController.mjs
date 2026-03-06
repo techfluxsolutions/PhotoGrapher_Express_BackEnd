@@ -1,5 +1,6 @@
 import Notification from "../../models/Notification.mjs";
 import { sendSuccessResponse, sendErrorResponse } from "../../utils/handleResponce.mjs";
+import mongoose from "mongoose";
 
 class NotificationController {
     // Get notifications for the authenticated photographer
