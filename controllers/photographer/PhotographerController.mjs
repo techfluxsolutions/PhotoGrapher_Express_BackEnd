@@ -608,6 +608,10 @@ class PhotographerController {
 
     async getSortedPhotographers(req, res) {
         try {
+            const page = Math.max(1, parseInt(req.query.page) || 1);
+            const limit = Math.max(1, parseInt(req.query.limit) || 10);
+            const skip = (page - 1) * limit;
+
             const [photographers, settings] = await Promise.all([
                 Photographer.find({ status: "active" })
                     .select('_id basicInfo.fullName basicInfo.profilePhoto professionalDetails.expertiseLevel commissionPercentage'),
@@ -625,10 +629,13 @@ class PhotographerController {
             const sorted = photographers.sort((a, b) => {
                 const levelA = levelOrder[a.professionalDetails?.expertiseLevel] || 99;
                 const levelB = levelOrder[b.professionalDetails?.expertiseLevel] || 99;
-                return levelA - levelB;
+                return levelA - levelB || b.createdAt - a.createdAt; // Secondary sort by newest
             });
 
-            const result = sorted.map(p => {
+            const total = sorted.length;
+            const paginatedItems = sorted.slice(skip, skip + limit);
+
+            const result = paginatedItems.map(p => {
                 const level = p.professionalDetails?.expertiseLevel || "N/A";
                 let comm = p.commissionPercentage;
 
@@ -656,7 +663,8 @@ class PhotographerController {
 
             res.status(200).json({
                 success: true,
-                data: result
+                data: result,
+                meta: { total, page, limit }
             });
         } catch (error) {
             console.error("Error fetching sorted photographers:", error);
