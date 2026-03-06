@@ -52,7 +52,8 @@ const photographerSchema = new mongoose.Schema(
       primaryLocation: { type: String, default: "" },
       willingToTravel: { type: Boolean, default: false },
       languagesSpoken: { type: [String], default: [] },
-      startUpDate: { type: String, default: "" }
+      startUpDate: { type: String, default: "" },
+      team_studio: { type: String, default: "" }
     },
 
     // ===== About You =====

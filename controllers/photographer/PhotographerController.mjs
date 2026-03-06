@@ -22,7 +22,7 @@ class PhotographerController {
             }
 
             const items = await Photographer.find(query)
-                .select('basicInfo.fullName email mobileNumber professionalDetails.yearsOfExperience professionalDetails.primaryLocation professionalDetails.startUpDate status createdAt commissionPercentage')
+                .select('basicInfo.fullName email mobileNumber professionalDetails.yearsOfExperience professionalDetails.primaryLocation professionalDetails.startUpDate professionalDetails.team_studio status createdAt commissionPercentage')
                 .skip(skip)
                 .limit(limit)
                 .sort({ createdAt: -1 });
@@ -65,7 +65,8 @@ class PhotographerController {
             verificationStatus: verificationStatus,
             createdAt: p.createdAt,
             signUpDate: p.professionalDetails?.startUpDate || `${day}/${month}/${year}`,
-            commissionPercentage: p.commissionPercentage || 0
+            commissionPercentage: p.commissionPercentage || 0,
+            team_studio: p.professionalDetails?.team_studio || ""
         };
     }
 
@@ -181,7 +182,8 @@ class PhotographerController {
                 professionalDetails: {
                     yearsOfExperience: experience,
                     primaryLocation: city,
-                    startUpDate: startUpDate || signUpDate
+                    startUpDate: startUpDate || signUpDate,
+                    team_studio: req.body.team_studio || ""
                 },
                 status: "pending"
             });
@@ -253,6 +255,7 @@ class PhotographerController {
             if (city) photographer.professionalDetails.primaryLocation = city;
             const dateToUpdate = startUpDate || signUpDate;
             if (dateToUpdate) photographer.professionalDetails.startUpDate = dateToUpdate;
+            if (req.body.team_studio) photographer.professionalDetails.team_studio = req.body.team_studio;
 
             await photographer.save();
 
@@ -268,6 +271,7 @@ class PhotographerController {
                     city: photographer.professionalDetails.primaryLocation,
                     status: photographer.status,
                     signUpDate: photographer.professionalDetails.startUpDate || `${String(photographer.createdAt.getDate()).padStart(2, '0')}/${String(photographer.createdAt.getMonth() + 1).padStart(2, '0')}/${photographer.createdAt.getFullYear()}`,
+                    team_studio: photographer.professionalDetails.team_studio || "",
                     createdAt: photographer.createdAt
                 }
             });

@@ -93,6 +93,7 @@ router.get("/bookings/upcoming", (req, res, next) => ServiceBookingController.ge
 router.get("/bookings/upcomming", (req, res, next) => ServiceBookingController.getUpcoming(req, res, next));
 router.get("/bookings/previous", (req, res, next) => ServiceBookingController.getPrevious(req, res, next));
 router.get("/bookings/:id", (req, res, next) => ServiceBookingController.getById(req, res, next));
+router.patch("/bookings/assign-photographer", (req, res, next) => ServiceBookingController.assignPhotographer(req, res, next));
 router.put("/bookings/:id", (req, res, next) => ServiceBookingController.update(req, res, next));
 router.delete("/bookings/:id", (req, res, next) => ServiceBookingController.delete(req, res, next));
 router.get("/getpreviousbookings", (req, res, next) => ServiceBookingController.getPrevious(req, res, next));

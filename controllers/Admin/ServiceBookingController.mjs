@@ -201,8 +201,8 @@ class ServiceBookingController {
         veroaBookingId: booking.veroaBookingId,
         client_id: booking.client_id?._id || null,
         client_name: booking.client_id?.username || "",
-        assigned_photographer: booking.photographer_id?.username || "",
-        team_studio: booking.team || "",
+        assigned_photographer: booking.photographer_id?.basicInfo?.fullName || "",
+        team_studio: booking.photographer_id?.professionalDetails?.team_studio || booking.team || "",
         eventType: booking.service_id?.serviceName || "",
         eventDate: booking.bookingDate,
         location: booking.city || "",
@@ -281,8 +281,8 @@ class ServiceBookingController {
         veroaBookingId: booking.veroaBookingId,
         client_id: booking.client_id?._id || null,
         client_name: booking.client_id?.username || "",
-        assigned_photographer: booking.photographer_id?.username || "",
-        team_studio: booking.team || "",
+        assigned_photographer: booking.photographer_id?.basicInfo?.fullName || "",
+        team_studio: booking.photographer_id?.professionalDetails?.team_studio || booking.team || "",
         eventType: booking.shootType || "",
         eventDate: booking.bookingDate,
         location: booking.city || "",
@@ -492,6 +492,44 @@ class ServiceBookingController {
     }
   }
 
+  /**
+   * Assign photographer to a booking
+   * PATCH /api/admins/bookings/:id/assign-photographer
+   */
+  async assignPhotographer(req, res, next) {
+    try {
+      const { photographerId, bookingId } = req.body;
+
+      if (!photographerId) {
+        return res.status(400).json({
+          success: false,
+          message: "Photographer ID is required"
+        });
+      }
+
+      const booking = await ServiceBooking.findByIdAndUpdate(
+        bookingId,
+        { photographer_id: photographerId },
+        { new: true }
+      ).populate("photographer_id");
+
+      if (!booking) {
+        return res.status(404).json({
+          success: false,
+          message: "Booking not found"
+        });
+      }
+
+      return res.json({
+        success: true,
+        message: "Photographer assigned successfully",
+        data: booking
+      });
+    } catch (err) {
+      return next(err);
+    }
+  }
+
   async getCompletedBookings(req, res, next) {
     try {
       const page = Math.max(1, parseInt(req.query.page) || 1);
@@ -667,7 +705,13 @@ class ServiceBookingController {
               "bookingStatus": "$status",
               "paymentStatus": "$paymentStatus",
               "assignPhotographer": "$photographer_id.basicInfo.fullName",
-              "team": "$team",
+              "team_studio": {
+                $cond: {
+                  if: { $gt: [{ $type: "$photographer_id" }, "missing"] },
+                  then: { $ifNull: ["$photographer_id.professionalDetails.team_studio", ""] },
+                  else: "$team"
+                }
+              },
               "unreadmessages": "$unreadCount",
             },
           },
