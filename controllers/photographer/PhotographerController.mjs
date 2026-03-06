@@ -2,6 +2,7 @@ import Photographer from "../../models/Photographer.mjs";
 import PlatformSettings from "../../models/PlatformSettings.mjs";
 import bcrypt from "bcrypt";
 import { sendWelcomeEmail } from "../../utils/emailService.mjs";
+import mongoose from "mongoose";
 
 class PhotographerController {
     // Get All Photographers (Unified endpoint with filtering)
@@ -22,7 +23,7 @@ class PhotographerController {
             }
 
             const items = await Photographer.find(query)
-                .select('basicInfo.fullName email mobileNumber professionalDetails.yearsOfExperience professionalDetails.primaryLocation professionalDetails.startUpDate professionalDetails.team_studio status createdAt commissionPercentage')
+                .select('basicInfo.fullName basicInfo.profilePhoto email mobileNumber professionalDetails.yearsOfExperience professionalDetails.primaryLocation professionalDetails.startUpDate professionalDetails.team_studio status createdAt commissionPercentage')
                 .skip(skip)
                 .limit(limit)
                 .sort({ createdAt: -1 });
@@ -30,7 +31,7 @@ class PhotographerController {
             const total = await Photographer.countDocuments(query);
 
             // Transform response
-            const transformedItems = items.map(p => this._transformPhotographerData(p));
+            const transformedItems = items.map(p => this._transformPhotographerData(p, req));
 
             res.status(200).json({
                 success: true,
@@ -44,7 +45,7 @@ class PhotographerController {
     }
 
     // Helper to transform photographer data uniformly
-    _transformPhotographerData(p) {
+    _transformPhotographerData(p, req) {
         const date = new Date(p.createdAt);
         const day = String(date.getDate()).padStart(2, '0');
         const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -53,6 +54,12 @@ class PhotographerController {
         let verificationStatus = "Inactive";
         if (p.status === 'active') verificationStatus = "Verified";
         if (p.status === 'pending') verificationStatus = "Unverified";
+
+        const baseUrl = req ? `${req.protocol}://${req.get("host")}` : "";
+        let profilePhoto = p.basicInfo?.profilePhoto || "";
+        if (profilePhoto && !profilePhoto.startsWith("http")) {
+            profilePhoto = `${baseUrl}${profilePhoto}`;
+        }
 
         return {
             _id: p._id,
@@ -63,6 +70,7 @@ class PhotographerController {
             city: p.professionalDetails?.primaryLocation,
             status: p.status,
             verificationStatus: verificationStatus,
+            profilePhoto,
             createdAt: p.createdAt,
             signUpDate: p.professionalDetails?.startUpDate || `${day}/${month}/${year}`,
             commissionPercentage: p.commissionPercentage || 0,
@@ -150,7 +158,15 @@ class PhotographerController {
             if (!photographer) {
                 return res.status(404).json({ message: "Photographer not found" });
             }
-            res.status(200).json({ success: true, message: "Photographer fetched successfully", photographer });
+
+            // Add Base URL to Photo
+            const photographerObj = photographer.toObject();
+            if (photographerObj.basicInfo?.profilePhoto && !photographerObj.basicInfo.profilePhoto.startsWith("http")) {
+                const baseUrl = `${req.protocol}://${req.get("host")}`;
+                photographerObj.basicInfo.profilePhoto = `${baseUrl}${photographerObj.basicInfo.profilePhoto}`;
+            }
+
+            res.status(200).json({ success: true, message: "Photographer fetched successfully", photographer: photographerObj });
         } catch (error) {
             res.status(500).json({ message: "Failed to fetch photographer", error: error.message });
         }
@@ -438,65 +454,62 @@ class PhotographerController {
 
             let updateData = { ...req.body };
 
+            // 1. Handle JSON strings from FormData for nested objects
+            const nestedObjects = ['basicInfo', 'professionalDetails', 'servicesAndStyles', 'availability', 'pricing', 'photographyAccessories'];
+            nestedObjects.forEach(field => {
+                if (updateData[field] && typeof updateData[field] === 'string') {
+                    try {
+                        updateData[field] = JSON.parse(updateData[field]);
+                    } catch (e) {
+                        console.error(`Failed to parse ${field}:`, e.message);
+                    }
+                }
+            });
+
+            // 2. Map flat fields to nested objects (Utility for simple FormData)
+            if (!updateData.basicInfo) updateData.basicInfo = {};
+            if (updateData.fullName) updateData.basicInfo.fullName = updateData.fullName;
+            if (updateData.displayName) updateData.basicInfo.displayName = updateData.displayName;
+            if (updateData.phone) updateData.basicInfo.phone = updateData.phone;
+
+            if (!updateData.professionalDetails) updateData.professionalDetails = {};
+            if (updateData.expertiseLevel) updateData.professionalDetails.expertiseLevel = updateData.expertiseLevel;
+            if (updateData.yearsOfExperience) updateData.professionalDetails.yearsOfExperience = updateData.yearsOfExperience;
+            if (updateData.primaryLocation) updateData.professionalDetails.primaryLocation = updateData.primaryLocation;
+
+            // 3. Handle Profile Photo Upload
+            if (req.file) {
+                const baseUrl = `${req.protocol}://${req.get("host")}`;
+                updateData.basicInfo.profilePhoto = `/uploads/${req.file.filename}`;
+            }
+
+            // 4. Flatten the object for deep partial updates (Avoid overwriting whole nested objects)
+            const flatten = (obj, prefix = '') => {
+                let flattened = {};
+                for (let key in obj) {
+                    if (obj.hasOwnProperty(key)) {
+                        const newKey = prefix ? `${prefix}.${key}` : key;
+                        // Only flatten objects, not arrays or special types like Date/ObjectId
+                        if (obj[key] && typeof obj[key] === 'object' && !Array.isArray(obj[key]) && !(obj[key] instanceof Date) && !(obj[key] instanceof mongoose.Types.ObjectId)) {
+                            Object.assign(flattened, flatten(obj[key], newKey));
+                        } else {
+                            flattened[newKey] = obj[key];
+                        }
+                    }
+                }
+                return flattened;
+            };
+
+            const flatUpdateData = flatten(updateData);
+
             // Handle password update if present
             if (updateData.password) {
                 const salt = await bcrypt.genSalt(10);
-                updateData.password = await bcrypt.hash(updateData.password, salt);
+                const hashedPassword = await bcrypt.hash(updateData.password, salt);
+                flatUpdateData.password = hashedPassword;
             }
 
-            // Handle Profile Photo Upload
-            if (req.file) {
-                // Ensure basicInfo is an object
-                if (typeof updateData.basicInfo === 'string') {
-                    try {
-                        updateData.basicInfo = JSON.parse(updateData.basicInfo);
-                    } catch (e) {
-                        updateData.basicInfo = {};
-                    }
-                } else if (!updateData.basicInfo) {
-                    updateData.basicInfo = {};
-                }
-
-                // Merge profilePhoto into basicInfo
-                updateData.basicInfo = {
-                    ...updateData.basicInfo,
-                    profilePhoto: `/uploads/${req.file.filename}`
-                };
-            }
-
-            // Parse Schema Fields if they are JSON strings (from FormData)
-            const jsonFields = [
-                'basicInfo',
-                'professionalDetails',
-                'servicesAndStyles',
-                'availability',
-                'pricing',
-                'photographyAccessories',
-                'bank_details' // keys like bank_name are top level but just in case user nested them? 
-                // Actually schema has flat bank (bank_name etc) and nested (basicInfo etc)
-                // Only nested arrays/objects need parsing.
-            ];
-
-            // Add fields that are definitely objects/arrays in Schema
-            // function to try parse
-            const tryParse = (key) => {
-                if (updateData[key] && typeof updateData[key] === 'string') {
-                    try {
-                        updateData[key] = JSON.parse(updateData[key]);
-                    } catch (e) {
-                        // console.error(`Failed to parse ${key}`, e);
-                    }
-                }
-            };
-
-            tryParse('basicInfo');
-            tryParse('professionalDetails');
-            tryParse('servicesAndStyles');
-            tryParse('availability');
-            tryParse('pricing');
-            tryParse('photographyAccessories');
-
-            const photographer = await Photographer.findByIdAndUpdate(id, updateData, {
+            const photographer = await Photographer.findByIdAndUpdate(id, { $set: flatUpdateData }, {
                 new: true,
                 runValidators: true
             });
@@ -504,7 +517,15 @@ class PhotographerController {
             if (!photographer) {
                 return res.status(200).json({ message: "Photographer not found" });
             }
-            res.status(200).json({ message: "Photographer updated successfully", photographer });
+
+            // Prepend Base URL to Photo in response
+            const photographerObj = photographer.toObject();
+            if (photographerObj.basicInfo?.profilePhoto && !photographerObj.basicInfo.profilePhoto.startsWith("http")) {
+                const baseUrl = `${req.protocol}://${req.get("host")}`;
+                photographerObj.basicInfo.profilePhoto = `${baseUrl}${photographerObj.basicInfo.profilePhoto}`;
+            }
+
+            res.status(200).json({ message: "Photographer updated successfully", photographer: photographerObj });
         } catch (error) {
             res.status(500).json({ message: "Failed to update photographer", error: error.message });
         }
@@ -589,7 +610,7 @@ class PhotographerController {
         try {
             const [photographers, settings] = await Promise.all([
                 Photographer.find({ status: "active" })
-                    .select('_id basicInfo.fullName professionalDetails.expertiseLevel commissionPercentage'),
+                    .select('_id basicInfo.fullName basicInfo.profilePhoto professionalDetails.expertiseLevel commissionPercentage'),
                 PlatformSettings.findOne({ type: "commissions" })
             ]);
 
@@ -618,10 +639,17 @@ class PhotographerController {
                     else if (level === "Professional") comm = globalCommissions.professional;
                 }
 
+                const baseUrl = `${req.protocol}://${req.get("host")}`;
+                let photo = p.basicInfo?.profilePhoto || "";
+                if (photo && !photo.startsWith("http")) {
+                    photo = `${baseUrl}${photo}`;
+                }
+
                 return {
                     id: p._id,
                     name: p.basicInfo?.fullName || "N/A",
                     level: level,
+                    profilePhoto: photo,
                     commissionPercentage: comm || 0
                 };
             });

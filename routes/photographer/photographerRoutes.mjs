@@ -36,7 +36,7 @@ router.get("/me", (req, res, next) => PhotographerController.getPhotographerById
 router.get("/status", (req, res, next) => PhotographerController.getPhotographerStatus(req, res, next));
 router.put("/status", (req, res, next) => PhotographerController.updatePhotographerStatus(req, res, next));
 router.post("/status", (req, res, next) => PhotographerController.updatePhotographerStatus(req, res, next));
-router.put("/me", upload.single('profilePhoto'), (req, res, next) => PhotographerController.updatePhotographer(req, res, next));
+router.patch("/me", upload.single('profilePhoto'), (req, res, next) => PhotographerController.updatePhotographer(req, res, next));
 
 // --- Availability ---
 router.post("/availability", (req, res, next) => AvailabilityController.create(req, res, next));

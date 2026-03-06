@@ -32,10 +32,10 @@ class BookingController {
             let filter = {};
 
             if (statusToFilter === "pending") {
-                // Shows bookings either broadcast to all (and unassigned) OR specifically assigned to me as pending
+                // Shows bookings either broadcast to all OR specifically assigned to me as pending
                 filter = {
                     $or: [
-                        { isBroadcast: true, photographer_id: null },
+                        { isBroadcast: true }, // Available to everyone
                         { photographer_id: photographerId, bookingStatus: "pending" }
                     ]
                 };
@@ -551,12 +551,12 @@ class BookingController {
             let filter = { _id: id };
 
             if (bookingStatus === "accepted") {
-                // To claim: must be mine OR (broadcast & unassigned)
+                // To claim: must be formally assigned to me OR be a broadcast booking up for grabs
                 filter = {
                     _id: id,
                     $or: [
                         { photographer_id: myId },
-                        { isBroadcast: true, photographer_id: null }
+                        { isBroadcast: true }
                     ]
                 };
             } else {

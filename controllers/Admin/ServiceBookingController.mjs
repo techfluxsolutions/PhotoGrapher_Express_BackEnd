@@ -5,9 +5,19 @@ import PlatformSettings from "../../models/PlatformSettings.mjs";
 
 
 const parseDDMMYYYY = (dateStr) => {
-  if (!dateStr) return dateStr;
-  const [day, month, year] = dateStr.split("-");
-  return new Date(`${year}-${month}-${day}`);
+  if (!dateStr || dateStr instanceof Date) return dateStr;
+
+  // Custom DD-MM-YYYY format (e.g., 20-03-2026)
+  const bits = dateStr.split("-");
+  if (bits.length === 3) {
+    const [d, m, y] = bits;
+    // If first part is 4 digits, it's likely YYYY-MM-DD, use standard parsing
+    if (d.length === 4) return new Date(dateStr);
+    // Otherwise assume DD-MM-YYYY and rearrange for JS Date
+    return new Date(`${y}-${m}-${d}`);
+  }
+
+  return new Date(dateStr);
 };
 class ServiceBookingController {
   /**
@@ -41,7 +51,7 @@ class ServiceBookingController {
 
       payload.veroaBookingId = `VEROA-BK-${formattedNumber}`;
 
-      if (payload.startDate === payload.endDate) {
+      if (payload.startDate && payload.startDate === payload.endDate) {
         payload.bookingDate = parseDDMMYYYY(payload.startDate);
         payload.endDate = "";
         payload.startDate = "";
