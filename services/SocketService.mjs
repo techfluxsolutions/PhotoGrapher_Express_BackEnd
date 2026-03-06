@@ -20,7 +20,7 @@ export const initSocket = (server) => {
         cors: {
             origin: (origin, callback) => {
                 if (!origin) return callback(null, true);
-                    const allowedOrigins = [
+                const allowedOrigins = [
                     "http://localhost:3000",
                     "http://127.0.0.1:3000",
                     "http://localhost:5173",
@@ -32,7 +32,8 @@ export const initSocket = (server) => {
                     "https://photographer-admin-6nit.vercel.app",
                     "https://superadmin-9xk2lmq7zap3rt8.veroastudioz.com",
                     "https://dev-api.veroastudioz.com",
-                    "https://veroastudioz.com"
+                    "https://veroastudioz.com",
+                    "https://photographer-veroa.vercel.app"
                 ];
                 const isLocalhost = origin.startsWith("http://localhost:") || origin.startsWith("http://127.0.0.1:");
                 const isTechFlux = origin.endsWith(".techfluxsolutions.com");
