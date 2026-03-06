@@ -65,28 +65,34 @@ class BookingController {
             ]);
 
             // Helper to format date to IST (Separate Date and Time)
-            const formatIST = (date) => {
-                if (!date) return { date: "N/A", time: "N/A" };
-                const d = new Date(date);
-                const datePart = new Intl.DateTimeFormat("en-IN", {
-                    timeZone: "Asia/Kolkata",
-                    day: "2-digit",
-                    month: "2-digit",
-                    year: "numeric"
-                }).format(d);
+            const formatIST = (date, fallbackDate = null) => {
+                let d = null;
+                if (date) {
+                    d = new Date(date);
+                } else if (fallbackDate) {
+                    d = new Date(fallbackDate);
+                }
 
-                const timePart = new Intl.DateTimeFormat("en-IN", {
-                    timeZone: "Asia/Kolkata",
-                    hour: "2-digit",
-                    minute: "2-digit",
-                    hour12: true
-                }).format(d);
+                if (d && !isNaN(d.getTime())) {
+                    const formatted = new Intl.DateTimeFormat("en-IN", {
+                        timeZone: "Asia/Kolkata",
+                        day: "2-digit",
+                        month: "2-digit",
+                        year: "numeric",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                        hour12: true
+                    }).format(d).toLowerCase();
 
-                return { date: datePart, time: timePart };
+                    const [datePart, timePart] = formatted.split(", ");
+                    return { date: datePart, time: timePart };
+                }
+
+                return { date: "N/A", time: "N/A" };
             };
 
             const formattedBookings = bookings.map(booking => {
-                const ist = formatIST(booking.bookingDate);
+                const ist = formatIST(booking.bookingDate, booking.startDate || booking.eventDate);
                 return {
                     _id: booking._id,
                     bookingId: booking.veroaBookingId,
@@ -147,13 +153,27 @@ class BookingController {
             bookingObj.eventType = booking.service_id?.serviceName || "N/A";
             bookingObj.requirements = booking.notes || "No requirements";
 
-            // Format IST explicitly to separate Date and Time
+            // Strictly use booking/event date, not creation date
+            let d = null;
             if (booking.bookingDate) {
-                const d = new Date(booking.bookingDate);
-                bookingObj.date = new Intl.DateTimeFormat("en-IN", { timeZone: "Asia/Kolkata", day: "2-digit", month: "2-digit", year: "numeric" }).format(d);
-                bookingObj.time = new Intl.DateTimeFormat("en-IN", { timeZone: "Asia/Kolkata", hour: "2-digit", minute: "2-digit", hour12: true }).format(d);
+                d = new Date(booking.bookingDate);
+            } else if (booking.startDate || booking.eventDate) {
+                d = new Date(booking.startDate || booking.eventDate);
+            }
+
+            if (d && !isNaN(d.getTime())) {
+                const formatted = new Intl.DateTimeFormat("en-IN", {
+                    timeZone: "Asia/Kolkata",
+                    day: "2-digit",
+                    month: "2-digit",
+                    year: "numeric",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                    hour12: true
+                }).format(d).toLowerCase();
+                [bookingObj.date, bookingObj.time] = formatted.split(", ");
             } else {
-                bookingObj.date = "N/A";
+                bookingObj.date = booking.startDate || booking.eventDate || "N/A";
                 bookingObj.time = "N/A";
             }
 
