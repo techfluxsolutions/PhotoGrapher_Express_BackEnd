@@ -9,7 +9,7 @@ class PayoutController {
             // Assuming req.photographer.id is populated by middleware
             // If not, we might need to adjust based on how auth is handled (req.user or req.photographer)
             // Based on photographerRoutes.mjs, it uses 'isPhotographer' middleware, likely setting req.photographer or req.user
-            const photographerId = req.user?.id || req.user?._id || req.photographer?._id;
+            const photographerId = req.user?.id;
 
             if (!photographerId) {
                 return res.status(401).json({ success: false, message: "Unauthorized" });
@@ -51,8 +51,14 @@ class PayoutController {
     // Get a single payout by ID
     async getOne(req, res, next) {
         try {
-            const { id } = req.params;
-            const payout = await Payout.findById(id)
+            const { id } = req.params; // Extract id from req.params
+            const photographerId = req.user?.id; // Use req.user.id for ownership check
+
+            if (!photographerId) {
+                return res.status(401).json({ success: false, message: "Unauthorized" });
+            }
+
+            const payout = await Payout.findOne({ _id: id, photographer_id: photographerId })
                 .populate({
                     path: "booking_id",
                     select: "veroaBookingId bookingDate eventType totalAmount status",
@@ -81,7 +87,7 @@ class PayoutController {
     async create(req, res, next) {
         try {
             const { booking_id, total_amount, paid_amount, status } = req.body;
-            const photographerId = req.user?.id || req.user?._id || req.photographer?._id;
+            const photographerId = req.user?.id;
 
             if (!photographerId) {
                 return res.status(401).json({ success: false, message: "Unauthorized" });
@@ -122,9 +128,14 @@ class PayoutController {
         try {
             const { id } = req.params;
             const { paid_amount, status } = req.body;
+            const photographerId = req.user?.id; // Use req.user.id for ownership check
+
+            if (!photographerId) {
+                return res.status(401).json({ success: false, message: "Unauthorized" });
+            }
 
             // Find first to recalculate pending
-            const payout = await Payout.findById(id);
+            const payout = await Payout.findOne({ _id: id, photographer_id: photographerId });
             if (!payout) {
                 return res.status(404).json({ success: false, message: "Payout not found" });
             }
@@ -148,7 +159,13 @@ class PayoutController {
     async delete(req, res, next) {
         try {
             const { id } = req.params;
-            const payout = await Payout.findByIdAndDelete(id);
+            const photographerId = req.user?.id; // Use req.user.id for ownership check
+
+            if (!photographerId) {
+                return res.status(401).json({ success: false, message: "Unauthorized" });
+            }
+
+            const payout = await Payout.findOneAndDelete({ _id: id, photographer_id: photographerId });
 
             if (!payout) {
                 return res.status(404).json({ success: false, message: "Payout not found" });
@@ -164,9 +181,10 @@ class PayoutController {
         try {
             const { bookingId } = req.params;
             const { paid_amount, status } = req.body;
+            const photographerId = req.user?.id;
 
             // Find by Booking ID
-            const payout = await Payout.findOne({ booking_id: bookingId });
+            const payout = await Payout.findOne({ booking_id: bookingId, photographer_id: photographerId });
 
             if (!payout) {
                 return res.status(404).json({ success: false, message: "Payout not found for this Booking ID" });

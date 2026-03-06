@@ -12,7 +12,9 @@ class JobController {
 
   async getAll(req, res, next) {
     try {
-      const data = await Job.find();
+      const photographerId = req.user?.id;
+      const filter = photographerId ? { assigned_photographer_id: photographerId } : {};
+      const data = await Job.find(filter);
       res.status(200).json({ success: true, data });
     } catch (error) {
       next(error);
@@ -22,7 +24,13 @@ class JobController {
   async getOne(req, res, next) {
     try {
       const { id } = req.params;
-      const data = await Job.findById(id);
+      const photographerId = req.user?.id;
+      const filter = { _id: id };
+      if (photographerId) {
+        filter.assigned_photographer_id = photographerId;
+      }
+
+      const data = await Job.findOne(filter);
       if (!data) {
         return res.status(404).json({ success: false, message: "Job not found" });
       }
@@ -35,7 +43,13 @@ class JobController {
   async update(req, res, next) {
     try {
       const { id } = req.params;
-      const data = await Job.findByIdAndUpdate(id, req.body, { new: true });
+      const photographerId = req.user?.id;
+      const filter = { _id: id };
+      if (photographerId) {
+        filter.assigned_photographer_id = photographerId;
+      }
+
+      const data = await Job.findOneAndUpdate(filter, req.body, { new: true });
       if (!data) {
         return res.status(404).json({ success: false, message: "Job not found" });
       }
@@ -48,7 +62,13 @@ class JobController {
   async delete(req, res, next) {
     try {
       const { id } = req.params;
-      const data = await Job.findByIdAndDelete(id);
+      const photographerId = req.user?.id;
+      const filter = { _id: id };
+      if (photographerId) {
+        filter.assigned_photographer_id = photographerId;
+      }
+
+      const data = await Job.findOneAndDelete(filter);
       if (!data) {
         return res.status(404).json({ success: false, message: "Job not found" });
       }

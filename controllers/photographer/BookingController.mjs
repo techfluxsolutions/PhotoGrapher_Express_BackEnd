@@ -20,10 +20,12 @@ class BookingController {
 
             let filter = {};
 
-            // Filter by photographer_id if available
-            if (req.user && req.user._id) {
-                filter.photographer_id = req.user._id;
+            // Strictly enforce photographer filtering
+            const photographerId = req.user?.id;
+            if (!photographerId) {
+                return sendErrorResponse(res, "Unauthorized: Photographer account required", 401);
             }
+            filter.photographer_id = new mongoose.Types.ObjectId(photographerId);
 
             // Status Filtering: Prioritize forcedStatus (from specific API endpoints)
             const statusToFilter = forcedStatus || req.query.bookingStatus;
@@ -128,7 +130,12 @@ class BookingController {
                 return sendErrorResponse(res, { message: "Invalid booking ID" }, 400);
             }
 
-            const booking = await ServiceBooking.findById(id)
+            const filter = { _id: id };
+            if (req.user && req.user.id) {
+                filter.photographer_id = req.user.id;
+            }
+
+            const booking = await ServiceBooking.findOne(filter)
                 .populate("client_id", "username email mobileNumber avatar")
                 .populate("service_id", "serviceName") // Ensure serviceName is selected
                 .populate("additionalServicesId")
@@ -456,8 +463,13 @@ class BookingController {
                 updateData.status = "canceled";
             }
 
-            const booking = await ServiceBooking.findByIdAndUpdate(
-                id,
+            const filter = { _id: id };
+            if (req.user && req.user.id) {
+                filter.photographer_id = req.user.id;
+            }
+
+            const booking = await ServiceBooking.findOneAndUpdate(
+                filter,
                 updateData,
                 { new: true }
             );
