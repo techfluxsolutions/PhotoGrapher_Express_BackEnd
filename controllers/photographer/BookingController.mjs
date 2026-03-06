@@ -2,6 +2,8 @@
 import mongoose from "mongoose";
 import ServiceBooking from "../../models/ServiceBookings.mjs";
 import Gallery from "../../models/Gallery.mjs";
+import Photographer from "../../models/Photographer.mjs";
+import PlatformSettings from "../../models/PlatformSettings.mjs";
 import {
     sendErrorResponse,
     sendSuccessResponse,
@@ -18,33 +20,46 @@ class BookingController {
             const limit = Math.max(1, parseInt(req.query.limit) || 10);
             const skip = (page - 1) * limit;
 
-            let filter = {};
-
-            // Strictly enforce photographer filtering
-            const photographerId = req.user?.id;
-            if (!photographerId) {
+            const myId = req.user?.id;
+            if (!myId) {
                 return sendErrorResponse(res, "Unauthorized: Photographer account required", 401);
             }
-            filter.photographer_id = new mongoose.Types.ObjectId(photographerId);
+            const photographerId = new mongoose.Types.ObjectId(myId);
 
             // Status Filtering: Prioritize forcedStatus (from specific API endpoints)
             const statusToFilter = forcedStatus || req.query.bookingStatus;
 
-            if (statusToFilter) {
-                const statuses = statusToFilter.split(",").filter(s => s);
-                if (statuses.includes("completed")) {
-                    filter.status = "completed";
-                    const otherStatuses = statuses.filter(s => s !== "completed");
-                    if (otherStatuses.length > 1) {
-                        filter.bookingStatus = { $in: otherStatuses };
-                    } else if (otherStatuses.length === 1) {
-                        filter.bookingStatus = otherStatuses[0];
-                    }
-                } else {
-                    if (statuses.length > 1) {
-                        filter.bookingStatus = { $in: statuses };
-                    } else if (statuses.length === 1) {
-                        filter.bookingStatus = statuses[0];
+            let filter = {};
+
+            if (statusToFilter === "pending") {
+                // Shows bookings either broadcast to all (and unassigned) OR specifically assigned to me as pending
+                filter = {
+                    $or: [
+                        { isBroadcast: true, photographer_id: null },
+                        { photographer_id: photographerId, bookingStatus: "pending" }
+                    ]
+                };
+            } else if (statusToFilter === "accepted") {
+                // User requirement: When isBroadcast is false and photographer is assigned, show in accepted
+                filter = {
+                    $or: [
+                        { photographer_id: photographerId, isBroadcast: false },
+                        { photographer_id: photographerId, bookingStatus: "accepted" }
+                    ]
+                };
+            } else {
+                // For other statuses (completed, rejected), strictly my assigned bookings
+                filter.photographer_id = photographerId;
+                if (statusToFilter) {
+                    const statuses = statusToFilter.split(",").filter(s => s);
+                    if (statuses.includes("completed")) {
+                        filter.status = "completed";
+                        const otherStatuses = statuses.filter(s => s !== "completed");
+                        if (otherStatuses.length > 0) {
+                            filter.bookingStatus = { $in: otherStatuses };
+                        }
+                    } else {
+                        filter.bookingStatus = statuses.length > 1 ? { $in: statuses } : statuses[0];
                     }
                 }
             }
@@ -93,8 +108,30 @@ class BookingController {
                 return { date: "N/A", time: "N/A" };
             };
 
+            // Fetch my commission settings for live calculation of broadcast bookings
+            const [me, settings] = await Promise.all([
+                Photographer.findById(myId),
+                PlatformSettings.findOne({ type: "commissions" })
+            ]);
+            const global = settings || { basic: 0, intermediate: 0, professional: 0 };
+            const myLevel = me?.professionalDetails?.expertiseLevel || "Beginner";
+            let myComm = me?.commissionPercentage;
+            if (!myComm) {
+                if (myLevel === "Beginner") myComm = global.basic;
+                else if (myLevel === "Intermediate") myComm = global.intermediate;
+                else if (myLevel === "Professional") myComm = global.professional;
+            }
+
             const formattedBookings = bookings.map(booking => {
                 const ist = formatIST(booking.bookingDate, booking.startDate || booking.eventDate);
+
+                // If it's already assigned and has a stored amount, use it.
+                // Otherwise calculate it on the fly for this viewing photographer.
+                let displayAmount = booking.photographerAmount;
+                if (!displayAmount || (booking.isBroadcast && !booking.photographer_id)) {
+                    displayAmount = Math.round(booking.totalAmount * (1 - (myComm || 0) / 100));
+                }
+
                 return {
                     _id: booking._id,
                     bookingId: booking.veroaBookingId,
@@ -106,6 +143,8 @@ class BookingController {
                     city: booking.city,
                     status: booking.status,
                     bookingStatus: booking.bookingStatus,
+                    photographerAmount: displayAmount,
+                    totalAmount: booking.totalAmount, // Optional
                     daysLeft: "Calculated Frontend"
                 };
             });
@@ -155,10 +194,32 @@ class BookingController {
                 );
             }
 
+            // Fetch my commission settings for live calculation of broadcast bookings
+            const [me, settings] = await Promise.all([
+                Photographer.findById(req.user.id),
+                PlatformSettings.findOne({ type: "commissions" })
+            ]);
+            const global = settings || { basic: 0, intermediate: 0, professional: 0 };
+            const myLevel = me?.professionalDetails?.expertiseLevel || "Beginner";
+            let myComm = me?.commissionPercentage;
+            if (!myComm) {
+                if (myLevel === "Beginner") myComm = global.basic;
+                else if (myLevel === "Intermediate") myComm = global.intermediate;
+                else if (myLevel === "Professional") myComm = global.professional;
+            }
+
             // Enhance response with helper fields while keeping original data
             let bookingObj = booking.toObject({ virtuals: true });
             bookingObj.eventType = booking.service_id?.serviceName || "N/A";
             bookingObj.requirements = booking.notes || "No requirements";
+
+            // If it's already assigned and has a stored amount, use it.
+            // Otherwise calculate it on the fly for this viewing photographer.
+            let displayAmount = booking.photographerAmount;
+            if (!displayAmount || (booking.isBroadcast && !booking.photographer_id)) {
+                displayAmount = Math.round(booking.totalAmount * (1 - (myComm || 0) / 100));
+            }
+            bookingObj.photographerAmount = displayAmount;
 
             // Strictly use booking/event date, not creation date
             let d = null;
@@ -456,16 +517,51 @@ class BookingController {
 
             const updateData = { bookingStatus };
 
-            // If accepted, also update the main status to confirmed
+            // If accepted, also update the main status to confirmed and assign to me
             if (bookingStatus === "accepted") {
+                // Determine commission and net payout
+                const [targetBooking, photographer, settings] = await Promise.all([
+                    ServiceBooking.findById(id),
+                    Photographer.findById(req.user.id),
+                    PlatformSettings.findOne({ type: "commissions" })
+                ]);
+
+                if (targetBooking && photographer) {
+                    const global = settings || { basic: 0, intermediate: 0, professional: 0 };
+                    const level = photographer.professionalDetails?.expertiseLevel || "Beginner";
+                    let commission = photographer.commissionPercentage;
+
+                    if (!commission) {
+                        if (level === "Beginner") commission = global.basic;
+                        else if (level === "Intermediate") commission = global.intermediate;
+                        else if (level === "Professional") commission = global.professional;
+                    }
+
+                    updateData.photographerAmount = Math.round(targetBooking.totalAmount * (1 - (commission || 0) / 100));
+                }
+
                 updateData.status = "confirmed";
+                updateData.photographer_id = new mongoose.Types.ObjectId(req.user.id);
+                updateData.isBroadcast = false;
             } else if (bookingStatus === "rejected") {
                 updateData.status = "canceled";
             }
 
-            const filter = { _id: id };
-            if (req.user && req.user.id) {
-                filter.photographer_id = req.user.id;
+            const myId = new mongoose.Types.ObjectId(req.user.id);
+            let filter = { _id: id };
+
+            if (bookingStatus === "accepted") {
+                // To claim: must be mine OR (broadcast & unassigned)
+                filter = {
+                    _id: id,
+                    $or: [
+                        { photographer_id: myId },
+                        { isBroadcast: true, photographer_id: null }
+                    ]
+                };
+            } else {
+                // Other statuses strictly require ownership
+                filter.photographer_id = myId;
             }
 
             const booking = await ServiceBooking.findOneAndUpdate(
@@ -475,7 +571,13 @@ class BookingController {
             );
 
             if (!booking) {
-                return sendErrorResponse(res, { message: "Booking not found" }, 404);
+                // If accepting, it might be already claimed by another photographer
+                if (bookingStatus === "accepted") {
+                    return sendErrorResponse(res, {
+                        message: "This booking has already been claimed by another photographer."
+                    }, 409);
+                }
+                return sendErrorResponse(res, { message: "Booking not found or unauthorized to update" }, 404);
             }
 
             return sendSuccessResponse(res, { booking }, `Booking ${bookingStatus} successfully`);

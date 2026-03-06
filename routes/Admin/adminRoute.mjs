@@ -21,6 +21,9 @@ import ContactUsController from "../../controllers/ContactUsController.mjs";
 import CustomerController from "../../controllers/Admin/CustomerController.mjs";
 const router = express.Router();
 
+// --- Debug ---
+router.get("/photographers/sorted", (req, res, next) => PhotographerController.getSortedPhotographers(req, res, next));
+
 // --- Admin Authentication (No middleware required) ---
 router.post("/auth/login", (req, res, next) => AdminEmailAuthController.login(req, res, next));
 //

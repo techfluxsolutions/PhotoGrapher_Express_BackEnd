@@ -140,6 +140,14 @@ const serviceBookingSchema = new mongoose.Schema(
       ref: "Quote",
       default: null,
       sparse: true
+    },
+    isBroadcast: {
+      type: Boolean,
+      default: false
+    },
+    photographerAmount: {
+      type: Number,
+      default: 0
     }
   },
   { timestamps: true }

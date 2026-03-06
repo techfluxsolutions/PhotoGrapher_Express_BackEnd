@@ -138,6 +138,7 @@ class PhotographerController {
     // get photographer by id (Supports Admin/Public via :id, or Self via Auth)
     async getPhotographerById(req, res) {
         try {
+            console.log("getPhotographerById hit with params:", req.params);
             // Priority: Params ID (Admin/Public) -> Auth User ID (Self, 'id' from token) -> Auth Photographer ID
             const id = req.params.id || req.user?.id || req.user?._id || req.photographer?._id;
 
@@ -581,6 +582,57 @@ class PhotographerController {
         } catch (error) {
             console.error("Error fetching commissions:", error);
             res.status(500).json({ success: false, message: "Failed to fetch commissions", error: error.message });
+        }
+    }
+
+    async getSortedPhotographers(req, res) {
+        try {
+            const [photographers, settings] = await Promise.all([
+                Photographer.find({ status: "active" })
+                    .select('_id basicInfo.fullName professionalDetails.expertiseLevel commissionPercentage'),
+                PlatformSettings.findOne({ type: "commissions" })
+            ]);
+
+            const globalCommissions = settings || { basic: 0, intermediate: 0, professional: 0 };
+
+            const levelOrder = {
+                "Beginner": 1,
+                "Intermediate": 2,
+                "Professional": 3
+            };
+
+            const sorted = photographers.sort((a, b) => {
+                const levelA = levelOrder[a.professionalDetails?.expertiseLevel] || 99;
+                const levelB = levelOrder[b.professionalDetails?.expertiseLevel] || 99;
+                return levelA - levelB;
+            });
+
+            const result = sorted.map(p => {
+                const level = p.professionalDetails?.expertiseLevel || "N/A";
+                let comm = p.commissionPercentage;
+
+                // If individual commission is 0, fall back to global level-based commission
+                if (!comm) {
+                    if (level === "Beginner") comm = globalCommissions.basic;
+                    else if (level === "Intermediate") comm = globalCommissions.intermediate;
+                    else if (level === "Professional") comm = globalCommissions.professional;
+                }
+
+                return {
+                    id: p._id,
+                    name: p.basicInfo?.fullName || "N/A",
+                    level: level,
+                    commissionPercentage: comm || 0
+                };
+            });
+
+            res.status(200).json({
+                success: true,
+                data: result
+            });
+        } catch (error) {
+            console.error("Error fetching sorted photographers:", error);
+            res.status(500).json({ success: false, message: "Failed to fetch photographers", error: error.message });
         }
     }
 }

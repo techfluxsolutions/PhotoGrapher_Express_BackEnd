@@ -1,5 +1,7 @@
 import ServiceBooking from "../../models/ServiceBookings.mjs";
 import Gallery from "../../models/Gallery.mjs";
+import Photographer from "../../models/Photographer.mjs";
+import PlatformSettings from "../../models/PlatformSettings.mjs";
 
 
 const parseDDMMYYYY = (dateStr) => {
@@ -213,6 +215,7 @@ class ServiceBookingController {
         startDate: booking.startDate || null,
         endDate: booking.endDate || null,
         bookingAmount: booking.totalAmount,
+        photographerAmount: booking.photographerAmount || 0,
         paymentMode: booking.paymentMode,
         paymentStatus: booking.paymentStatus,
         bookingStatus: booking.status,
@@ -294,6 +297,7 @@ class ServiceBookingController {
         startDate: booking.startDate || null,
         endDate: booking.endDate || null,
         bookingAmount: booking.totalAmount,
+        photographerAmount: booking.photographerAmount || 0,
         paymentMode: booking.paymentMode,
         paymentStatus: booking.paymentStatus,
         bookingStatus: booking.status,
@@ -500,18 +504,40 @@ class ServiceBookingController {
    */
   async assignPhotographer(req, res, next) {
     try {
-      const { photographerId, bookingId } = req.body;
+      const { photographerId, bookingId, isBroadcast } = req.body;
 
-      if (!photographerId) {
-        return res.status(400).json({
-          success: false,
-          message: "Photographer ID is required"
-        });
+      const updateData = {};
+      if (isBroadcast !== undefined) updateData.isBroadcast = isBroadcast;
+
+      if (photographerId) {
+        updateData.photographer_id = photographerId;
+
+        // Calculate Photographer Amount based on Commission
+        const [booking, photographer, settings] = await Promise.all([
+          ServiceBooking.findById(bookingId),
+          Photographer.findById(photographerId),
+          PlatformSettings.findOne({ type: "commissions" })
+        ]);
+
+        if (booking && photographer) {
+          const global = settings || { basic: 0, intermediate: 0, professional: 0 };
+          const level = photographer.professionalDetails?.expertiseLevel || "Beginner";
+          let commission = photographer.commissionPercentage;
+
+          if (!commission) {
+            if (level === "Beginner") commission = global.basic;
+            else if (level === "Intermediate") commission = global.intermediate;
+            else if (level === "Professional") commission = global.professional;
+          }
+
+          // booking.totalAmount * (1 - commission / 100)
+          updateData.photographerAmount = Math.round(booking.totalAmount * (1 - (commission || 0) / 100));
+        }
       }
 
       const booking = await ServiceBooking.findByIdAndUpdate(
         bookingId,
-        { photographer_id: photographerId },
+        updateData,
         { new: true }
       ).populate("photographer_id");
 
@@ -703,6 +729,7 @@ class ServiceBookingController {
               "eventDate": "$bookingDate",
               "eventLocation": { $concat: ["$city", ", ", "$state"] },
               "bookingAmount": "$totalAmount",
+              "photographerAmount": { $ifNull: ["$photographerAmount", 0] },
               "paymentMode": "$paymentMode",
               "bookingStatus": "$status",
               "paymentStatus": "$paymentStatus",
