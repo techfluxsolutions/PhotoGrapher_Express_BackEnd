@@ -75,7 +75,7 @@ class BookingController {
                     .populate("client_id", "username email mobileNumber avatar")
                     .populate("service_id", "serviceName")
                     .populate("photographer_id", "username")
-                    .sort({ createdAt: -1 })
+                    .sort({ bookingDate: 1 })
                     .skip(skip)
                     .limit(limit),
                 ServiceBooking.countDocuments(filter),

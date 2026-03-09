@@ -83,7 +83,7 @@ class ServiceBookingController {
         ServiceBooking.find({})
           .skip(skip)
           .limit(limit)
-          .sort({ bookingDate: -1 })
+          .sort({ bookingDate: 1 })
           .populate("service_id client_id photographer_id"),
         ServiceBooking.countDocuments(),
       ]);
@@ -285,7 +285,7 @@ class ServiceBookingController {
         ServiceBooking.find(filter)
           .skip(skip)
           .limit(limit)
-          .sort({ bookingDate: -1 })
+          .sort({ bookingDate: 1 })
           .populate("service_id client_id photographer_id"),
         ServiceBooking.countDocuments(filter),
       ]);
@@ -433,7 +433,7 @@ class ServiceBookingController {
         ServiceBooking.find({ status })
           .skip(skip)
           .limit(limit)
-          .sort({ bookingDate: -1 })
+          .sort({ bookingDate: 1 })
           .populate("service_id client_id photographer_id"),
         ServiceBooking.countDocuments({ status }),
       ]);
@@ -463,7 +463,7 @@ class ServiceBookingController {
         ServiceBooking.find({ client_id: clientId })
           .skip(skip)
           .limit(limit)
-          .sort({ bookingDate: -1 })
+          .sort({ bookingDate: 1 })
           .populate("service_id client_id photographer_id"),
         ServiceBooking.countDocuments({ client_id: clientId }),
       ]);
@@ -493,7 +493,7 @@ class ServiceBookingController {
         ServiceBooking.find({ photographer_id: photographerId })
           .skip(skip)
           .limit(limit)
-          .sort({ bookingDate: -1 })
+          .sort({ bookingDate: 1 })
           .populate("service_id client_id photographer_id"),
         ServiceBooking.countDocuments({ photographer_id: photographerId }),
       ]);
@@ -599,7 +599,7 @@ class ServiceBookingController {
         ServiceBooking.find({ status: "completed", paymentStatus: "fully paid" })
           .skip(skip)
           .limit(limit)
-          .sort({ bookingDate: -1 })
+          .sort({ bookingDate: 1 })
           .populate("service_id client_id photographer_id"),
         ServiceBooking.countDocuments({ status: "completed" }),
       ]);
