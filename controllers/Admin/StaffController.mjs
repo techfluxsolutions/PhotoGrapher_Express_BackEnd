@@ -74,11 +74,11 @@ class StaffController {
                     status: 'active'
                 });
 
-                // Send welcome email with credentials
-                try {
-                    await sendWelcomeEmail(email, name, password);
-                } catch (emailError) {
-                    console.error("Error sending welcome email to staff:", emailError);
+                // Send welcome email in background (Non-blocking)
+                if (email && name && password) {
+                    sendWelcomeEmail(email, name, password).catch(emailError => {
+                        console.error("Error sending welcome email to staff:", emailError);
+                    });
                 }
 
                 return sendSuccessResponse(res, {
