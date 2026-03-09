@@ -105,8 +105,7 @@ class ChatController {
                 .sort({ createdAt: -1 }) // Get latest first
                 .skip(skip)
                 .limit(limit)
-                .populate("senderId", "username avatar"); // To show sender details
-
+                .populate("senderId", "username avatar"); // To show sender detailsdd 
             const baseUrl = `${req.protocol}://${req.get("host")}`;
             const formattedMessages = messages.map(msg => {
                 const msgObj = msg.toObject();
