@@ -144,6 +144,7 @@ class BookingController {
                     city: booking.city,
                     status: booking.status,
                     bookingStatus: booking.bookingStatus,
+                    galleryStatus: booking.galleryStatus || "Upload Pending",
                     photographerAmount: displayAmount,
                     totalAmount: booking.totalAmount, // Optional
                     daysLeft: "Calculated Frontend"
@@ -511,13 +512,19 @@ class BookingController {
                 return sendErrorResponse(res, { message: "Invalid booking ID" }, 400);
             }
 
-            const { bookingStatus } = req.body; // 'accepted' or 'rejected'
+            const { bookingStatus, galleryStatus } = req.body; // 'accepted', 'rejected' or gallery status updates
 
-            if (!["accepted", "rejected", "pending"].includes(bookingStatus)) {
+            if (bookingStatus && !["accepted", "rejected", "pending"].includes(bookingStatus)) {
                 return sendErrorResponse(res, { message: "Invalid booking status" }, 400);
             }
 
-            const updateData = { bookingStatus };
+            if (galleryStatus && !["Upload Pending", "Photos Uploaded"].includes(galleryStatus)) {
+                return sendErrorResponse(res, { message: "Invalid gallery status" }, 400);
+            }
+
+            const updateData = {};
+            if (bookingStatus) updateData.bookingStatus = bookingStatus;
+            if (galleryStatus) updateData.galleryStatus = galleryStatus;
 
             // If accepted, also update the main status to confirmed and assign to me
             if (bookingStatus === "accepted") {

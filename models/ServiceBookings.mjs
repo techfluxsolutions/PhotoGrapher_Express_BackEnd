@@ -87,6 +87,11 @@ const serviceBookingSchema = new mongoose.Schema(
       enum: ["accepted", "rejected", "pending"],
       default: "pending",
     },
+    galleryStatus: {
+      type: String,
+      enum: ["Upload Pending", "Photos Uploaded"],
+      default: "Upload Pending",
+    },
     paymentDate: {
       type: String,
       default: ""
@@ -122,10 +127,6 @@ const serviceBookingSchema = new mongoose.Schema(
     endDate: {
       type: String,
       sparse: true
-    },
-    is_Incomplete: {
-      type: Boolean,
-      default: false
     },
     ratingsGivenByClient: {
       type: Number,
