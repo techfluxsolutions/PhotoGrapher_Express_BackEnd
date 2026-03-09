@@ -335,13 +335,13 @@ class PhotographerController {
             await photographer.save();
 
             // Send welcome email with login credentials
-            // try {
-            //     if (password && photographer.email) {
-            //         await sendWelcomeEmail(photographer.email, photographer.username, password);
-            //     }
-            // } catch (emailError) {
-            //     console.error("Error sending welcome email during verification:", emailError);
-            // }
+            try {
+                if (password && photographer.email) {
+                    await sendWelcomeEmail(photographer.email, photographer.username, password);
+                }
+            } catch (emailError) {
+                console.error("Error sending welcome email during verification:", emailError);
+            }
 
             res.status(200).json({
                 success: true,
@@ -432,9 +432,9 @@ class PhotographerController {
             await photographer.save();
 
             // Send welcome email if password was provided
-            // if (plainPassword && photographer.email) {
-            //     await sendWelcomeEmail(photographer.email, photographer.username || photographer.email, plainPassword);
-            // }
+            if (plainPassword && photographer.email) {
+                await sendWelcomeEmail(photographer.email, photographer.username || photographer.email, plainPassword);
+            }
 
             res.status(201).json({ message: "Photographer created successfully", photographer });
         } catch (error) {
