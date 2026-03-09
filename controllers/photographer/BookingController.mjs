@@ -75,7 +75,7 @@ class BookingController {
                     .populate("client_id", "username email mobileNumber avatar")
                     .populate("service_id", "serviceName")
                     .populate("photographer_id", "username")
-                    .sort({ createdAt: -1 })
+                    .sort({ bookingDate: 1 })
                     .skip(skip)
                     .limit(limit),
                 ServiceBooking.countDocuments(filter),
@@ -144,6 +144,7 @@ class BookingController {
                     city: booking.city,
                     status: booking.status,
                     bookingStatus: booking.bookingStatus,
+                    galleryStatus: booking.galleryStatus || "Upload Pending",
                     photographerAmount: displayAmount,
                     totalAmount: booking.totalAmount, // Optional
                     daysLeft: "Calculated Frontend"
@@ -511,16 +512,24 @@ class BookingController {
                 return sendErrorResponse(res, { message: "Invalid booking ID" }, 400);
             }
 
-            const { bookingStatus } = req.body; // 'accepted' or 'rejected'
+            const { bookingStatus, galleryStatus } = req.body; // 'accepted', 'rejected' or gallery status updates
 
-            if (!["accepted", "rejected", "pending"].includes(bookingStatus)) {
+            if (bookingStatus && !["accepted", "rejected", "pending"].includes(bookingStatus)) {
                 return sendErrorResponse(res, { message: "Invalid booking status" }, 400);
             }
 
-            const updateData = { bookingStatus };
+            if (galleryStatus && !["Upload Pending", "Photos Uploaded"].includes(galleryStatus)) {
+                return sendErrorResponse(res, { message: "Invalid gallery status" }, 400);
+            }
+
+            const updateData = {};
+            if (bookingStatus) updateData.bookingStatus = bookingStatus;
+            if (galleryStatus) updateData.galleryStatus = galleryStatus;
 
             // If accepted, also update the main status to confirmed and assign to me
             if (bookingStatus === "accepted") {
+                updateData.acceptedAt = new Date(); // Track when it was accepted
+
                 // Determine commission and net payout
                 const [targetBooking, photographer, settings] = await Promise.all([
                     ServiceBooking.findById(id),
@@ -546,6 +555,18 @@ class BookingController {
                 updateData.photographer_id = new mongoose.Types.ObjectId(req.user.id);
                 updateData.photographerIds = []; // Clear invitations once claimed
             } else if (bookingStatus === "rejected") {
+                // Check for 48-hour rejection limit if it was already accepted
+                const existingBooking = await ServiceBooking.findById(id);
+
+                if (existingBooking && existingBooking.bookingStatus === "accepted" && existingBooking.acceptedAt) {
+                    const hoursSinceAcceptance = (new Date() - new Date(existingBooking.acceptedAt)) / (1000 * 60 * 60);
+                    if (hoursSinceAcceptance > 48) {
+                        return sendErrorResponse(res, {
+                            message: "You can't reject this booking Because 48 hours have passed since acceptance."
+                        }, 403);
+                    }
+                }
+
                 updateData.status = "canceled";
             }
 
