@@ -20,6 +20,7 @@ import PartnerRegistrationController from "../../controllers/PartnerRegistration
 import ContactUsController from "../../controllers/ContactUsController.mjs";
 import CustomerController from "../../controllers/Admin/CustomerController.mjs";
 const router = express.Router();
+import { startUpload, getUploadPartUrl, completeUpload } from "../../controllers/User/UploadController.mjs";
 
 // --- Debug ---
 router.get("/photographers/sorted", (req, res, next) => PhotographerController.getSortedPhotographers(req, res, next));
@@ -193,5 +194,11 @@ router.get("/:id", (req, res, next) => AdminController.getById(req, res, next));
 router.put("/:id", (req, res, next) => AdminController.update(req, res, next));
 router.delete("/:id", (req, res, next) => AdminController.delete(req, res, next));
 
+
+// photo upload routes 
+
+router.post("/startUploading", (req, res, next) => startUpload(req, res, next));
+router.post("/getUploadPartUrl", (req, res, next) => getUploadPartUrl(req, res, next));
+router.post("/completeUploading", (req, res, next) => completeUpload(req, res, next));
 
 export default router;

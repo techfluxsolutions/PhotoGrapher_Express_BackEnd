@@ -90,4 +90,9 @@ router.patch("/notifications/:id/read", (req, res, next) => NotificationControll
 router.get("/servicename", (req, res, next) => ServiceController.getServiceNameOnly(req, res, next));
 router.get("/services/:id", (req, res, next) => ServiceController.getById(req, res, next));
 
+// --- Uploads ---
+router.post("/uploads/start", (req, res, next) => UploadController.startUpload(req, res, next));
+router.post("/uploads/part", (req, res, next) => UploadController.getUploadPartUrl(req, res, next));
+router.post("/uploads/complete", (req, res, next) => UploadController.completeUpload(req, res, next));
+
 export default router;
