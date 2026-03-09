@@ -538,6 +538,7 @@ class ServiceBookingController {
           // Direct assignment counts as already accepted
           updateData.bookingStatus = "accepted";
           updateData.status = "confirmed";
+          updateData.acceptedAt = new Date(); // To enforce the 48hr rule later
 
           const [booking, photographer, settings] = await Promise.all([
             ServiceBooking.findById(bookingId),

@@ -150,6 +150,10 @@ const serviceBookingSchema = new mongoose.Schema(
     photographerAmount: {
       type: Number,
       default: 0
+    },
+    acceptedAt: {
+      type: Date,
+      default: null
     }
   },
   { timestamps: true }

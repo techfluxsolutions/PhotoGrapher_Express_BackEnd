@@ -528,6 +528,8 @@ class BookingController {
 
             // If accepted, also update the main status to confirmed and assign to me
             if (bookingStatus === "accepted") {
+                updateData.acceptedAt = new Date(); // Track when it was accepted
+
                 // Determine commission and net payout
                 const [targetBooking, photographer, settings] = await Promise.all([
                     ServiceBooking.findById(id),
@@ -553,6 +555,18 @@ class BookingController {
                 updateData.photographer_id = new mongoose.Types.ObjectId(req.user.id);
                 updateData.photographerIds = []; // Clear invitations once claimed
             } else if (bookingStatus === "rejected") {
+                // Check for 48-hour rejection limit if it was already accepted
+                const existingBooking = await ServiceBooking.findById(id);
+
+                if (existingBooking && existingBooking.bookingStatus === "accepted" && existingBooking.acceptedAt) {
+                    const hoursSinceAcceptance = (new Date() - new Date(existingBooking.acceptedAt)) / (1000 * 60 * 60);
+                    if (hoursSinceAcceptance > 48) {
+                        return sendErrorResponse(res, {
+                            message: "You can't reject this booking Because 48 hours have passed since acceptance."
+                        }, 403);
+                    }
+                }
+
                 updateData.status = "canceled";
             }
 
