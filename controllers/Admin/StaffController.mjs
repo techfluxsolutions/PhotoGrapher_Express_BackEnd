@@ -75,11 +75,11 @@ class StaffController {
                 });
 
                 // Send welcome email with credentials
-                // try {
-                //     await sendWelcomeEmail(email, name, password);
-                // } catch (emailError) {
-                //     console.error("Error sending welcome email to staff:", emailError);
-                // }
+                try {
+                    await sendWelcomeEmail(email, name, password);
+                } catch (emailError) {
+                    console.error("Error sending welcome email to staff:", emailError);
+                }
 
                 return sendSuccessResponse(res, {
                     staff: {
