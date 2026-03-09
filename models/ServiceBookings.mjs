@@ -141,10 +141,11 @@ const serviceBookingSchema = new mongoose.Schema(
       default: null,
       sparse: true
     },
-    isBroadcast: {
-      type: Boolean,
-      default: false
-    },
+    photographerIds: [{
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Photographer",
+      default: []
+    }],
     photographerAmount: {
       type: Number,
       default: 0

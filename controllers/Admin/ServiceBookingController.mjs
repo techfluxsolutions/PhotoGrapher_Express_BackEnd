@@ -514,34 +514,54 @@ class ServiceBookingController {
    */
   async assignPhotographer(req, res, next) {
     try {
-      const { photographerId, bookingId, isBroadcast } = req.body;
+      const { photographerId, bookingId, photographerIds } = req.body;
 
       const updateData = {};
-      if (isBroadcast !== undefined) updateData.isBroadcast = isBroadcast;
 
-      if (photographerId) {
+      // Handle the invitation list (broadcast replacement)
+      if (photographerIds !== undefined && photographerIds.length > 0) {
+        updateData.photographerIds = photographerIds;
+        // If broadcasting/inviting many, it is not yet "accepted" by any specific person
+        updateData.photographer_id = null;
+        updateData.bookingStatus = "pending";
+        updateData.status = "pending";
+        updateData.photographerAmount = 0;
+      }
+
+      // Handle direct assignment
+      if (photographerId !== undefined) {
         updateData.photographer_id = photographerId;
 
-        // Calculate Photographer Amount based on Commission
-        const [booking, photographer, settings] = await Promise.all([
-          ServiceBooking.findById(bookingId),
-          Photographer.findById(photographerId),
-          PlatformSettings.findOne({ type: "commissions" })
-        ]);
+        if (photographerId) {
+          // If assigning a specific person, clear other invitations
+          updateData.photographerIds = [];
+          // Direct assignment counts as already accepted
+          updateData.bookingStatus = "accepted";
+          updateData.status = "confirmed";
 
-        if (booking && photographer) {
-          const global = settings || { basic: 0, intermediate: 0, professional: 0 };
-          const level = photographer.professionalDetails?.expertiseLevel || "Beginner";
-          let commission = photographer.commissionPercentage;
+          const [booking, photographer, settings] = await Promise.all([
+            ServiceBooking.findById(bookingId),
+            Photographer.findById(photographerId),
+            PlatformSettings.findOne({ type: "commissions" })
+          ]);
 
-          if (!commission) {
-            if (level === "Beginner") commission = global.basic;
-            else if (level === "Intermediate") commission = global.intermediate;
-            else if (level === "Professional") commission = global.professional;
+          if (booking && photographer) {
+            const global = settings || { basic: 0, intermediate: 0, professional: 0 };
+            const level = photographer.professionalDetails?.expertiseLevel || "Beginner";
+            let commission = photographer.commissionPercentage;
+
+            if (!commission) {
+              if (level === "Beginner") commission = global.basic;
+              else if (level === "Intermediate") commission = global.intermediate;
+              else if (level === "Professional") commission = global.professional;
+            }
+            updateData.photographerAmount = Math.round(booking.totalAmount * (1 - (commission || 0) / 100));
           }
-
-          // booking.totalAmount * (1 - commission / 100)
-          updateData.photographerAmount = Math.round(booking.totalAmount * (1 - (commission || 0) / 100));
+        } else {
+          // If clearing assignment, also clear the amount and reset statuses
+          updateData.photographerAmount = 0;
+          updateData.bookingStatus = "pending";
+          updateData.status = "pending";
         }
       }
 

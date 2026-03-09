@@ -32,18 +32,18 @@ class BookingController {
             let filter = {};
 
             if (statusToFilter === "pending") {
-                // Shows bookings either broadcast to all OR specifically assigned to me as pending
+                // Shows bookings where I am invited via photographerIds OR specifically assigned to me as pending
                 filter = {
                     $or: [
-                        { isBroadcast: true }, // Available to everyone
+                        { photographerIds: { $in: [photographerId] } },
                         { photographer_id: photographerId, bookingStatus: "pending" }
                     ]
                 };
             } else if (statusToFilter === "accepted") {
-                // User requirement: When isBroadcast is false and photographer is assigned, show in accepted
+                // Shows bookings specifically assigned to me alone (direct assignment) OR explicitly accepted
                 filter = {
                     $or: [
-                        { photographer_id: photographerId, isBroadcast: false },
+                        { photographer_id: photographerId, photographerIds: { $size: 0 } },
                         { photographer_id: photographerId, bookingStatus: "accepted" }
                     ]
                 };
@@ -128,7 +128,8 @@ class BookingController {
                 // If it's already assigned and has a stored amount, use it.
                 // Otherwise calculate it on the fly for this viewing photographer.
                 let displayAmount = booking.photographerAmount;
-                if (!displayAmount || (booking.isBroadcast && !booking.photographer_id)) {
+                const isInvited = booking.photographerIds && booking.photographerIds.length > 0;
+                if (!displayAmount || (isInvited && !booking.photographer_id)) {
                     displayAmount = Math.round(booking.totalAmount * (1 - (myComm || 0) / 100));
                 }
 
@@ -216,7 +217,8 @@ class BookingController {
             // If it's already assigned and has a stored amount, use it.
             // Otherwise calculate it on the fly for this viewing photographer.
             let displayAmount = booking.photographerAmount;
-            if (!displayAmount || (booking.isBroadcast && !booking.photographer_id)) {
+            const isInvited = booking.photographerIds && booking.photographerIds.length > 0;
+            if (!displayAmount || (isInvited && !booking.photographer_id)) {
                 displayAmount = Math.round(booking.totalAmount * (1 - (myComm || 0) / 100));
             }
             bookingObj.photographerAmount = displayAmount;
@@ -542,7 +544,7 @@ class BookingController {
 
                 updateData.status = "confirmed";
                 updateData.photographer_id = new mongoose.Types.ObjectId(req.user.id);
-                updateData.isBroadcast = false;
+                updateData.photographerIds = []; // Clear invitations once claimed
             } else if (bookingStatus === "rejected") {
                 updateData.status = "canceled";
             }
@@ -551,12 +553,12 @@ class BookingController {
             let filter = { _id: id };
 
             if (bookingStatus === "accepted") {
-                // To claim: must be formally assigned to me OR be a broadcast booking up for grabs
+                // To claim: must be invited via photographerIds OR be formally assigned to me
                 filter = {
                     _id: id,
                     $or: [
                         { photographer_id: myId },
-                        { isBroadcast: true }
+                        { photographerIds: { $in: [myId] } }
                     ]
                 };
             } else {
@@ -574,7 +576,7 @@ class BookingController {
                 // If accepting, it might be already claimed by another photographer
                 if (bookingStatus === "accepted") {
                     return sendErrorResponse(res, {
-                        message: "This booking has already been claimed by another photographer."
+                        message: "This booking has already been accepted by another photographer."
                     }, 409);
                 }
                 return sendErrorResponse(res, { message: "Booking not found or unauthorized to update" }, 404);
