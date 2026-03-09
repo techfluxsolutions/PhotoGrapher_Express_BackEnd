@@ -653,7 +653,7 @@ class PhotographerController {
                 }
 
                 return {
-                    id: p._id,
+                    _id: p._id,
                     name: p.basicInfo?.fullName || "N/A",
                     level: level,
                     profilePhoto: photo,
