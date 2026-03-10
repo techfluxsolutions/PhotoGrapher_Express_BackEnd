@@ -45,7 +45,7 @@ const photographerSchema = new mongoose.Schema(
       photographerType: { type: String, default: "" }, // e.g. Wedding, Fashion, Corporate
       expertiseLevel: {
         type: String,
-        enum: ["Beginner", "Intermediate", "Professional", ""],
+        enum: ["INITIO", "ELITE", "PRO", ""],
         default: ""
       },
       yearsOfExperience: { type: String, default: "" }, // e.g. 1-3, 3-5, 5+

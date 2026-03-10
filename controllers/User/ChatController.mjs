@@ -81,15 +81,22 @@ class ChatController {
             }
 
             const total = await Message.countDocuments({ conversationId: conversation._id });
-            //
-
+            const baseUrl = `${req.protocol}://${req.get("host")}`;
+            
             let pinedBookings;
 
-            const gotBookings = await ServiceBooking.findOne({ _id: conversation.bookingId }).populate('service_id additionalServicesId', 'serviceName serviceCost')
+            const gotBookings = await ServiceBooking.findOne({ _id: conversation.bookingId })
+                .populate('service_id additionalServicesId', 'serviceName serviceCost')
+                .populate('client_id', 'username avatar');
+
             if (gotBookings) {
-                pinedBookings = gotBookings;
+                pinedBookings = gotBookings.toObject();
+                // Format client avatar if it's the client's profile image
+                if (pinedBookings.client_id && pinedBookings.client_id.avatar && !pinedBookings.client_id.avatar.startsWith("http")) {
+                   pinedBookings.client_id.avatar = `${baseUrl}/${pinedBookings.client_id.avatar.replace(/\\/g, "/")}`;
+                }
             } else {
-                pinedBookings = await Quote.findOne({ _id: conversation.quoteId })
+                const quoteData = await Quote.findOne({ _id: conversation.quoteId })
                     .populate({
                         path: 'service_id',
                         select: 'serviceName serviceCost'
@@ -97,16 +104,24 @@ class ChatController {
                     .populate({
                         path: 'additionalServicesId',
                         select: 'serviceName serviceCost',
-                        options: { strictPopulate: false } // if needed
-                    });
+                        options: { strictPopulate: false }
+                    })
+                    .populate('clientId', 'username avatar');
+                
+                if (quoteData) {
+                    pinedBookings = quoteData.toObject();
+                    // Format client avatar if it's the client's profile image
+                    if (pinedBookings.clientId && pinedBookings.clientId.avatar && !pinedBookings.clientId.avatar.startsWith("http")) {
+                       pinedBookings.clientId.avatar = `${baseUrl}/${pinedBookings.clientId.avatar.replace(/\\/g, "/")}`;
+                    }
+                }
             }
 
             const messages = await Message.find({ conversationId: conversation._id })
                 .sort({ createdAt: -1 }) // Get latest first
                 .skip(skip)
                 .limit(limit)
-                .populate("senderId", "username avatar"); // To show sender detailsdd 
-            const baseUrl = `${req.protocol}://${req.get("host")}`;
+                .populate("senderId", "username avatar"); // To show sender details
             const formattedMessages = messages.map(msg => {
                 const msgObj = msg.toObject();
                 if (msgObj.senderId && msgObj.senderId.avatar && !msgObj.senderId.avatar.startsWith("http")) {
@@ -115,8 +130,12 @@ class ChatController {
                 return msgObj;
             });
 
+            const clientData = pinedBookings?.client_id || pinedBookings?.clientId;
+
             return res.json({
                 success: true,
+                userName: clientData?.username || pinedBookings?.clientName || "Unknown User",
+                profileImage: clientData?.avatar || null,
                 pinned: pinedBookings,
                 data: formattedMessages.reverse(), // Client usually expects chronological order for chat
                 meta: { total, page, limit },

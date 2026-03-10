@@ -7,9 +7,9 @@ const platformSettingsSchema = new mongoose.Schema(
             default: "commissions",
             unique: true
         },
-        basic: { type: Number, default: 0 },
-        intermediate: { type: Number, default: 0 },
-        professional: { type: Number, default: 0 }
+        initio: { type: Number, default: 0 },
+        elite: { type: Number, default: 0 },
+        pro: { type: Number, default: 0 }
     },
     { timestamps: true }
 );

@@ -547,28 +547,28 @@ class PhotographerController {
 
     async updateCommissions(req, res) {
         try {
-            const { basic, intermediate, professional } = req.body;
+            const { initio, elite, pro } = req.body;
 
             const updates = [];
 
-            if (basic !== undefined) {
+            if (initio !== undefined) {
                 updates.push(Photographer.updateMany(
-                    { "professionalDetails.expertiseLevel": "Beginner" },
-                    { $set: { commissionPercentage: basic } }
+                    { "professionalDetails.expertiseLevel": "INITIO" },
+                    { $set: { commissionPercentage: initio } }
                 ));
             }
 
-            if (intermediate !== undefined) {
+            if (elite !== undefined) {
                 updates.push(Photographer.updateMany(
-                    { "professionalDetails.expertiseLevel": "Intermediate" },
-                    { $set: { commissionPercentage: intermediate } }
+                    { "professionalDetails.expertiseLevel": "ELITE" },
+                    { $set: { commissionPercentage: elite } }
                 ));
             }
 
-            if (professional !== undefined) {
+            if (pro !== undefined) {
                 updates.push(Photographer.updateMany(
-                    { "professionalDetails.expertiseLevel": "Professional" },
-                    { $set: { commissionPercentage: professional } }
+                    { "professionalDetails.expertiseLevel": "PRO" },
+                    { $set: { commissionPercentage: pro } }
                 ));
             }
 
@@ -579,9 +579,9 @@ class PhotographerController {
                 { type: "commissions" },
                 {
                     $set: {
-                        ...(basic !== undefined && { basic }),
-                        ...(intermediate !== undefined && { intermediate }),
-                        ...(professional !== undefined && { professional })
+                        ...(initio !== undefined && { initio }),
+                        ...(elite !== undefined && { elite }),
+                        ...(pro !== undefined && { pro })
                     }
                 },
                 { upsert: true, new: true }
@@ -595,10 +595,18 @@ class PhotographerController {
     }
     async getCommissions(req, res) {
         try {
-            const settings = await PlatformSettings.findOne({ type: "commissions" });
+            const settings = await PlatformSettings.findOne({ type: "commissions" }).lean();
+
+            // Explicitly filter only the new fields to ignore old ones in the DB
+            const commissions = settings ? {
+                initio: settings.initio || 0,
+                elite: settings.elite || 0,
+                pro: settings.pro || 0
+            } : { initio: 0, elite: 0, pro: 0 };
+
             res.status(200).json({
                 success: true,
-                commissions: settings || { basic: 0, intermediate: 0, professional: 0 }
+                commissions
             });
         } catch (error) {
             console.error("Error fetching commissions:", error);
@@ -618,12 +626,12 @@ class PhotographerController {
                 PlatformSettings.findOne({ type: "commissions" })
             ]);
 
-            const globalCommissions = settings || { basic: 0, intermediate: 0, professional: 0 };
+            const globalCommissions = settings || { initio: 0, elite: 0, pro: 0 };
 
             const levelOrder = {
-                "Beginner": 1,
-                "Intermediate": 2,
-                "Professional": 3
+                "INITIO": 1,
+                "ELITE": 2,
+                "PRO": 3
             };
 
             const sorted = photographers.sort((a, b) => {
@@ -641,9 +649,9 @@ class PhotographerController {
 
                 // If individual commission is 0, fall back to global level-based commission
                 if (!comm) {
-                    if (level === "Beginner") comm = globalCommissions.basic;
-                    else if (level === "Intermediate") comm = globalCommissions.intermediate;
-                    else if (level === "Professional") comm = globalCommissions.professional;
+                    if (level === "INITIO") comm = globalCommissions.initio;
+                    else if (level === "ELITE") comm = globalCommissions.elite;
+                    else if (level === "PRO") comm = globalCommissions.pro;
                 }
 
                 const baseUrl = `${req.protocol}://${req.get("host")}`;
