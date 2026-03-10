@@ -69,6 +69,32 @@ class BookingController {
                 filter.status = req.query.status;
             }
 
+            // Date Range Filter
+            if (req.query.fromDate && req.query.toDate) {
+                const fDate = new Date(req.query.fromDate);
+                fDate.setUTCHours(0, 0, 0, 0);
+                const tDate = new Date(req.query.toDate);
+                tDate.setUTCHours(23, 59, 59, 999);
+                const fs = fDate.toISOString().split("T")[0];
+                const ts = tDate.toISOString().split("T")[0];
+
+                if (filter.$or) {
+                    // Wrap existing $or in $and if it exists to avoid conflicts
+                    const existingOr = filter.$or;
+                    delete filter.$or;
+                    filter.$and = [{ $or: existingOr }];
+                } else {
+                    filter.$and = filter.$and || [];
+                }
+
+                filter.$and.push({
+                    $or: [
+                        { bookingDate: { $gte: fDate, $lte: tDate } },
+                        { startDate: { $gte: fs, $lte: ts } }
+                    ]
+                });
+            }
+
             const [bookings, total] = await Promise.all([
                 ServiceBooking.find(filter)
                     .select("-gallery -images")
@@ -113,13 +139,13 @@ class BookingController {
                 Photographer.findById(myId),
                 PlatformSettings.findOne({ type: "commissions" })
             ]);
-            const global = settings || { basic: 0, intermediate: 0, professional: 0 };
-            const myLevel = me?.professionalDetails?.expertiseLevel || "Beginner";
+            const global = settings || { initio: 0, elite: 0, pro: 0 };
+            const myLevel = me?.professionalDetails?.expertiseLevel || "INITIO";
             let myComm = me?.commissionPercentage;
             if (!myComm) {
-                if (myLevel === "Beginner") myComm = global.basic;
-                else if (myLevel === "Intermediate") myComm = global.intermediate;
-                else if (myLevel === "Professional") myComm = global.professional;
+                if (myLevel === "INITIO") myComm = global.initio;
+                else if (myLevel === "ELITE") myComm = global.elite;
+                else if (myLevel === "PRO") myComm = global.pro;
             }
 
             const formattedBookings = bookings.map(booking => {
@@ -201,13 +227,13 @@ class BookingController {
                 Photographer.findById(req.user.id),
                 PlatformSettings.findOne({ type: "commissions" })
             ]);
-            const global = settings || { basic: 0, intermediate: 0, professional: 0 };
-            const myLevel = me?.professionalDetails?.expertiseLevel || "Beginner";
+            const global = settings || { initio: 0, elite: 0, pro: 0 };
+            const myLevel = me?.professionalDetails?.expertiseLevel || "INITIO";
             let myComm = me?.commissionPercentage;
             if (!myComm) {
-                if (myLevel === "Beginner") myComm = global.basic;
-                else if (myLevel === "Intermediate") myComm = global.intermediate;
-                else if (myLevel === "Professional") myComm = global.professional;
+                if (myLevel === "INITIO") myComm = global.initio;
+                else if (myLevel === "ELITE") myComm = global.elite;
+                else if (myLevel === "PRO") myComm = global.pro;
             }
 
             // Enhance response with helper fields while keeping original data
@@ -538,14 +564,14 @@ class BookingController {
                 ]);
 
                 if (targetBooking && photographer) {
-                    const global = settings || { basic: 0, intermediate: 0, professional: 0 };
-                    const level = photographer.professionalDetails?.expertiseLevel || "Beginner";
+                    const global = settings || { initio: 0, elite: 0, pro: 0 };
+                    const level = photographer.professionalDetails?.expertiseLevel || "INITIO";
                     let commission = photographer.commissionPercentage;
 
                     if (!commission) {
-                        if (level === "Beginner") commission = global.basic;
-                        else if (level === "Intermediate") commission = global.intermediate;
-                        else if (level === "Professional") commission = global.professional;
+                        if (level === "INITIO") commission = global.initio;
+                        else if (level === "ELITE") commission = global.elite;
+                        else if (level === "PRO") commission = global.pro;
                     }
 
                     updateData.photographerAmount = Math.round(targetBooking.totalAmount * (1 - (commission || 0) / 100));

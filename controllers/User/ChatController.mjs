@@ -81,15 +81,22 @@ class ChatController {
             }
 
             const total = await Message.countDocuments({ conversationId: conversation._id });
-            //
-
+            const baseUrl = `${req.protocol}://${req.get("host")}`;
+            
             let pinedBookings;
 
-            const gotBookings = await ServiceBooking.findOne({ _id: conversation.bookingId }).populate('service_id additionalServicesId', 'serviceName serviceCost')
+            const gotBookings = await ServiceBooking.findOne({ _id: conversation.bookingId })
+                .populate('service_id additionalServicesId', 'serviceName serviceCost')
+                .populate('client_id', 'username avatar');
+
             if (gotBookings) {
-                pinedBookings = gotBookings;
+                pinedBookings = gotBookings.toObject();
+                // Format client avatar if it's the client's profile image
+                if (pinedBookings.client_id && pinedBookings.client_id.avatar && !pinedBookings.client_id.avatar.startsWith("http")) {
+                   pinedBookings.client_id.avatar = `${baseUrl}/${pinedBookings.client_id.avatar.replace(/\\/g, "/")}`;
+                }
             } else {
-                pinedBookings = await Quote.findOne({ _id: conversation.quoteId })
+                const quoteData = await Quote.findOne({ _id: conversation.quoteId })
                     .populate({
                         path: 'service_id',
                         select: 'serviceName serviceCost'
@@ -97,16 +104,24 @@ class ChatController {
                     .populate({
                         path: 'additionalServicesId',
                         select: 'serviceName serviceCost',
-                        options: { strictPopulate: false } // if needed
-                    });
+                        options: { strictPopulate: false }
+                    })
+                    .populate('clientId', 'username avatar');
+                
+                if (quoteData) {
+                    pinedBookings = quoteData.toObject();
+                    // Format client avatar if it's the client's profile image
+                    if (pinedBookings.clientId && pinedBookings.clientId.avatar && !pinedBookings.clientId.avatar.startsWith("http")) {
+                       pinedBookings.clientId.avatar = `${baseUrl}/${pinedBookings.clientId.avatar.replace(/\\/g, "/")}`;
+                    }
+                }
             }
 
             const messages = await Message.find({ conversationId: conversation._id })
                 .sort({ createdAt: -1 }) // Get latest first
                 .skip(skip)
                 .limit(limit)
-                .populate("senderId", "username avatar"); // To show sender detailsdd 
-            const baseUrl = `${req.protocol}://${req.get("host")}`;
+                .populate("senderId", "username avatar"); // To show sender details
             const formattedMessages = messages.map(msg => {
                 const msgObj = msg.toObject();
                 if (msgObj.senderId && msgObj.senderId.avatar && !msgObj.senderId.avatar.startsWith("http")) {
@@ -115,8 +130,12 @@ class ChatController {
                 return msgObj;
             });
 
+            const clientData = pinedBookings?.client_id || pinedBookings?.clientId;
+
             return res.json({
                 success: true,
+                userName: clientData?.username || pinedBookings?.clientName || "Unknown User",
+                profileImage: clientData?.avatar || null,
                 pinned: pinedBookings,
                 data: formattedMessages.reverse(), // Client usually expects chronological order for chat
                 meta: { total, page, limit },
@@ -295,10 +314,45 @@ class ChatController {
             });
 
             if (!conversation) {
-                return res.status(404).json({ success: false, message: "Conversation not found for ID: " + refId });
+                // If no conversation exists yet, create it if it's a valid booking or quote
+                const booking = await ServiceBooking.findById(refId);
+                const quote = !booking ? await Quote.findById(refId) : null;
+
+                if (!booking && !quote) {
+                    return res.status(404).json({ success: false, message: "Booking/Quote not found for ID: " + refId });
+                }
+
+                // Get all admins to add as participants
+                const admins = await AdminEmailAuth.find({}, "_id");
+                const adminIds = admins.map(admin => admin._id);
+                
+                // Participants: User (sender), all Admins, Client (if not sender), Photographer (if assigned)
+                const participantsSet = new Set();
+                participantsSet.add(userId.toString());
+                adminIds.forEach(id => participantsSet.add(id.toString()));
+                
+                if (booking) {
+                    if (booking.client_id) participantsSet.add(booking.client_id.toString());
+                    if (booking.photographer_id) participantsSet.add(booking.photographer_id.toString());
+                } else if (quote) {
+                    if (quote.clientId) participantsSet.add(quote.clientId.toString());
+                }
+
+                conversation = await Conversation.create({
+                    ...(booking && { bookingId: booking._id }),
+                    ...(quote && { quoteId: quote._id }),
+                    participants: Array.from(participantsSet)
+                });
+            } else {
+                // Ensure the user is in the participants list if the conversation already exists
+                const userExists = conversation.participants.some(p => p.toString() === userId);
+                if (!userExists) {
+                    conversation.participants.push(userId);
+                    await conversation.save();
+                }
             }
 
-            // Check if user is a participant
+            // Check if user is a participant (should now always be true unless something failed)
             const isParticipant = conversation.participants.some(p => p.toString() === userId);
             if (!isParticipant && !req.user.isAdmin) {
                 return res.status(403).json({ success: false, message: "Access denied" });
@@ -346,6 +400,7 @@ class ChatController {
                     // If finalizing, include all other fields
                     if (finalIsQuoteFinal) {
                         quoteUpdateData.isQuoteFinal = true;
+                        quoteUpdateData.finalizeAt = new Date();
                         if (finalStartDate !== undefined) quoteUpdateData.startDate = finalStartDate;
                         if (finalEndDate !== undefined) quoteUpdateData.endDate = finalEndDate;
                         if (finalLocation !== undefined) quoteUpdateData.location = finalLocation;

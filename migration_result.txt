@@ -1,0 +1,1 @@
+Successfully migrated 13 quotes with null/missing finalizeAt field.

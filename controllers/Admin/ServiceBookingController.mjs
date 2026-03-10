@@ -79,13 +79,28 @@ class ServiceBookingController {
       const limit = Math.max(1, parseInt(req.query.limit) || 20);
       const skip = (page - 1) * limit;
 
+      let filter = {};
+      if (req.query.fromDate && req.query.toDate) {
+        const fromDate = new Date(req.query.fromDate);
+        fromDate.setUTCHours(0, 0, 0, 0);
+        const toDate = new Date(req.query.toDate);
+        toDate.setUTCHours(23, 59, 59, 999);
+        const fromStr = fromDate.toISOString().split("T")[0];
+        const toStr = toDate.toISOString().split("T")[0];
+
+        filter.$or = [
+          { bookingDate: { $gte: fromDate, $lte: toDate } },
+          { startDate: { $gte: fromStr, $lte: toStr } },
+        ];
+      }
+
       const [items, total] = await Promise.all([
-        ServiceBooking.find({})
+        ServiceBooking.find(filter)
           .skip(skip)
           .limit(limit)
-          .sort({ bookingDate: 1 })
+          .sort({ createdAt: -1 })
           .populate("service_id client_id photographer_id"),
-        ServiceBooking.countDocuments(),
+        ServiceBooking.countDocuments(filter),
       ]);
 
       return res.json({
@@ -184,19 +199,27 @@ class ServiceBookingController {
         const toDate = new Date(req.query.toDate);
         toDate.setUTCHours(23, 59, 59, 999);
 
+        const fromStr = fromDate.toISOString().split("T")[0];
+        const toStr = toDate.toISOString().split("T")[0];
+
         filter = {
-          startDate: { $lte: toDate },   // booking starts before range ends
-          endDate: { $gte: fromDate }    // booking ends after range starts
+          $or: [
+            { startDate: { $gte: fromStr, $lte: toStr } },
+            { bookingDate: { $gte: fromDate, $lte: toDate } },
+          ],
         };
 
       } else {
         // 📅 Upcoming from today (strict upcoming logic)
-
         const today = new Date();
         today.setUTCHours(0, 0, 0, 0);
+        const todayStr = today.toISOString().split("T")[0];
 
         filter = {
-          endDate: { $gte: today }
+          $or: [
+            { endDate: { $gte: todayStr } },
+            { bookingDate: { $gte: today } },
+          ],
         };
       }
 
@@ -204,7 +227,7 @@ class ServiceBookingController {
         ServiceBooking.find(filter)
           .skip(skip)
           .limit(limit)
-          .sort({ startDate: 1 }) // better to sort by event start date
+          .sort({ createdAt: -1 })
           .populate("service_id client_id photographer_id"),
         ServiceBooking.countDocuments(filter),
       ]);
@@ -261,23 +284,27 @@ class ServiceBookingController {
       let filter = {};
 
       if (req.query.fromDate && req.query.toDate) {
-        // 📅 Custom date filter
+        // 📅 Custom date range filter
         const fromDate = new Date(req.query.fromDate);
+        fromDate.setUTCHours(0, 0, 0, 0);
         const toDate = new Date(req.query.toDate);
-        toDate.setHours(23, 59, 59, 999);
+        toDate.setUTCHours(23, 59, 59, 999);
+        const fromStr = fromDate.toISOString().split("T")[0];
+        const toStr = toDate.toISOString().split("T")[0];
 
         filter.$or = [
           { bookingDate: { $gte: fromDate, $lte: toDate } },
-          { startDate: { $gte: fromDate, $lte: toDate } }
+          { startDate: { $gte: fromStr, $lte: toStr } },
         ];
       } else {
         // 📅 Previous bookings compared to today
         const today = new Date();
         today.setHours(0, 0, 0, 0);
+        const todayStr = today.toISOString().split("T")[0];
 
         filter.$or = [
           { bookingDate: { $lt: today } },
-          { startDate: { $lt: today } }
+          { startDate: { $lt: todayStr } },
         ];
       }
 
@@ -285,7 +312,7 @@ class ServiceBookingController {
         ServiceBooking.find(filter)
           .skip(skip)
           .limit(limit)
-          .sort({ bookingDate: 1 })
+          .sort({ createdAt: -1 })
           .populate("service_id client_id photographer_id"),
         ServiceBooking.countDocuments(filter),
       ]);
@@ -547,14 +574,14 @@ class ServiceBookingController {
           ]);
 
           if (booking && photographer) {
-            const global = settings || { basic: 0, intermediate: 0, professional: 0 };
-            const level = photographer.professionalDetails?.expertiseLevel || "Beginner";
+            const global = settings || { initio: 0, elite: 0, pro: 0 };
+            const level = photographer.professionalDetails?.expertiseLevel || "INITIO";
             let commission = photographer.commissionPercentage;
 
             if (!commission) {
-              if (level === "Beginner") commission = global.basic;
-              else if (level === "Intermediate") commission = global.intermediate;
-              else if (level === "Professional") commission = global.professional;
+              if (level === "INITIO") commission = global.initio;
+              else if (level === "ELITE") commission = global.elite;
+              else if (level === "PRO") commission = global.pro;
             }
             updateData.photographerAmount = Math.round(booking.totalAmount * (1 - (commission || 0) / 100));
           }

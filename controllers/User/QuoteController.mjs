@@ -260,15 +260,25 @@ class QuoteController {
       const formattedNumber = String(nextNumber).padStart(6, "0");
       const veroaBookingId = `VEROA-BK-${formattedNumber}`;
 
+      // Format dates for ServiceBooking (String storage)
+      const formatDateStr = (date) => {
+        if (!date) return "";
+        try {
+          return new Date(date).toISOString().split("T")[0];
+        } catch (e) {
+          return "";
+        }
+      };
+
       // 🧠 Step 2: Create booking using quote details
       const booking = await ServiceBooking.create({
         veroaBookingId: veroaBookingId,
 
         service_id: quote.service_id,
         client_id: quote.clientId,
-        bookingDate: leanedData?.eventDate,
-        startDate: leanedData.startDate,
-        endDate: leanedData.endDate,
+        bookingDate: leanedData.eventDate || leanedData.startDate, // Keep as Date object
+        startDate: formatDateStr(leanedData.startDate),
+        endDate: formatDateStr(leanedData.endDate),
 
         // Address mapping
         flatOrHouseNo,
