@@ -18,7 +18,7 @@ class EnquiryController {
       const skip = (page - 1) * limit;
 
       const [items, total] = await Promise.all([
-        User.find({}).skip(skip).limit(limit).sort({ createdAt: -1 }),
+        User.find({}).skip(skip).limit(limit).sort({ createdAt: 1 }),
         User.countDocuments(),
       ]);
 
