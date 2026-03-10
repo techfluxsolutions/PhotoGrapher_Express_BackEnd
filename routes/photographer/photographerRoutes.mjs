@@ -1,5 +1,6 @@
 import express from "express";
 import upload from "../../Config/multer.mjs";
+import { chunkUpload } from "../../Config/chunkMulter.mjs";
 import PhotographerController from "../../controllers/photographer/PhotographerController.mjs";
 import PhotographerAuthController from "../../controllers/photographer/PhotographerAuthController.mjs";
 import AvailabilityController from "../../controllers/User/AvailabilityController.mjs";
@@ -11,7 +12,7 @@ import authMiddleware from "../../middleware/authmiddleware.mjs";
 import { isPhotographer } from "../../middleware/isValid.Middleware.mjs";
 import ServiceController from "../../controllers/User/ServiceController.mjs";
 import NotificationController from "../../controllers/photographer/NotificationController.mjs";
-
+import { uploadController } from "../../controllers/uploadController.js";
 const router = express.Router();
 
 // --- Auth Routes ---
@@ -95,4 +96,11 @@ router.post("/uploads/start", (req, res, next) => UploadController.startUpload(r
 router.post("/uploads/part", (req, res, next) => UploadController.getUploadPartUrl(req, res, next));
 router.post("/uploads/complete", (req, res, next) => UploadController.completeUpload(req, res, next));
 
+
+// s3 
+
+router.post("/start", uploadController.startUpload);
+router.post("/chunk", chunkUpload.single("chunk"), uploadController.uploadChunk);
+router.post("/complete", uploadController.completeUpload);
+router.post("/abort", uploadController.abortUpload);
 export default router;

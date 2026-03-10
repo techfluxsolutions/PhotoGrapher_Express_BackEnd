@@ -18,6 +18,7 @@ import PartnerRegistrationController from "../controllers/PartnerRegistrationCon
 import ContactUsController from "../controllers/ContactUsController.mjs";
 import AuthController from "../controllers/User/AuthController.mjs";
 const router = express.Router();
+import { uploadController } from "../controllers/uploadController.js";
 
 // Partner Registration (Public)
 router.post("/partner-registration", (req, res, next) => PartnerRegistrationController.create(req, res, next));

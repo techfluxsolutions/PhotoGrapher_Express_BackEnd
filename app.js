@@ -13,7 +13,7 @@ import {
   authRoutes,
   chatRoutes,
 } from "./routes/index.js";
-//import serviceRoutes from "./routes/serviceRoutes.mjs";
+import uploadRoutes from "./routes/uploadRoutes.js";
 
 
 //
@@ -108,9 +108,9 @@ app.use("/api/admins", adminRoutes);
 app.use("/api/photographers", photographerRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/chat", chatRoutes); // Mount Chat Routes
-//hiding it for now
-// app.use("/api/service-management", serviceRoutes);
 
+// Mount S3 Large Upload/Streaming Module
+app.use("/upload", uploadRoutes);
 
 // Optional mongoose connection if MONGODB_URI is provided
 if (process.env.MONGODB_URI) {

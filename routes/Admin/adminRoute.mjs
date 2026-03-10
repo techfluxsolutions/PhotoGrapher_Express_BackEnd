@@ -11,6 +11,7 @@ import AdminEmailAuthController from "../../controllers/Admin/AdminEmailAuthCont
 import PhotographerController from "../../controllers/photographer/PhotographerController.mjs"; // Added Import
 import upload from "../../Config/multer.mjs";
 import { downloadInvoice } from "../../controllers/Admin/InvoiceController.mjs";
+import { chunkUpload } from "../../Config/chunkMulter.mjs";
 import SubscribedUserController from "../../controllers/User/SubscribedUserController.mjs";
 import AdminController from "../../controllers/User/AdminController.mjs";
 import SidebarIconController from "../../controllers/Admin/SidebarIconController.mjs";
@@ -20,8 +21,7 @@ import PartnerRegistrationController from "../../controllers/PartnerRegistration
 import ContactUsController from "../../controllers/ContactUsController.mjs";
 import CustomerController from "../../controllers/Admin/CustomerController.mjs";
 const router = express.Router();
-import { startUpload, getUploadPartUrl, completeUpload } from "../../controllers/User/UploadController.mjs";
-
+import { uploadController } from "../../controllers/uploadController.js";
 // --- Debug ---
 router.get("/photographers/sorted", (req, res, next) => PhotographerController.getSortedPhotographers(req, res, next));
 
@@ -197,8 +197,9 @@ router.delete("/:id", (req, res, next) => AdminController.delete(req, res, next)
 
 // photo upload routes 
 
-router.post("/startUploading", (req, res, next) => startUpload(req, res, next));
-router.post("/getUploadPartUrl", (req, res, next) => getUploadPartUrl(req, res, next));
-router.post("/completeUploading", (req, res, next) => completeUpload(req, res, next));
+router.post("/start", uploadController.startUpload);
+router.post("/chunk", chunkUpload.single("chunk"), uploadController.uploadChunk);
+router.post("/complete", uploadController.completeUpload);
+router.post("/abort", uploadController.abortUpload);
 
 export default router;
