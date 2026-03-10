@@ -596,10 +596,10 @@ class ServiceBookingController {
       const skip = (page - 1) * limit;
 
       const [items, total] = await Promise.all([
-        ServiceBooking.find({ status: "completed", paymentStatus: "fully paid" })
+        ServiceBooking.find({ status: "completed" })
           .skip(skip)
           .limit(limit)
-          .sort({ bookingDate: 1 })
+          .sort({ createdAt: -1 })
           .populate("service_id client_id photographer_id"),
         ServiceBooking.countDocuments({ status: "completed" }),
       ]);
