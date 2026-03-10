@@ -419,7 +419,23 @@ class PhotographerController {
                 return res.status(404).json({ message: "Photographer not found" });
             }
 
-            // Bank Details Validation
+            // 1. Map Expertise Level (Beginner -> INITIO, etc.)
+            if (profileData.professionalDetails?.expertiseLevel) {
+                const levelMap = {
+                    "Beginner": "INITIO",
+                    "Expert": "ELITE",
+                    "Master": "PRO"
+                };
+                const level = profileData.professionalDetails.expertiseLevel;
+                profileData.professionalDetails.expertiseLevel = levelMap[level] || level.toUpperCase();
+            }
+
+            // 2. Sanitize Bank Details
+            if (profileData.bank_ifsc) {
+                profileData.bank_ifsc = profileData.bank_ifsc.trim().toUpperCase();
+            }
+
+            // 3. Bank Details Validation
             if (profileData.bank_account_number && profileData.confirm_account_number) {
                 if (profileData.bank_account_number !== profileData.confirm_account_number) {
                     return res.status(400).json({ 
@@ -429,22 +445,31 @@ class PhotographerController {
                 }
             }
 
-            // Update Fields
-            if (profileData.basicInfo) photographer.basicInfo = { ...photographer.basicInfo, ...profileData.basicInfo };
-            if (profileData.professionalDetails) photographer.professionalDetails = { ...photographer.professionalDetails, ...profileData.professionalDetails };
+            // Update Fields (Safe merge using toObject/set)
+            if (profileData.basicInfo) {
+                const current = photographer.basicInfo ? photographer.basicInfo.toObject() : {};
+                photographer.basicInfo = { ...current, ...profileData.basicInfo };
+            }
+            if (profileData.professionalDetails) {
+                const current = photographer.professionalDetails ? photographer.professionalDetails.toObject() : {};
+                photographer.professionalDetails = { ...current, ...profileData.professionalDetails };
+            }
             if (profileData.photographyAccessories) photographer.photographyAccessories = profileData.photographyAccessories;
 
             if (profileData.aboutYou) photographer.aboutYou = profileData.aboutYou;
 
             if (profileData.servicesAndStyles) {
+                const currentServices = (photographer.servicesAndStyles && photographer.servicesAndStyles.services) ? photographer.servicesAndStyles.services.toObject() : {};
+                const currentStyles = (photographer.servicesAndStyles && photographer.servicesAndStyles.styles) ? photographer.servicesAndStyles.styles.toObject() : {};
+                
                 photographer.servicesAndStyles = {
-                    services: { ...photographer.servicesAndStyles?.services, ...profileData.servicesAndStyles?.services },
-                    styles: { ...photographer.servicesAndStyles?.styles, ...profileData.servicesAndStyles?.styles }
+                    services: { ...currentServices, ...profileData.servicesAndStyles.services },
+                    styles: { ...currentStyles, ...profileData.servicesAndStyles.styles }
                 };
             }
 
-            if (profileData.availability) photographer.availability = { ...photographer.availability, ...profileData.availability };
-            if (profileData.pricing) photographer.pricing = { ...photographer.pricing, ...profileData.pricing };
+            if (profileData.availability) photographer.availability = { ...photographer.availability.toObject(), ...profileData.availability };
+            if (profileData.pricing) photographer.pricing = { ...photographer.pricing.toObject(), ...profileData.pricing };
 
             // Bank Details
             if (profileData.bank_account_holder) photographer.bank_account_holder = profileData.bank_account_holder;
@@ -513,7 +538,19 @@ class PhotographerController {
 
             let updateData = { ...req.body };
 
-            // Bank Details Validation
+            // 1. Map Expertise Level
+            if (updateData.professionalDetails?.expertiseLevel) {
+                const levelMap = { "Beginner": "INITIO", "Expert": "ELITE", "Master": "PRO" };
+                const level = updateData.professionalDetails.expertiseLevel;
+                updateData.professionalDetails.expertiseLevel = levelMap[level] || level.toUpperCase();
+            }
+
+            // 2. Sanitize Bank Details
+            if (updateData.bank_ifsc) {
+                updateData.bank_ifsc = updateData.bank_ifsc.trim().toUpperCase();
+            }
+
+            // 3. Bank Details Validation
             if (updateData.bank_account_number && updateData.confirm_account_number) {
                 if (updateData.bank_account_number !== updateData.confirm_account_number) {
                     return res.status(400).json({ 

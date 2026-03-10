@@ -162,7 +162,7 @@ const photographerSchema = new mongoose.Schema(
 
 // Virtual: Full Name
 photographerSchema.virtual("fullName").get(function () {
-  return `${this.name}`;
+  return this.basicInfo?.fullName || "";
 });
 
 // Index
