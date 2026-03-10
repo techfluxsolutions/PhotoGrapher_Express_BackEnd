@@ -69,6 +69,32 @@ class BookingController {
                 filter.status = req.query.status;
             }
 
+            // Date Range Filter
+            if (req.query.fromDate && req.query.toDate) {
+                const fDate = new Date(req.query.fromDate);
+                fDate.setUTCHours(0, 0, 0, 0);
+                const tDate = new Date(req.query.toDate);
+                tDate.setUTCHours(23, 59, 59, 999);
+                const fs = fDate.toISOString().split("T")[0];
+                const ts = tDate.toISOString().split("T")[0];
+
+                if (filter.$or) {
+                    // Wrap existing $or in $and if it exists to avoid conflicts
+                    const existingOr = filter.$or;
+                    delete filter.$or;
+                    filter.$and = [{ $or: existingOr }];
+                } else {
+                    filter.$and = filter.$and || [];
+                }
+
+                filter.$and.push({
+                    $or: [
+                        { bookingDate: { $gte: fDate, $lte: tDate } },
+                        { startDate: { $gte: fs, $lte: ts } }
+                    ]
+                });
+            }
+
             const [bookings, total] = await Promise.all([
                 ServiceBooking.find(filter)
                     .select("-gallery -images")

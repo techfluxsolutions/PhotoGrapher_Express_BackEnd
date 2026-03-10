@@ -79,13 +79,28 @@ class ServiceBookingController {
       const limit = Math.max(1, parseInt(req.query.limit) || 20);
       const skip = (page - 1) * limit;
 
+      let filter = {};
+      if (req.query.fromDate && req.query.toDate) {
+        const fromDate = new Date(req.query.fromDate);
+        fromDate.setUTCHours(0, 0, 0, 0);
+        const toDate = new Date(req.query.toDate);
+        toDate.setUTCHours(23, 59, 59, 999);
+        const fromStr = fromDate.toISOString().split("T")[0];
+        const toStr = toDate.toISOString().split("T")[0];
+
+        filter.$or = [
+          { bookingDate: { $gte: fromDate, $lte: toDate } },
+          { startDate: { $gte: fromStr, $lte: toStr } },
+        ];
+      }
+
       const [items, total] = await Promise.all([
-        ServiceBooking.find({})
+        ServiceBooking.find(filter)
           .skip(skip)
           .limit(limit)
           .sort({ createdAt: -1 })
           .populate("service_id client_id photographer_id"),
-        ServiceBooking.countDocuments(),
+        ServiceBooking.countDocuments(filter),
       ]);
 
       return res.json({
@@ -184,9 +199,19 @@ class ServiceBookingController {
         const toDate = new Date(req.query.toDate);
         toDate.setUTCHours(23, 59, 59, 999);
 
+        const fromStr = fromDate.toISOString().split("T")[0];
+        const toStr = toDate.toISOString().split("T")[0];
+
         filter = {
-          startDate: { $lte: toDate },   // booking starts before range ends
-          endDate: { $gte: fromDate }    // booking ends after range starts
+          $or: [
+            {
+              startDate: { $lte: toStr },  // booking starts before range ends
+              endDate: { $gte: fromStr }   // booking ends after range starts
+            },
+            {
+              bookingDate: { $gte: fromDate, $lte: toDate }
+            }
+          ]
         };
 
       } else {
@@ -264,14 +289,17 @@ class ServiceBookingController {
       let filter = {};
 
       if (req.query.fromDate && req.query.toDate) {
-        // 📅 Custom date filter
+        // 📅 Custom date range filter
         const fromDate = new Date(req.query.fromDate);
+        fromDate.setUTCHours(0, 0, 0, 0);
         const toDate = new Date(req.query.toDate);
-        toDate.setHours(23, 59, 59, 999);
+        toDate.setUTCHours(23, 59, 59, 999);
+        const fromStr = fromDate.toISOString().split("T")[0];
+        const toStr = toDate.toISOString().split("T")[0];
 
         filter.$or = [
           { bookingDate: { $gte: fromDate, $lte: toDate } },
-          { startDate: { $gte: fromDate, $lte: toDate } }
+          { startDate: { $gte: fromStr, $lte: toStr } },
         ];
       } else {
         // 📅 Previous bookings compared to today
