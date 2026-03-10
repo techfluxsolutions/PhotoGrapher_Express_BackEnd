@@ -314,10 +314,45 @@ class ChatController {
             });
 
             if (!conversation) {
-                return res.status(404).json({ success: false, message: "Conversation not found for ID: " + refId });
+                // If no conversation exists yet, create it if it's a valid booking or quote
+                const booking = await ServiceBooking.findById(refId);
+                const quote = !booking ? await Quote.findById(refId) : null;
+
+                if (!booking && !quote) {
+                    return res.status(404).json({ success: false, message: "Booking/Quote not found for ID: " + refId });
+                }
+
+                // Get all admins to add as participants
+                const admins = await AdminEmailAuth.find({}, "_id");
+                const adminIds = admins.map(admin => admin._id);
+                
+                // Participants: User (sender), all Admins, Client (if not sender), Photographer (if assigned)
+                const participantsSet = new Set();
+                participantsSet.add(userId.toString());
+                adminIds.forEach(id => participantsSet.add(id.toString()));
+                
+                if (booking) {
+                    if (booking.client_id) participantsSet.add(booking.client_id.toString());
+                    if (booking.photographer_id) participantsSet.add(booking.photographer_id.toString());
+                } else if (quote) {
+                    if (quote.clientId) participantsSet.add(quote.clientId.toString());
+                }
+
+                conversation = await Conversation.create({
+                    bookingId: booking ? booking._id : null,
+                    quoteId: quote ? quote._id : null,
+                    participants: Array.from(participantsSet)
+                });
+            } else {
+                // Ensure the user is in the participants list if the conversation already exists
+                const userExists = conversation.participants.some(p => p.toString() === userId);
+                if (!userExists) {
+                    conversation.participants.push(userId);
+                    await conversation.save();
+                }
             }
 
-            // Check if user is a participant
+            // Check if user is a participant (should now always be true unless something failed)
             const isParticipant = conversation.participants.some(p => p.toString() === userId);
             if (!isParticipant && !req.user.isAdmin) {
                 return res.status(403).json({ success: false, message: "Access denied" });
