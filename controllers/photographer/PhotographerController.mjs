@@ -419,6 +419,16 @@ class PhotographerController {
                 return res.status(404).json({ message: "Photographer not found" });
             }
 
+            // Bank Details Validation
+            if (profileData.bank_account_number && profileData.confirm_account_number) {
+                if (profileData.bank_account_number !== profileData.confirm_account_number) {
+                    return res.status(400).json({ 
+                        success: false, 
+                        message: "Account number and Confirm account number do not match." 
+                    });
+                }
+            }
+
             // Update Fields
             if (profileData.basicInfo) photographer.basicInfo = { ...photographer.basicInfo, ...profileData.basicInfo };
             if (profileData.professionalDetails) photographer.professionalDetails = { ...photographer.professionalDetails, ...profileData.professionalDetails };
@@ -502,6 +512,16 @@ class PhotographerController {
             }
 
             let updateData = { ...req.body };
+
+            // Bank Details Validation
+            if (updateData.bank_account_number && updateData.confirm_account_number) {
+                if (updateData.bank_account_number !== updateData.confirm_account_number) {
+                    return res.status(400).json({ 
+                        success: false, 
+                        message: "Account number and Confirm account number do not match." 
+                    });
+                }
+            }
 
             // 1. Handle JSON strings from FormData for nested objects
             const nestedObjects = ['basicInfo', 'professionalDetails', 'servicesAndStyles', 'availability', 'pricing', 'photographyAccessories'];
