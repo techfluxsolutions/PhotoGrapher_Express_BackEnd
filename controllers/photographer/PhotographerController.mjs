@@ -23,7 +23,7 @@ class PhotographerController {
             }
 
             const items = await Photographer.find(query)
-                .select('basicInfo.fullName basicInfo.profilePhoto email mobileNumber professionalDetails.yearsOfExperience professionalDetails.primaryLocation professionalDetails.startUpDate professionalDetails.team_studio status createdAt commissionPercentage')
+                .select('basicInfo.fullName basicInfo.profilePhoto email mobileNumber professionalDetails.yearsOfExperience professionalDetails.primaryLocation professionalDetails.startUpDate professionalDetails.team_studio professionalDetails.expertiseLevel professionalDetails.photographerType status createdAt commissionPercentage')
                 .skip(skip)
                 .limit(limit)
                 .sort({ createdAt: -1 });
@@ -74,7 +74,13 @@ class PhotographerController {
             createdAt: p.createdAt,
             signUpDate: p.professionalDetails?.startUpDate || `${day}/${month}/${year}`,
             commissionPercentage: p.commissionPercentage || 0,
-            team_studio: p.professionalDetails?.team_studio || ""
+            team_studio: p.professionalDetails?.team_studio || "",
+            isAbleToVerify: (
+                !p.professionalDetails?.yearsOfExperience || 
+                !p.professionalDetails?.primaryLocation || 
+                !p.professionalDetails?.expertiseLevel || 
+                !p.professionalDetails?.photographerType
+            ) ? true : false
         };
     }
 
