@@ -70,7 +70,7 @@ class QuoteController {
         Quote.find({ isQuoteFinal: true })
           .skip(skip)
           .limit(limit)
-          .sort({ finalizeAt: 1 })
+          .sort({ finalizeAt: -1 })
           .populate("service_id clientId"),
         Quote.countDocuments({ isQuoteFinal: true }),
       ]);
@@ -99,7 +99,7 @@ class QuoteController {
         Quote.find({ quoteStatus: "yourQuotes" })
           .skip(skip)
           .limit(limit)
-          .sort({ createdAt: 1 })
+          .sort({ createdAt: -1 })
           .populate("service_id clientId"),
         Quote.countDocuments({ quoteStatus: "yourQuotes" }),
       ]);
@@ -192,7 +192,7 @@ class QuoteController {
         Quote.find(filter)
           .skip(skip)
           .limit(limit)
-          .sort({ eventDate: 1 })
+          .sort({ eventDate: -1 })
           .populate("service_id clientId"),
         Quote.countDocuments(filter),
       ]);
@@ -359,7 +359,7 @@ class QuoteController {
         Quote.find({ quoteStatus: status })
           .skip(skip)
           .limit(limit)
-          .sort({ eventDate: 1 })
+          .sort({ eventDate: -1 })
           .populate("service_id clientId"),
         Quote.countDocuments({ quoteStatus: status }),
       ]);
@@ -487,7 +487,7 @@ class QuoteController {
         Quote.find({ isQuoteFinal: false })
           .skip(skip)
           .limit(limit)
-          .sort({ createdAt: 1 })
+          .sort({ createdAt: -1 })
           .populate("service_id clientId"),
         Quote.countDocuments({ isQuoteFinal: false }),
       ]);

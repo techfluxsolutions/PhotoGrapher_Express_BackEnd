@@ -83,7 +83,7 @@ class ServiceBookingController {
         ServiceBooking.find({})
           .skip(skip)
           .limit(limit)
-          .sort({ bookingDate: 1 })
+          .sort({ createdAt: -1 })
           .populate("service_id client_id photographer_id"),
         ServiceBooking.countDocuments(),
       ]);
