@@ -6,14 +6,12 @@ const conversationSchema = new mongoose.Schema(
             type: mongoose.Schema.Types.ObjectId,
             ref: "Quote",
             required: false,
-            unique: true,
             sparse: true,
         },
         bookingId: {
             type: mongoose.Schema.Types.ObjectId,
             ref: "ServiceBooking",
             required: false,
-            unique: true,
             sparse: true,
         },
         participants: [

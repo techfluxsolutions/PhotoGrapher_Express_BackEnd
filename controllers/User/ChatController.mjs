@@ -339,8 +339,8 @@ class ChatController {
                 }
 
                 conversation = await Conversation.create({
-                    bookingId: booking ? booking._id : null,
-                    quoteId: quote ? quote._id : null,
+                    ...(booking && { bookingId: booking._id }),
+                    ...(quote && { quoteId: quote._id }),
                     participants: Array.from(participantsSet)
                 });
             } else {
