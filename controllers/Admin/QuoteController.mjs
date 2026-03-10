@@ -321,7 +321,11 @@ class QuoteController {
     try {
       const { id } = req.params;
 
-      const quote = await Quote.findByIdAndDelete(id);
+      const quote = await Quote.findByIdAndUpdate(
+        id,
+        { quoteStatus: "canceled" },
+        { new: true }
+      );
 
       if (!quote) {
         return res.status(404).json({
@@ -332,8 +336,8 @@ class QuoteController {
 
       return res.json({
         success: true,
-        message: "Quote deleted successfully",
-        data: null
+        message: "Quote canceled successfully",
+        data: quote
       });
     } catch (err) {
       return next(err);

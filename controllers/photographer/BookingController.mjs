@@ -336,13 +336,17 @@ class BookingController {
                 return sendErrorResponse(res, { message: "Invalid booking ID" }, 400);
             }
 
-            const booking = await ServiceBooking.findByIdAndDelete(id);
+            const booking = await ServiceBooking.findByIdAndUpdate(
+                id,
+                { status: "canceled" },
+                { new: true }
+            );
 
             if (!booking) {
                 return sendErrorResponse(res, 404, "Booking not found");
             }
 
-            return sendSuccessResponse(res, null, "Booking deleted successfully");
+            return sendSuccessResponse(res, booking, "Booking canceled successfully");
         } catch (error) {
             return sendErrorResponse(res, error, 500);
         }

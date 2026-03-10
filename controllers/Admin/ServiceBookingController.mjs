@@ -426,7 +426,11 @@ class ServiceBookingController {
     try {
       const { id } = req.params;
 
-      const booking = await ServiceBooking.findByIdAndDelete(id);
+      const booking = await ServiceBooking.findByIdAndUpdate(
+        id,
+        { status: "canceled" },
+        { new: true }
+      );
 
       if (!booking) {
         return res.status(404).json({
@@ -437,8 +441,8 @@ class ServiceBookingController {
 
       return res.json({
         success: true,
-        message: "ServiceBooking deleted successfully",
-        data: null
+        message: "ServiceBooking canceled successfully",
+        data: booking
       });
     } catch (err) {
       return next(err);
