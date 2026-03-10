@@ -179,16 +179,44 @@ class PhotographerController {
         try {
             const { name, email, phone, experience, city, startUpDate, signUpDate } = req.body;
 
-            // Check if email already exists
-            const existingUser = await Photographer.findOne({ email });
-            if (existingUser) {
-                return res.status(400).json({ message: "Email already exists" });
+            // 1. Mandatory Validations
+            const required = { name, email, phone, experience, city };
+            const missing = Object.keys(required).filter(k => !required[k]);
+
+            if (missing.length > 0) {
+                return res.status(400).json({
+                    success: false,
+                    message: `${missing.join(", ")} is required.`
+                });
+            }
+
+            // 2. Format Validations
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            const phoneRegex = /^\d{10}$/;
+
+            if (!emailRegex.test(email)) {
+                return res.status(400).json({ success: false, message: "Invalid email format." });
+            }
+            if (!phoneRegex.test(phone)) {
+                return res.status(400).json({ success: false, message: "Mobile number must be exactly 10 digits." });
+            }
+
+            // 3. Uniqueness Checks
+            const [existingEmail, existingPhone] = await Promise.all([
+                Photographer.findOne({ email }),
+                Photographer.findOne({ mobileNumber: phone })
+            ]);
+
+            if (existingEmail) {
+                return res.status(400).json({ success: false, message: "A photographer with this email already exists." });
+            }
+            if (existingPhone) {
+                return res.status(400).json({ success: false, message: "A photographer with this mobile number already exists." });
             }
 
             // Create with status: pending
-            // Mapping fields to schema structure
             const newPhotographer = new Photographer({
-                username: undefined, // Optional/Sparse
+                username: undefined,
                 email,
                 mobileNumber: phone,
                 basicInfo: {
@@ -236,25 +264,46 @@ class PhotographerController {
             const { id } = req.params;
             const { name, email, phone, experience, city, startUpDate, signUpDate } = req.body;
 
-            const photographer = await Photographer.findById(id);
-
-            if (!photographer) {
-                return res.status(404).json({ message: "Photographer not found" });
-            }
-
-            // Optional: Check if email is being changed and if it conflicts
-            if (email && email !== photographer.email) {
-                const existingUser = await Photographer.findOne({ email });
-                if (existingUser) {
-                    return res.status(400).json({ message: "Email already exists" });
+            // 1. Mandatory Validations (If provided they cannot be empty)
+            const requiredFields = ['name', 'email', 'phone', 'experience', 'city'];
+            for (const field of requiredFields) {
+                if (req.body[field] === "") {
+                    return res.status(400).json({ success: false, message: `${field} cannot be empty.` });
                 }
             }
 
-            // Check if phone is being changed and if it conflicts
+            // 2. Format Validations
+            if (email) {
+                const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                if (!emailRegex.test(email)) {
+                    return res.status(400).json({ success: false, message: "Invalid email format." });
+                }
+            }
+            if (phone) {
+                const phoneRegex = /^\d{10}$/;
+                if (!phoneRegex.test(phone)) {
+                    return res.status(400).json({ success: false, message: "Mobile number must be exactly 10 digits." });
+                }
+            }
+
+            const photographer = await Photographer.findById(id);
+
+            if (!photographer) {
+                return res.status(404).json({ success: false, message: "Photographer not found" });
+            }
+
+            // 2. Uniqueness Checks
+            if (email && email !== photographer.email) {
+                const existingUser = await Photographer.findOne({ email });
+                if (existingUser) {
+                    return res.status(400).json({ success: false, message: "This email is already taken by another photographer." });
+                }
+            }
+
             if (phone && phone !== photographer.mobileNumber) {
                 const existingUser = await Photographer.findOne({ mobileNumber: phone });
                 if (existingUser) {
-                    return res.status(400).json({ message: "Mobile number already exists" });
+                    return res.status(400).json({ success: false, message: "This mobile number is already taken by another photographer." });
                 }
             }
 
