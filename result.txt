@@ -1,2 +1,0 @@
-Dropped index: bookingId_1
-Dropped index: quoteId_1
