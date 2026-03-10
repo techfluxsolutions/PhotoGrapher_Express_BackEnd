@@ -10,12 +10,9 @@ class PayoutController {
     }
   }
 
-  async list(req, res, next) {
+  async getAll(req, res, next) {
     try {
-      const data = await Payout.find()
-        .populate("photographer_id", "username")
-        .populate("booking_id", "veroaBookingId")
-        .sort({ payout_date: -1 });
+      const data = await Payout.find();
       res.status(200).json({ success: true, data });
     } catch (error) {
       next(error);

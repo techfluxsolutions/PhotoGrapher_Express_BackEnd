@@ -5,7 +5,7 @@ const env = fs.readFileSync('.env', 'utf8');
 const mongoMatch = env.match(/MONGODB_URI=\s*(.+)/);
 const uri = mongoMatch ? mongoMatch[1].trim() : null;
 
-async function findMock() {
+async function checkData() {
   if (!uri) {
     process.exit(1);
   }
@@ -13,20 +13,18 @@ async function findMock() {
   try {
     await mongoose.connect(uri);
     const db = mongoose.connection.db;
+    const collection = db.collection('servicebookings');
     
-    const booking = await db.collection('servicebookings').findOne({ veroaBookingId: "VEROA-BK-000026" });
+    // Find a few bookings to see their structure
+    const bookings = await collection.find({}).sort({ createdAt: -1 }).limit(5).toArray();
     
-    if (booking) {
-        fs.writeFileSync('mock_search.txt', JSON.stringify(booking, null, 2));
-    } else {
-        fs.writeFileSync('mock_search.txt', 'Not found');
-    }
+    fs.writeFileSync('bookings_sample.json', JSON.stringify(bookings, null, 2));
     
   } catch (err) {
-    fs.writeFileSync('mock_search.txt', 'Error: ' + err.message);
+    fs.writeFileSync('bookings_sample.json', 'Error: ' + err.message);
   } finally {
     await mongoose.disconnect();
     process.exit();
   }
 }
-findMock();
+checkData();

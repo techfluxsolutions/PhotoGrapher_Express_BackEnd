@@ -191,12 +191,15 @@ class ServiceBookingController {
 
       } else {
         // 📅 Upcoming from today (strict upcoming logic)
-
         const today = new Date();
         today.setUTCHours(0, 0, 0, 0);
+        const todayStr = today.toISOString().split("T")[0];
 
         filter = {
-          endDate: { $gte: today }
+          $or: [
+            { endDate: { $gte: todayStr } },
+            { bookingDate: { $gte: today } },
+          ],
         };
       }
 
@@ -204,7 +207,7 @@ class ServiceBookingController {
         ServiceBooking.find(filter)
           .skip(skip)
           .limit(limit)
-          .sort({ startDate: 1 }) // better to sort by event start date
+          .sort({ createdAt: -1 })
           .populate("service_id client_id photographer_id"),
         ServiceBooking.countDocuments(filter),
       ]);
@@ -274,10 +277,11 @@ class ServiceBookingController {
         // 📅 Previous bookings compared to today
         const today = new Date();
         today.setHours(0, 0, 0, 0);
+        const todayStr = today.toISOString().split("T")[0];
 
         filter.$or = [
           { bookingDate: { $lt: today } },
-          { startDate: { $lt: today } }
+          { startDate: { $lt: todayStr } },
         ];
       }
 
@@ -596,10 +600,10 @@ class ServiceBookingController {
       const skip = (page - 1) * limit;
 
       const [items, total] = await Promise.all([
-        ServiceBooking.find({ status: "completed" })
+        ServiceBooking.find({ status: "completed", paymentStatus: "fully paid" })
           .skip(skip)
           .limit(limit)
-          .sort({ createdAt: -1 })
+          .sort({ bookingDate: 1 })
           .populate("service_id client_id photographer_id"),
         ServiceBooking.countDocuments({ status: "completed" }),
       ]);
