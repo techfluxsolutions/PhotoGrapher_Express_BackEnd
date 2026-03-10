@@ -400,6 +400,7 @@ class ChatController {
                     // If finalizing, include all other fields
                     if (finalIsQuoteFinal) {
                         quoteUpdateData.isQuoteFinal = true;
+                        quoteUpdateData.finalizeAt = new Date();
                         if (finalStartDate !== undefined) quoteUpdateData.startDate = finalStartDate;
                         if (finalEndDate !== undefined) quoteUpdateData.endDate = finalEndDate;
                         if (finalLocation !== undefined) quoteUpdateData.location = finalLocation;
