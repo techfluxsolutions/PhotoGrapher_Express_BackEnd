@@ -147,7 +147,7 @@ class QuoteController {
         Quote.find(filter)
           .skip(skip)
           .limit(limit)
-          .sort({ createdAt: -1 })
+          .sort({ startDate: 1 })
           .populate("service_id clientId"),
         Quote.countDocuments(filter),
       ]);

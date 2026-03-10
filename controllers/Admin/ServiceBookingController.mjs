@@ -83,7 +83,7 @@ class ServiceBookingController {
         ServiceBooking.find({})
           .skip(skip)
           .limit(limit)
-          .sort({ bookingDate: 1 })
+          .sort({ createdAt: -1 })
           .populate("service_id client_id photographer_id"),
         ServiceBooking.countDocuments(),
       ]);
@@ -547,14 +547,14 @@ class ServiceBookingController {
           ]);
 
           if (booking && photographer) {
-            const global = settings || { basic: 0, intermediate: 0, professional: 0 };
-            const level = photographer.professionalDetails?.expertiseLevel || "Beginner";
+            const global = settings || { initio: 0, elite: 0, pro: 0 };
+            const level = photographer.professionalDetails?.expertiseLevel || "INITIO";
             let commission = photographer.commissionPercentage;
 
             if (!commission) {
-              if (level === "Beginner") commission = global.basic;
-              else if (level === "Intermediate") commission = global.intermediate;
-              else if (level === "Professional") commission = global.professional;
+              if (level === "INITIO") commission = global.initio;
+              else if (level === "ELITE") commission = global.elite;
+              else if (level === "PRO") commission = global.pro;
             }
             updateData.photographerAmount = Math.round(booking.totalAmount * (1 - (commission || 0) / 100));
           }

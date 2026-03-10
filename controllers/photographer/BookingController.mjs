@@ -113,13 +113,13 @@ class BookingController {
                 Photographer.findById(myId),
                 PlatformSettings.findOne({ type: "commissions" })
             ]);
-            const global = settings || { basic: 0, intermediate: 0, professional: 0 };
-            const myLevel = me?.professionalDetails?.expertiseLevel || "Beginner";
+            const global = settings || { initio: 0, elite: 0, pro: 0 };
+            const myLevel = me?.professionalDetails?.expertiseLevel || "INITIO";
             let myComm = me?.commissionPercentage;
             if (!myComm) {
-                if (myLevel === "Beginner") myComm = global.basic;
-                else if (myLevel === "Intermediate") myComm = global.intermediate;
-                else if (myLevel === "Professional") myComm = global.professional;
+                if (myLevel === "INITIO") myComm = global.initio;
+                else if (myLevel === "ELITE") myComm = global.elite;
+                else if (myLevel === "PRO") myComm = global.pro;
             }
 
             const formattedBookings = bookings.map(booking => {
@@ -201,13 +201,13 @@ class BookingController {
                 Photographer.findById(req.user.id),
                 PlatformSettings.findOne({ type: "commissions" })
             ]);
-            const global = settings || { basic: 0, intermediate: 0, professional: 0 };
-            const myLevel = me?.professionalDetails?.expertiseLevel || "Beginner";
+            const global = settings || { initio: 0, elite: 0, pro: 0 };
+            const myLevel = me?.professionalDetails?.expertiseLevel || "INITIO";
             let myComm = me?.commissionPercentage;
             if (!myComm) {
-                if (myLevel === "Beginner") myComm = global.basic;
-                else if (myLevel === "Intermediate") myComm = global.intermediate;
-                else if (myLevel === "Professional") myComm = global.professional;
+                if (myLevel === "INITIO") myComm = global.initio;
+                else if (myLevel === "ELITE") myComm = global.elite;
+                else if (myLevel === "PRO") myComm = global.pro;
             }
 
             // Enhance response with helper fields while keeping original data
@@ -538,14 +538,14 @@ class BookingController {
                 ]);
 
                 if (targetBooking && photographer) {
-                    const global = settings || { basic: 0, intermediate: 0, professional: 0 };
-                    const level = photographer.professionalDetails?.expertiseLevel || "Beginner";
+                    const global = settings || { initio: 0, elite: 0, pro: 0 };
+                    const level = photographer.professionalDetails?.expertiseLevel || "INITIO";
                     let commission = photographer.commissionPercentage;
 
                     if (!commission) {
-                        if (level === "Beginner") commission = global.basic;
-                        else if (level === "Intermediate") commission = global.intermediate;
-                        else if (level === "Professional") commission = global.professional;
+                        if (level === "INITIO") commission = global.initio;
+                        else if (level === "ELITE") commission = global.elite;
+                        else if (level === "PRO") commission = global.pro;
                     }
 
                     updateData.photographerAmount = Math.round(targetBooking.totalAmount * (1 - (commission || 0) / 100));
