@@ -103,4 +103,8 @@ router.post("/start", uploadController.startUpload);
 router.post("/chunk", chunkUpload.single("chunk"), uploadController.uploadChunk);
 router.post("/complete", uploadController.completeUpload);
 router.post("/abort", uploadController.abortUpload);
+
+// Support streaming and batch downloading
+router.get("/stream/:bookingId/*key", (req, res, next) => uploadController.streamProtectedFile(req, res, next));
+router.post("/download-zip", (req, res, next) => uploadController.downloadZip(req, res, next));
 export default router;

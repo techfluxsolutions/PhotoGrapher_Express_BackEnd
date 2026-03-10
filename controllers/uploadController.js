@@ -1,5 +1,6 @@
 import { s3Service } from "../lib/s3Service.js";
 import DataLinks from "../models/DataLinks.js";
+import archiver from "archiver";
 
 export const uploadController = {
     // 1. Init multipart upload
@@ -133,6 +134,128 @@ export const uploadController = {
             }
             console.error("Stream error:", error);
             res.status(500).json({ error: error.message });
+        }
+    },
+
+    // 6. Protected streaming for Users/Photographers
+    streamProtectedFile: async (req, res) => {
+        try {
+            const key = req.params.key || req.params[0];
+            const range = req.headers.range;
+            const userId = "6452f1e6b3c2a123456789ab"
+            //req.user.id;
+            const requestedBookingId = req.params.bookingId;
+
+            if (!key) {
+                return res.status(400).json({ error: "File key is required." });
+            }
+
+            // Verify access in DataLinks database
+            const query = {
+
+                $and: [
+                    {
+                        $or: [
+                            { clientId: userId },
+                            { photographerId: userId }
+                        ]
+                    },
+                    { bookingid: requestedBookingId }
+                ]
+            };
+
+            // If a specific bookingId is requested, enforce it matches the record
+            if (requestedBookingId) {
+                query.bookingid = requestedBookingId;
+            }
+
+            const linkRecord = await DataLinks.findOne(query);
+
+            if (!linkRecord) {
+                return res.status(403).json({
+                    error: "Unauthorized access. You do not have permission to view this file or the booking ID mismatch."
+                });
+            }
+
+            const data = await s3Service.getFileStream(key, range);
+
+            // Set inline disposition
+            res.setHeader("Content-Disposition", `inline; filename="${key.split('/').pop()}"`);
+
+            if (data.ContentType) res.setHeader("Content-Type", data.ContentType);
+            if (data.ContentLength) res.setHeader("Content-Length", data.ContentLength);
+            if (data.ContentRange) res.setHeader("Content-Range", data.ContentRange);
+            if (data.AcceptRanges) res.setHeader("Accept-Ranges", data.AcceptRanges);
+
+            const statusCode = range ? 206 : 200;
+            res.status(statusCode);
+
+            data.Body.pipe(res);
+
+        } catch (error) {
+            if (error.name === "NoSuchKey") {
+                return res.status(404).json({ error: "File not found in S3." });
+            }
+            console.error("Protected stream error:", error);
+            res.status(500).json({ error: error.message });
+        }
+    },
+
+    // 7. Zip multiple files for download
+    downloadZip: async (req, res) => {
+        try {
+            const { keys, bookingId } = req.body;
+            const userId = req.user.id;
+
+            if (!keys || !Array.isArray(keys) || keys.length === 0) {
+                return res.status(400).json({ error: "No files selected for download." });
+            }
+
+            // Verify access for ALL selected files
+            const allowedFiles = await DataLinks.find({
+                key: { $in: keys },
+                bookingid: bookingId,
+                $or: [
+                    { clientId: userId },
+                    { photographerId: userId }
+                ]
+            });
+
+            if (allowedFiles.length === 0) {
+                return res.status(403).json({ error: "Unauthorized or no valid files found." });
+            }
+
+            const verifiedKeys = allowedFiles.map(link => link.key);
+
+            // Set headers for zip download
+            res.setHeader('Content-Type', 'application/zip');
+            res.setHeader('Content-Disposition', `attachment; filename="booking-${bookingId}-files.zip"`);
+
+            const archive = archiver('zip', { zlib: { level: 9 } });
+
+            // Pipe archive data to the response
+            archive.pipe(res);
+
+            // Handlers for archive events
+            archive.on('error', (err) => {
+                throw err;
+            });
+
+            // Fetch and append each file from S3
+            for (const key of verifiedKeys) {
+                const s3Data = await s3Service.getFileStream(key);
+                const fileName = key.split('/').pop();
+                archive.append(s3Data.Body, { name: fileName });
+            }
+
+            // Signal that we are done
+            await archive.finalize();
+
+        } catch (error) {
+            console.error("Zip download error:", error);
+            if (!res.headersSent) {
+                res.status(500).json({ error: error.message });
+            }
         }
     }
 };
