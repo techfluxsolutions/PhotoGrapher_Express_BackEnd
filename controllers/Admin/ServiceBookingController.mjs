@@ -204,14 +204,9 @@ class ServiceBookingController {
 
         filter = {
           $or: [
-            {
-              startDate: { $lte: toStr },  // booking starts before range ends
-              endDate: { $gte: fromStr }   // booking ends after range starts
-            },
-            {
-              bookingDate: { $gte: fromDate, $lte: toDate }
-            }
-          ]
+            { startDate: { $gte: fromStr, $lte: toStr } },
+            { bookingDate: { $gte: fromDate, $lte: toDate } },
+          ],
         };
 
       } else {
@@ -317,7 +312,7 @@ class ServiceBookingController {
         ServiceBooking.find(filter)
           .skip(skip)
           .limit(limit)
-          .sort({ bookingDate: 1 })
+          .sort({ createdAt: -1 })
           .populate("service_id client_id photographer_id"),
         ServiceBooking.countDocuments(filter),
       ]);
