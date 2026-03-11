@@ -13,6 +13,44 @@ import path from 'path';
 import { downloadInvoice } from "../../controllers/Admin/InvoiceController.mjs";
 
 class BookingController {
+    // Helper to format date to IST (Separate Date and Time)
+    formatIST(date, fallbackDate = null) {
+        let d = null;
+        if (date) {
+            d = new Date(date);
+        } else if (fallbackDate) {
+            d = new Date(fallbackDate);
+        }
+
+        if (d && !isNaN(d.getTime())) {
+            const formatted = new Intl.DateTimeFormat("en-IN", {
+                timeZone: "Asia/Kolkata",
+                day: "2-digit",
+                month: "2-digit",
+                year: "numeric",
+                hour: "2-digit",
+                minute: "2-digit",
+                hour12: true
+            }).format(d).toLowerCase();
+
+            const [datePart, timePart] = formatted.split(", ");
+            return { date: datePart, time: timePart };
+        }
+
+        return { date: "N/A", time: "N/A" };
+    }
+
+    // Helper to format date to DD/MM/YYYY
+    formatDMY(dateString) {
+        if (!dateString) return null;
+        const d = new Date(dateString);
+        if (isNaN(d.getTime())) return dateString; // Return as is if already a string like "20-03-2026"
+        const day = String(d.getDate()).padStart(2, '0');
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const year = d.getFullYear();
+        return `${day}/${month}/${year}`;
+    }
+
     // Get all bookings (with pagination and filter for photographer)
     async getAllBookings(req, res, forcedStatus = null) {
         try {
@@ -107,32 +145,6 @@ class BookingController {
                 ServiceBooking.countDocuments(filter),
             ]);
 
-            // Helper to format date to IST (Separate Date and Time)
-            const formatIST = (date, fallbackDate = null) => {
-                let d = null;
-                if (date) {
-                    d = new Date(date);
-                } else if (fallbackDate) {
-                    d = new Date(fallbackDate);
-                }
-
-                if (d && !isNaN(d.getTime())) {
-                    const formatted = new Intl.DateTimeFormat("en-IN", {
-                        timeZone: "Asia/Kolkata",
-                        day: "2-digit",
-                        month: "2-digit",
-                        year: "numeric",
-                        hour: "2-digit",
-                        minute: "2-digit",
-                        hour12: true
-                    }).format(d).toLowerCase();
-
-                    const [datePart, timePart] = formatted.split(", ");
-                    return { date: datePart, time: timePart };
-                }
-
-                return { date: "N/A", time: "N/A" };
-            };
 
             // Fetch my commission settings for live calculation of broadcast bookings
             const [me, settings] = await Promise.all([
@@ -148,19 +160,8 @@ class BookingController {
                 else if (myLevel === "PRO") myComm = global.pro;
             }
 
-            // Helper to format date to DD/MM/YYYY
-            const formatDMY = (dateString) => {
-                if (!dateString) return null;
-                const d = new Date(dateString);
-                if (isNaN(d.getTime())) return dateString; // Return as is if already a string like "20-03-2026"
-                const day = String(d.getDate()).padStart(2, '0');
-                const month = String(d.getMonth() + 1).padStart(2, '0');
-                const year = d.getFullYear();
-                return `${day}/${month}/${year}`;
-            };
-
             const formattedBookings = bookings.map(booking => {
-                const ist = formatIST(booking.bookingDate, booking.startDate || booking.eventDate);
+                const ist = this.formatIST(booking.bookingDate, booking.startDate || booking.eventDate);
 
                 // If it's already assigned and has a stored amount, use it.
                 // Otherwise calculate it on the fly for this viewing photographer.
@@ -178,8 +179,8 @@ class BookingController {
                     requirements: booking.notes || "No requirements",
                     date: ist.date,
                     time: ist.time,
-                    fromDate: formatDMY(booking.startDate),
-                    toDate: formatDMY(booking.endDate),
+                    fromDate: this.formatDMY(booking.startDate || booking.eventDate || booking.bookingDate),
+                    toDate: this.formatDMY(booking.endDate || booking.startDate || booking.eventDate || booking.bookingDate),
                     city: booking.city,
                     status: booking.status,
                     bookingStatus: booking.bookingStatus,
@@ -263,29 +264,12 @@ class BookingController {
             }
             bookingObj.photographerAmount = displayAmount;
 
-            // Strictly use booking/event date, not creation date
-            let d = null;
-            if (booking.bookingDate) {
-                d = new Date(booking.bookingDate);
-            } else if (booking.startDate || booking.eventDate) {
-                d = new Date(booking.startDate || booking.eventDate);
-            }
+            const ist = this.formatIST(booking.bookingDate, booking.startDate || booking.eventDate);
+            bookingObj.date = ist.date;
+            bookingObj.time = ist.time;
 
-            if (d && !isNaN(d.getTime())) {
-                const formatted = new Intl.DateTimeFormat("en-IN", {
-                    timeZone: "Asia/Kolkata",
-                    day: "2-digit",
-                    month: "2-digit",
-                    year: "numeric",
-                    hour: "2-digit",
-                    minute: "2-digit",
-                    hour12: true
-                }).format(d).toLowerCase();
-                [bookingObj.date, bookingObj.time] = formatted.split(", ");
-            } else {
-                bookingObj.date = booking.startDate || booking.eventDate || "N/A";
-                bookingObj.time = "N/A";
-            }
+            bookingObj.fromDate = this.formatDMY(booking.startDate || booking.eventDate || booking.bookingDate);
+            bookingObj.toDate = this.formatDMY(booking.endDate || booking.startDate || booking.eventDate || booking.bookingDate);
 
 
 
