@@ -98,7 +98,7 @@ class BookingController {
             const [bookings, total] = await Promise.all([
                 ServiceBooking.find(filter)
                     .select("-gallery -images")
-                    .populate("client_id", "username email mobileNumber avatar")
+                    .populate("client_id", "username email mobileNumber avatar state city isVerified")
                     .populate("service_id", "serviceName")
                     .populate("photographer_id", "username")
                     .sort({ createdAt: -1 })
@@ -216,7 +216,7 @@ class BookingController {
             }
 
             const booking = await ServiceBooking.findOne(filter)
-                .populate("client_id", "username email mobileNumber avatar")
+                .populate("client_id", "username email mobileNumber avatar state city isVerified")
                 .populate("service_id", "serviceName") // Ensure serviceName is selected
                 .populate("additionalServicesId")
                 .populate("photographer_id", "username");
