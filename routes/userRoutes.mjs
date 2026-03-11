@@ -144,7 +144,7 @@ router.get("/getReviewAndRating", (req, res, next) => ReviewAndRatingController.
 router.get("/stream/:bookingId/*key", (req, res, next) => uploadController.streamProtectedFile(req, res, next));
 
 // Download multiple files as Zip
-router.post("/download-zip", (req, res, next) => uploadController.downloadZip(req, res, next));
+router.post("/downloadZip", (req, res, next) => uploadController.downloadZip(req, res, next));
 
 
 
