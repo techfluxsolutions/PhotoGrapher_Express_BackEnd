@@ -516,7 +516,7 @@ class QuoteController {
       const limit = Math.max(1, parseInt(req.query.limit) || 20);
       const skip = (page - 1) * limit;
 
-      const [items, total] = await Promise.all([
+      const [items, total, allUnreadCountData] = await Promise.all([
         Quote.aggregate([
           { $match: { isQuoteFinal: false } },
           {
@@ -527,7 +527,7 @@ class QuoteController {
               as: "conversation",
             },
           },
-          { $unwind: { path: "$conversation", preserveNullAndEmptyArrays: true } },
+          { $addFields: { conversation: { $arrayElemAt: ["$conversation", 0] } } },
           {
             $lookup: {
               from: "messages",
@@ -536,12 +536,7 @@ class QuoteController {
                 {
                   $match: {
                     $expr: { $eq: ["$conversationId", "$$convId"] },
-                    // If finalizing, include all other fields
-                    // The instruction provided a code snippet that seems to belong to an update operation,
-                    // not within an aggregation pipeline's $match stage.
-                    // As this file does not contain an update operation for `isQuoteFinal`,
-                    // and to maintain syntactical correctness, the provided snippet cannot be directly inserted here.
-                    // The instruction implies a change to an update logic that is not present in this file.
+                    isAdminRead: false
                   },
                 },
               ],
@@ -561,7 +556,7 @@ class QuoteController {
               as: "service_id",
             },
           },
-          { $unwind: { path: "$service_id", preserveNullAndEmptyArrays: true } },
+          { $addFields: { service_id: { $arrayElemAt: ["$service_id", 0] } } },
           {
             $lookup: {
               from: "users",
@@ -570,7 +565,7 @@ class QuoteController {
               as: "clientId",
             },
           },
-          { $unwind: { path: "$clientId", preserveNullAndEmptyArrays: true } },
+          { $addFields: { clientId: { $arrayElemAt: ["$clientId", 0] } } },
           { $sort: { unreadCount: -1, "conversation.lastMessageAt": -1, createdAt: -1 } },
           { $skip: skip },
           { $limit: limit },
@@ -609,10 +604,42 @@ class QuoteController {
           },
         ]),
         Quote.countDocuments({ isQuoteFinal: false }),
+        // Total Unread Quotes Count (Unique quotes with unread messages)
+        Message.aggregate([
+          { $match: { isAdminRead: false } },
+          {
+            $lookup: {
+              from: "conversations",
+              localField: "conversationId",
+              foreignField: "_id",
+              as: "conversation"
+            }
+          },
+          { $unwind: "$conversation" },
+          { $match: { "conversation.quoteId": { $ne: null } } },
+          {
+            $lookup: {
+              from: "quotes",
+              localField: "conversation.quoteId",
+              foreignField: "_id",
+              as: "quote"
+            }
+          },
+          { 
+            $match: { 
+              "quote.0": { $exists: true },
+              "quote.isQuoteFinal": false 
+            } 
+          },
+          { $count: "count" }
+        ])
       ]);
+
+      const allUnreadCount = allUnreadCountData[0]?.count || 0;
 
       return res.json({
         success: true,
+        allunreadcount: allUnreadCount,
         data: items,
         meta: { total, page, limit },
       });

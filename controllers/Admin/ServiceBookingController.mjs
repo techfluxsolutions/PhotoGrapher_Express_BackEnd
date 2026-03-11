@@ -2,6 +2,7 @@ import ServiceBooking from "../../models/ServiceBookings.mjs";
 import Gallery from "../../models/Gallery.mjs";
 import Photographer from "../../models/Photographer.mjs";
 import PlatformSettings from "../../models/PlatformSettings.mjs";
+import Message from "../../models/Message.mjs";
 
 
 const parseDDMMYYYY = (dateStr) => {
@@ -718,7 +719,7 @@ class ServiceBookingController {
       const limit = Math.max(1, parseInt(req.query.limit) || 20);
       const skip = (page - 1) * limit;
 
-      const [items, total] = await Promise.all([
+      const [items, total, allUnreadCountData] = await Promise.all([
         ServiceBooking.aggregate([
           {
             $lookup: {
@@ -728,7 +729,7 @@ class ServiceBookingController {
               as: "conversation",
             },
           },
-          { $unwind: { path: "$conversation", preserveNullAndEmptyArrays: true } },
+          { $addFields: { conversation: { $arrayElemAt: ["$conversation", 0] } } },
           {
             $lookup: {
               from: "messages",
@@ -766,7 +767,7 @@ class ServiceBookingController {
               as: "service_id",
             },
           },
-          { $unwind: { path: "$service_id", preserveNullAndEmptyArrays: true } },
+          { $addFields: { service_id: { $arrayElemAt: ["$service_id", 0] } } },
           {
             $lookup: {
               from: "users",
@@ -775,7 +776,7 @@ class ServiceBookingController {
               as: "client_id",
             },
           },
-          { $unwind: { path: "$client_id", preserveNullAndEmptyArrays: true } },
+          { $addFields: { client_id: { $arrayElemAt: ["$client_id", 0] } } },
           {
             $lookup: {
               from: "photographers",
@@ -784,7 +785,7 @@ class ServiceBookingController {
               as: "photographer_id",
             },
           },
-          { $unwind: { path: "$photographer_id", preserveNullAndEmptyArrays: true } },
+          { $addFields: { photographer_id: { $arrayElemAt: ["$photographer_id", 0] } } },
           { $sort: { unreadCount: -1, "conversation.lastMessageAt": -1, createdAt: -1 } },
           { $skip: skip },
           { $limit: limit },
@@ -823,10 +824,37 @@ class ServiceBookingController {
           },
         ]),
         ServiceBooking.countDocuments(),
+        // Total Unread Bookings Count (Unique bookings with unread messages)
+        Message.aggregate([
+          { $match: { isAdminRead: false } },
+          {
+            $lookup: {
+              from: "conversations",
+              localField: "conversationId",
+              foreignField: "_id",
+              as: "conversation"
+            }
+          },
+          { $unwind: "$conversation" },
+          { $match: { "conversation.bookingId": { $ne: null } } },
+          {
+            $lookup: {
+              from: "servicebookings",
+              localField: "conversation.bookingId",
+              foreignField: "_id",
+              as: "booking"
+            }
+          },
+          { $match: { "booking.0": { $exists: true } } },
+          { $count: "count" }
+        ])
       ]);
+
+      const allUnreadCount = allUnreadCountData[0]?.count || 0;
 
       return res.json({
         success: true,
+        allunreadcount: allUnreadCount,
         data: items,
         meta: { total, page, limit },
       });

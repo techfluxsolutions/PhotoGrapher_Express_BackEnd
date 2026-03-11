@@ -190,7 +190,7 @@ class PhotographerController {
             const missing = Object.keys(required).filter(k => !required[k]);
 
             if (missing.length > 0) {
-                return res.status(400).json({
+                return res.status(200).json({
                     success: false,
                     message: `${missing.join(", ")} is required.`
                 });
@@ -274,7 +274,7 @@ class PhotographerController {
             const requiredFields = ['name', 'email', 'phone', 'experience', 'city'];
             for (const field of requiredFields) {
                 if (req.body[field] === "") {
-                    return res.status(400).json({ success: false, message: `${field} cannot be empty.` });
+                    return res.status(200).json({ success: false, message: `${field} cannot be empty.` });
                 }
             }
 
