@@ -224,64 +224,54 @@ export const uploadController = {
             });
         }
     },
+    downloadSingleFile: async (req, res) => {
+        try {
+            const { key, bookingId } = req.body;
+            if (!key) {
+                return res.status(400).json({ error: "Missing required fields." });
+            }
+            const isFileExist = await DataLinks.findOne({ bookingid: bookingId, key: key });
+            if (!isFileExist) {
+                return res.status(404).json({ error: "File not found in S3." });
+            }
+            const data = await s3Service.getFileStream(key);
+            if (!data) {
+                return res.status(404).json({ error: "File not found in S3." });
+            }
+            res.setHeader("Content-Type", data.ContentType);
+            res.setHeader("Content-Length", data.ContentLength);
+            res.setHeader("Content-Disposition", `attachment; filename="${key.split('/').pop()}"`);
+            data.Body.pipe(res);
+        } catch (error) {
+            console.error("Download file error:", error);
+            res.status(500).json({ error: error.message });
+        }
+    },
 
-    // 7. Zip multiple files for download
-    // downloadZip: async (req, res) => {
-    //     try {
-    //         const { keys, bookingId } = req.body;
-    //         const userId = req.user.id;
+    // downloadMultipleFiles no zip direct download 
 
-    //         if (!keys || !Array.isArray(keys) || keys.length === 0) {
-    //             return res.status(400).json({ error: "No files selected for download." });
-    //         }
 
-    //         // Verify access for ALL selected files
-    //         const allowedFiles = await DataLinks.find({
-    //             key: { $in: keys },
-    //             bookingid: bookingId,
-    //             $or: [
-    //                 { clientId: userId },
-    //                 { photographerId: userId }
-    //             ]
-    //         });
+    downloadMultipleFiles: async (req, res) => {
+        try {
+            const { keys, bookingid } = req.body;
+            if (!keys || keys.length === 0 || !bookingid) {
+                return res.status(400).json({ error: "Missing required fields" })
+            }
 
-    //         if (allowedFiles.length === 0) {
-    //             return res.status(403).json({ error: "Unauthorized or no valid files found." });
-    //         }
+            const data = await s3Service.getFileStreamMultiple(keys);
+            if (!data) {
+                return res.status(404).json({ error: "File not found in S3." });
+            }
+            res.setHeader("Content-Type", data.ContentType);
+            res.setHeader("Content-Length", data.ContentLength);
+            res.setHeader("Content-Disposition", `attachment; filename="${key.split('/').pop()}"`);
+            data.Body.pipe(res);
+        } catch (error) {
+            console.error("Download file error:", error);
+            res.status(500).json({ error: error.message });
+        }
+    },
 
-    //         const verifiedKeys = allowedFiles.map(link => link.key);
-
-    //         // Set headers for zip download
-    //         res.setHeader('Content-Type', 'application/zip');
-    //         res.setHeader('Content-Disposition', `attachment; filename="booking-${bookingId}-files.zip"`);
-
-    //         const archive = archiver('zip', { zlib: { level: 9 } });
-
-    //         // Pipe archive data to the response
-    //         archive.pipe(res);
-
-    //         // Handlers for archive events
-    //         archive.on('error', (err) => {
-    //             throw err;
-    //         });
-
-    //         // Fetch and append each file from S3
-    //         for (const key of verifiedKeys) {
-    //             const s3Data = await s3Service.getFileStream(key);
-    //             const fileName = key.split('/').pop();
-    //             archive.append(s3Data.Body, { name: fileName });
-    //         }
-
-    //         // Signal that we are done
-    //         await archive.finalize();
-
-    //     } catch (error) {
-    //         console.error("Zip download error:", error);
-    //         if (!res.headersSent) {
-    //             res.status(500).json({ error: error.message });
-    //         }
-    //     }
-    // }
 
     downloadZip: async (req, res) => {
         try {
@@ -338,5 +328,97 @@ export const uploadController = {
                 res.status(500).json({ error: error.message });
             }
         }
-    }
+    },
+
+    downloadZiponFourtyPlus: async (req, res) => {
+        try {
+            const { bookingid, keys } = req.body;
+            if (!bookingid || !keys || keys.length === 0) {
+                return res.status(400).json({ error: "Missing required fields." });
+            }
+            // Fetch all files for this booking
+
+            const files = await DataLinks.find({
+                bookingid: bookingid,
+                key: { $in: keys },
+            }).select('key');
+
+            if (!files.length) {
+                return res.status(404).json({ error: "No files found for this booking." });
+            }
+            // ZIP headers
+            res.setHeader("Content-Type", "application/zip");
+            res.setHeader(
+                "Content-Disposition",
+                `attachment; filename="booking-${bookingid}-files.zip"`
+            );
+
+            const archive = archiver("zip", { zlib: { level: 9 } });
+
+            archive.pipe(res);
+
+            archive.on("error", (err) => {
+                throw err;
+            });
+
+            // Fetch files from S3 / Spaces
+            for (const key of keys) {
+                const s3Data = await s3Service.getFileStream(key);
+                const fileName = key.split("/").pop();
+
+                archive.append(s3Data.Body, {
+                    name: fileName
+                });
+            }
+
+            await archive.finalize();
+
+        } catch (error) {
+            console.error("Zip download error:", error);
+
+            if (!res.headersSent) {
+                res.status(500).json({ error: error.message });
+            }
+        }
+    },
+
+    // delete any single file from the s3 bucket files
+    deleteSingleS3File: async (req, res) => {
+        try {
+            const { key, bookingId } = req.body;
+
+            if (!key || !bookingId) {
+                return res.status(400).json({ error: "Missing required fields." });
+            }
+            const s3Data = await s3Service.deleteFile(key);
+            if (s3Data) {
+                await DataLinks.deleteOne({ bookingid: bookingId, key: key });
+            }
+            res.status(200).json({ message: "File deleted successfully." });
+        } catch (error) {
+            console.error("Delete file error:", error);
+            res.status(500).json({ error: error.message });
+        }
+    },
+
+    deleteMultipleS3Files: async (req, res) => {
+        try {
+            const { key, bookingId } = req.body;
+
+            if (!key || !bookingId) {
+                return res.status(400).json({ error: "Missing required fields." });
+            }
+            const s3Data = await s3Service.deleteMultipleFiles(key);
+            if (s3Data) {
+                await DataLinks.deleteMany({ bookingid: bookingId, key: { $in: key } });
+            }
+            res.status(200).json({ message: "Files deleted successfully." });
+        } catch (error) {
+            console.error("Delete file error:", error);
+            res.status(500).json({ error: error.message });
+        }
+    },
+
+
+
 };

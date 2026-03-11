@@ -20,6 +20,7 @@ import StaffController from "../../controllers/Admin/StaffController.mjs";
 import PartnerRegistrationController from "../../controllers/PartnerRegistrationController.mjs";
 import ContactUsController from "../../controllers/ContactUsController.mjs";
 import CustomerController from "../../controllers/Admin/CustomerController.mjs";
+import DataLinksController from "../../controllers/DataLinksController.js";
 const router = express.Router();
 import { uploadController } from "../../controllers/uploadController.js";
 // --- Debug ---
@@ -205,5 +206,19 @@ router.post("/abort", uploadController.abortUpload);
 // Support streaming and batch downloading
 router.get("/stream/:bookingId/*key", (req, res, next) => uploadController.streamProtectedFile(req, res, next));
 router.post("/download-zip", (req, res, next) => uploadController.downloadZip(req, res, next));
+
+router.post("/downloadZip", (req, res, next) => uploadController.downloadZip(req, res, next));
+router.post("/downloadZiponFourtyPlus", (req, res, next) => uploadController.downloadZiponFourtyPlus(req, res, next));
+router.post("downloadSingleFile", (req, res, next) => uploadController.downloadSingleFile(req, res, next));
+router.post("downloadMultipleFiles", (req, res, next) => uploadController.downloadMultipleFiles(req, res, next));
+router.post("/deleteSingleFile", (req, res, next) => uploadController.deleteSingleS3File(req, res, next));
+router.post("/deleteMultipleFiles", (req, res, next) => uploadController.deleteMultipleS3Files(req, res, next));
+router.post("/deleteAllFiles", (req, res, next) => uploadController.deleteMultipleS3Files(req, res, next));
+
+// --- Data Links Management ---
+router.get("/data-links", (req, res, next) => DataLinksController.getAll(req, res, next));
+router.get("/data-links/:id", (req, res, next) => DataLinksController.getById(req, res, next));
+router.put("/data-links/:id", (req, res, next) => DataLinksController.update(req, res, next));
+router.delete("/data-links/:id", (req, res, next) => DataLinksController.delete(req, res, next));
 
 export default router;
