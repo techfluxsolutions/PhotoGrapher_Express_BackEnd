@@ -101,7 +101,7 @@ class BookingController {
                     .populate("client_id", "username email mobileNumber avatar")
                     .populate("service_id", "serviceName")
                     .populate("photographer_id", "username")
-                    .sort({ bookingDate: 1 })
+                    .sort({ createdAt: -1 })
                     .skip(skip)
                     .limit(limit),
                 ServiceBooking.countDocuments(filter),
@@ -148,6 +148,17 @@ class BookingController {
                 else if (myLevel === "PRO") myComm = global.pro;
             }
 
+            // Helper to format date to DD/MM/YYYY
+            const formatDMY = (dateString) => {
+                if (!dateString) return null;
+                const d = new Date(dateString);
+                if (isNaN(d.getTime())) return dateString; // Return as is if already a string like "20-03-2026"
+                const day = String(d.getDate()).padStart(2, '0');
+                const month = String(d.getMonth() + 1).padStart(2, '0');
+                const year = d.getFullYear();
+                return `${day}/${month}/${year}`;
+            };
+
             const formattedBookings = bookings.map(booking => {
                 const ist = formatIST(booking.bookingDate, booking.startDate || booking.eventDate);
 
@@ -167,6 +178,8 @@ class BookingController {
                     requirements: booking.notes || "No requirements",
                     date: ist.date,
                     time: ist.time,
+                    fromDate: formatDMY(booking.startDate),
+                    toDate: formatDMY(booking.endDate),
                     city: booking.city,
                     status: booking.status,
                     bookingStatus: booking.bookingStatus,
