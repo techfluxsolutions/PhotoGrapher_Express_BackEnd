@@ -51,7 +51,7 @@ class PaymentController {
         Payment.find({})
           .skip(skip)
           .limit(limit)
-          .sort({ payment_date: -1 })
+          .sort({ payment_date: 1 })
           .populate("user_id quote_id job_id"),
         Payment.countDocuments(),
       ]);
@@ -187,7 +187,7 @@ class PaymentController {
         Payment.find({ payment_status: status })
           .skip(skip)
           .limit(limit)
-          .sort({ payment_date: -1 })
+          .sort({ payment_date: 1 })
           .populate("user_id quote_id job_id"),
         Payment.countDocuments({ payment_status: status }),
       ]);
@@ -216,7 +216,7 @@ class PaymentController {
         Payment.find({ payment_status: "pending" })
           .skip(skip)
           .limit(limit)
-          .sort({ payment_date: -1 })
+          .sort({ payment_date: 1 })
           .populate("user_id quote_id job_id"),
         Payment.countDocuments({ payment_status: "pending" }),
       ]);
@@ -245,7 +245,7 @@ class PaymentController {
         Payment.find({ payment_status: "paid" })
           .skip(skip)
           .limit(limit)
-          .sort({ payment_date: -1 })
+          .sort({ payment_date: 1 })
           .populate("user_id quote_id job_id"),
         Payment.countDocuments({ payment_status: "paid" }),
       ]);
@@ -275,7 +275,7 @@ class PaymentController {
         Payment.find({ user_id: userId })
           .skip(skip)
           .limit(limit)
-          .sort({ payment_date: -1 })
+          .sort({ payment_date: 1 })
           .populate("user_id quote_id job_id"),
         Payment.countDocuments({ user_id: userId }),
       ]);
@@ -323,7 +323,7 @@ class PaymentController {
         Payment.find(filter)
           .skip(skip)
           .limit(limit)
-          .sort({ payment_date: -1 })
+          .sort({ payment_date: 1 })
           .populate("user_id quote_id job_id"),
         Payment.countDocuments(filter),
       ]);
