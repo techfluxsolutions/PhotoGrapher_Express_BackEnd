@@ -240,7 +240,7 @@ class ServiceBookingController {
         team_studio: booking.photographer_id?.professionalDetails?.team_studio || booking.team || "",
         eventType: booking.service_id?.serviceName || "",
         eventDate: booking.bookingDate,
-        location: booking.city || "",
+        location: `${booking.flatOrHouseNo}, ${booking.streetName}, ${booking.landMark ? booking.landMark + ', ' : ''}${booking.city}, ${booking.state} - ${booking.postalCode}`,
         note: booking.notes || "",
         status: booking.status,
         date: booking.ist_bookingDate ? booking.ist_bookingDate.split(", ")[0] : (booking.startDate || "N/A"),
@@ -326,7 +326,7 @@ class ServiceBookingController {
         team_studio: booking.photographer_id?.professionalDetails?.team_studio || booking.team || "",
         eventType: booking.shootType || "",
         eventDate: booking.bookingDate,
-        location: booking.city || "",
+        location: `${booking.flatOrHouseNo}, ${booking.streetName}, ${booking.landMark ? booking.landMark + ', ' : ''}${booking.city}, ${booking.state} - ${booking.postalCode}`,
         note: booking.notes || "",
         status: booking.status,
         date: booking.ist_bookingDate ? booking.ist_bookingDate.split(", ")[1] ? booking.ist_bookingDate.split(", ")[0] : booking.ist_bookingDate : (booking.startDate || "N/A"),
@@ -789,7 +789,15 @@ class ServiceBookingController {
               "clientName": "$client_id.username",
               "eventType": "$service_id.serviceName",
               "eventDate": "$bookingDate",
-              "eventLocation": { $concat: ["$city", ", ", "$state"] },
+              "eventLocation": {
+                $concat: [
+                  { $ifNull: ["$flatOrHouseNo", ""] }, ", ",
+                  { $ifNull: ["$streetName", ""] }, ", ",
+                  { $ifNull: ["$city", ""] }, ", ",
+                  { $ifNull: ["$state", ""] }, " - ",
+                  { $ifNull: ["$postalCode", ""] }
+                ]
+              },
               "bookingAmount": "$totalAmount",
               "photographerAmount": { $ifNull: ["$photographerAmount", 0] },
               "paymentMode": "$paymentMode",

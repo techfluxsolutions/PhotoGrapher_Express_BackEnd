@@ -1,5 +1,6 @@
 import ServiceBooking from "../../models/ServiceBookings.mjs";
 import Quote from "../../models/Quote.mjs";
+import Payment from "../../models/Payment.mjs";
 const parseDDMMYYYY = (dateStr) => {
   if (!dateStr) return dateStr;
   const [day, month, year] = dateStr.split("-");
@@ -221,9 +222,36 @@ class ServiceBookingController {
         });
       }
       if (booking && booking !== null) {
+        // Create Payment record for booking
+        try {
+          await Payment.create({
+            user_id: booking.client_id,
+            job_id: booking._id,
+            quote_id: booking.quoteId || null,
+            upfront_amount: payload.amount || payload.totalAmount || (booking.totalAmount - (payload.outStandingAmount || booking.outStandingAmount || 0)) || 0,
+            outstanding_amount: payload.outStandingAmount || booking.outStandingAmount || 0,
+            payment_status: (payload.paymentStatus === 'paid' || payload.paymentStatus === 'fully paid') ? 'paid' : 'pending',
+            payment_date: new Date()
+          });
+        } catch (paymentErr) {
+          console.error("Error creating payment record for booking:", paymentErr);
+        }
         return res.json({ success: true, message: "Booking updated successfully", data: booking });
       }
       if (quote && quote !== null) {
+        // Create Payment record for quote
+        try {
+          await Payment.create({
+            user_id: quote.clientId,
+            quote_id: quote._id,
+            upfront_amount: payload.amount || payload.totalAmount || (quote.budget ? parseFloat(quote.budget) : 0) || 0,
+            outstanding_amount: payload.outStandingAmount || 0,
+            payment_status: (payload.paymentStatus === 'paid' || payload.paymentStatus === 'fully paid') ? 'paid' : 'pending',
+            payment_date: new Date()
+          });
+        } catch (paymentErr) {
+          console.error("Error creating payment record for quote:", paymentErr);
+        }
         return res.json({ success: true, message: "Quote updated successfully", data: quote });
       }
       return res.status(404).json({ success: false, message: "Booking not found" });

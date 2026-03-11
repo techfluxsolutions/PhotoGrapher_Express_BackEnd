@@ -10,12 +10,12 @@ const paymentSchema = new mongoose.Schema(
     quote_id: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Quote",
-      required: [true, "Quote ID is required"],
+      required: false,
     },
     job_id: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Job",
-      required: [true, "Job ID is required"],
+      ref: "ServiceBooking",
+      required: false,
     },
     upfront_amount: {
       type: Number,
@@ -62,7 +62,7 @@ paymentSchema.virtual("totalPaid").get(function () {
 });
 
 // Index
-paymentSchema.index({ user_id: 1, quote_id: 1, job_id: 1 });
+paymentSchema.index({ user_id: 1, quote_id: 1, job_id: 1, booking_id: 1 });
 paymentSchema.index({ payment_status: 1 });
 paymentSchema.index({ payment_date: -1 });
 
