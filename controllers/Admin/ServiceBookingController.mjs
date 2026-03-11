@@ -210,30 +210,48 @@ class ServiceBookingController {
             {
               $or: [
                 { bookingDate: { $gte: fromDate, $lte: toDate } },
-                { startDate: { $gte: fromStr, $lte: toStr } }
+                { 
+                  $and: [
+                    { startDate: { $gte: fromStr, $lte: toStr } },
+                    { startDate: { $nin: [null, "", "N/A"] } }
+                  ]
+                }
               ]
             },
             // Constrain the end: must not go past requested range end
-            { $or: [{ endDate: { $lte: toStr } }, { endDate: { $exists: false } }, { endDate: "" }] },
+            { 
+              $or: [
+                { endDate: { $lte: toStr } }, 
+                { endDate: { $exists: false } }, 
+                { endDate: { $in: [null, "", "N/A"] } }
+              ] 
+            },
             {
               $or: [
                 { bookingDate: { $gte: today } },
                 { endDate: { $gte: todayStr } },
+                { status: "confirmed" },
+                { bookingStatus: "accepted" },
                 { $and: [{ endDate: { $exists: false } }, { startDate: { $gte: todayStr } }] }
               ]
             }
           ]
         };
       } else {
-        // 📅 All Upcoming bookings from today
+        // 📅 All Upcoming bookings (confirmed or with future dates)
         filter = {
           $or: [
             { endDate: { $gte: todayStr } },
             { bookingDate: { $gte: today } },
-            { $and: [
-              { endDate: { $exists: false } }, 
-              { startDate: { $gte: todayStr } }
-            ]}
+            { status: "confirmed" },
+            { bookingStatus: "accepted" },
+            { 
+              $and: [
+                { $or: [{ endDate: { $exists: false } }, { endDate: { $in: [null, "", "N/A"] } }] }, 
+                { startDate: { $gte: todayStr } },
+                { startDate: { $nin: [null, "", "N/A"] } }
+              ] 
+            }
           ],
         };
       }
@@ -342,18 +360,28 @@ class ServiceBookingController {
         todaysEnd.setUTCHours(23, 59, 59, 999);
 
         // Match bookings that START within the range AND do not exceed the requested range END
-        // Also must be "Done/Previous" relative to today
         filter = {
           $and: [
             {
               $or: [
                 { bookingDate: { $gte: fromDate, $lte: toDate } },
-                { startDate: { $gte: fromStr, $lte: toStr } }
+                { 
+                  $and: [
+                    { startDate: { $gte: fromStr, $lte: toStr } },
+                    { startDate: { $nin: [null, "", "N/A"] } }
+                  ]
+                }
               ]
             },
             // Constrain the end: must not go past requested range end
-            { $or: [{ endDate: { $lte: toStr } }, { endDate: { $exists: false } }, { endDate: "" }] },
-            // Mutually exclusive: must be past or today (not purely future)
+            { 
+              $or: [
+                { endDate: { $lte: toStr } }, 
+                { endDate: { $exists: false } }, 
+                { endDate: { $in: [null, "", "N/A"] } }
+              ] 
+            },
+            // Mutually exclusive: must be past or today
             {
               $or: [
                 { bookingDate: { $lte: todaysEnd } },
@@ -369,7 +397,13 @@ class ServiceBookingController {
           $or: [
             { bookingDate: { $lt: today } },
             { endDate: { $lt: todayStr } },
-            { $and: [{ endDate: { $exists: false } }, { startDate: { $lt: todayStr } }] }
+            { 
+              $and: [
+                { $or: [{ endDate: { $exists: false } }, { endDate: { $in: [null, "", "N/A"] } }] }, 
+                { startDate: { $lt: todayStr } },
+                { startDate: { $nin: [null, "", "N/A"] } }
+              ] 
+            }
           ],
         };
       }
@@ -722,7 +756,8 @@ class ServiceBookingController {
       const filter = {
         $or: [
           { paymentStatus: "fully paid" },
-          { paymentStatus: "paid" }
+          { paymentStatus: "paid" },
+          { full_Payment: true }
         ]
       };
 
