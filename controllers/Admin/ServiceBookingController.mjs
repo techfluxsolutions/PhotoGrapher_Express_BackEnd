@@ -205,8 +205,10 @@ class ServiceBookingController {
         const toStr = toDate.toISOString().split("T")[0];
 
         // Match bookings that START within the range AND stay within the range END
+        // Also exclude records with null/empty startDate
         filter = {
           $and: [
+            { startDate: { $ne: null, $exists: true, $ne: "" } },
             {
               $or: [
                 { bookingDate: { $gte: fromDate, $lte: toDate } },
@@ -342,9 +344,10 @@ class ServiceBookingController {
         todaysEnd.setUTCHours(23, 59, 59, 999);
 
         // Match bookings that START within the range AND do not exceed the requested range END
-        // Also must be "Done/Previous" relative to today
+        // Also must be "Done/Previous" relative to today and have a valid startDate
         filter = {
           $and: [
+            { startDate: { $ne: null, $exists: true, $ne: "" } },
             {
               $or: [
                 { bookingDate: { $gte: fromDate, $lte: toDate } },
