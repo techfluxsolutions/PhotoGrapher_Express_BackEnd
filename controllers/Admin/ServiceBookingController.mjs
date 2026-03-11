@@ -626,13 +626,20 @@ class ServiceBookingController {
       const limit = Math.max(1, parseInt(req.query.limit) || 20);
       const skip = (page - 1) * limit;
 
+      const filter = {
+        $or: [
+          { paymentStatus: "fully paid" },
+          { paymentStatus: "paid" }
+        ]
+      };
+
       const [items, total] = await Promise.all([
-        ServiceBooking.find({ status: "completed", paymentStatus: "fully paid" })
+        ServiceBooking.find(filter)
           .skip(skip)
           .limit(limit)
           .sort({ bookingDate: 1 })
           .populate("service_id client_id photographer_id"),
-        ServiceBooking.countDocuments({ status: "completed" }),
+        ServiceBooking.countDocuments(filter),
       ]);
 
       return res.json({
