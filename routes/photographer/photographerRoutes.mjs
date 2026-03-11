@@ -13,6 +13,7 @@ import { isPhotographer } from "../../middleware/isValid.Middleware.mjs";
 import ServiceController from "../../controllers/User/ServiceController.mjs";
 import NotificationController from "../../controllers/photographer/NotificationController.mjs";
 import { uploadController } from "../../controllers/uploadController.js";
+import DataLinksController from "../../controllers/DataLinksController.js";
 const router = express.Router();
 
 // --- Auth Routes ---
@@ -106,5 +107,15 @@ router.post("/abort", uploadController.abortUpload);
 
 // Support streaming and batch downloading
 router.get("/stream/:bookingId/*key", (req, res, next) => uploadController.streamProtectedFile(req, res, next));
-router.post("/download-zip", (req, res, next) => uploadController.downloadZip(req, res, next));
+router.post("/downloadZip", (req, res, next) => uploadController.downloadZip(req, res, next));
+router.post("/downloadZiponFourtyPlus", (req, res, next) => uploadController.downloadZiponFourtyPlus(req, res, next));
+router.post("downloadSingleFile", (req, res, next) => uploadController.downloadSingleFile(req, res, next));
+router.post("/deleteSingleFile", (req, res, next) => uploadController.deleteSingleS3File(req, res, next));
+router.post("/deleteMultipleFiles", (req, res, next) => uploadController.deleteMultipleS3Files(req, res, next));
+router.post("/deleteAllFiles", (req, res, next) => uploadController.deleteMultipleS3Files(req, res, next));
+
+// --- Data Links ---
+router.get("/data-links", (req, res, next) => DataLinksController.getAll(req, res, next));
+router.get("/data-links/:id", (req, res, next) => DataLinksController.getById(req, res, next));
+
 export default router;
