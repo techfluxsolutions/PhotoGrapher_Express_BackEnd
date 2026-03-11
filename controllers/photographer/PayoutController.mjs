@@ -31,7 +31,7 @@ class PayoutController {
                         select: "username email" // Getting client name (username as fallback)
                     }
                 })
-                .sort({ createdAt: -1 });
+                .sort({ createdAt: 1 });
 
             // Add invoice download URL
             const payoutsWithInvoice = payouts.map(payout => {

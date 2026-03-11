@@ -204,7 +204,7 @@ class ServiceBookingController {
         const fromStr = fromDate.toISOString().split("T")[0];
         const toStr = toDate.toISOString().split("T")[0];
 
-        // Match bookings that START within the range AND are truly upcoming
+        // Match bookings that START within the range AND stay within the range END
         filter = {
           $and: [
             {
@@ -213,6 +213,8 @@ class ServiceBookingController {
                 { startDate: { $gte: fromStr, $lte: toStr } }
               ]
             },
+            // Constrain the end: must not go past requested range end
+            { $or: [{ endDate: { $lte: toStr } }, { endDate: { $exists: false } }, { endDate: "" }] },
             {
               $or: [
                 { bookingDate: { $gte: today } },
@@ -240,7 +242,7 @@ class ServiceBookingController {
         ServiceBooking.find(filter)
           .skip(skip)
           .limit(limit)
-          .sort({ createdAt: -1 })
+          .sort({ startDate: 1, bookingDate: 1 })
           .populate("service_id client_id photographer_id"),
         ServiceBooking.countDocuments(filter),
         // Total Unread Bookings Count (Unique bookings with unread messages)
@@ -376,7 +378,7 @@ class ServiceBookingController {
         ServiceBooking.find(filter)
           .skip(skip)
           .limit(limit)
-          .sort({ createdAt: -1 })
+          .sort({ startDate: 1, bookingDate: 1 })
           .populate("service_id client_id photographer_id"),
         ServiceBooking.countDocuments(filter),
         // Total Unread Bookings Count
