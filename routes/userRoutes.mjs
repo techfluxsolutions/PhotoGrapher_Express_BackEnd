@@ -140,7 +140,11 @@ router.get("/getPreviousTickets/:clientId", (req, res, next) => TicketController
 router.post("/reviewAndRating", (req, res, next) => ReviewAndRatingController.create(req, res, next));
 router.get("/getReviewAndRating", (req, res, next) => ReviewAndRatingController.getAll(req, res, next));
 
+// s3 Stream (Protected: Only Client/Photographer linked to the file/booking can view)
+router.get("/stream/:bookingId/*key", (req, res, next) => uploadController.streamProtectedFile(req, res, next));
 
+// Download multiple files as Zip
+router.post("/downloadZip", (req, res, next) => uploadController.downloadZip(req, res, next));
 
 
 

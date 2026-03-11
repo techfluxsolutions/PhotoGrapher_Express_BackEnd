@@ -17,6 +17,11 @@ const DataLinksSchema = new mongoose.Schema({
     },
     veroaBookingId: {
         type: String
+    },
+    key: {
+        type: String,
+        required: true,
+        index: true
     }
 })
 
