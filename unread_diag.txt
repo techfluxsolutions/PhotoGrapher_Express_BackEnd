@@ -1,0 +1,7 @@
+Unread Analysis:
+Msg: 69a6d24247f53cac188b7986 | BookingID: 699eb6b0894f1287e6a5d229
+Msg: 69a6d2dc47f53cac188b79d4 | QuoteID: 69a6d29d47f53cac188b799b | Quote Found: false | isQuoteFinal: N/A
+Msg: 69a7d59447f53cac188b7cd1 | QuoteID: 69a7d3f247f53cac188b7c78 | Quote Found: false | isQuoteFinal: N/A
+Msg: 69a7ddbe47f53cac188b7f18 | QuoteID: 69a7dd8b47f53cac188b7ed3 | Quote Found: false | isQuoteFinal: N/A
+Msg: 69a94bd4f3738c5b53e3d691 | QuoteID: 69a94b0af3738c5b53e3d650 | Quote Found: false | isQuoteFinal: N/A
+Msg: 69afb981085096eee1c5a1fa | QuoteID: 69afb95a085096eee1c5a1c5 | Quote Found: true | isQuoteFinal: true

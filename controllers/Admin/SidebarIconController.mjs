@@ -18,10 +18,10 @@ class SidebarIconController {
             const iconsWithUrl = icons.map(iconObj => {
                 // Prepend base URL if not already absolute
                 if (iconObj.activeIcon && !iconObj.activeIcon.startsWith('http')) {
-                    iconObj.activeIcon = `${baseUrl}${iconObj.activeIcon}`;
+                    iconObj.activeIcon = `${baseUrl}/${iconObj.activeIcon.replace(/\\/g, "/").replace(/^\//, "")}`;
                 }
                 if (iconObj.inactiveIcon && !iconObj.inactiveIcon.startsWith('http')) {
-                    iconObj.inactiveIcon = `${baseUrl}${iconObj.inactiveIcon}`;
+                    iconObj.inactiveIcon = `${baseUrl}/${iconObj.inactiveIcon.replace(/\\/g, "/").replace(/^\//, "")}`;
                 }
                 return iconObj;
             });

@@ -2,6 +2,7 @@ import ServiceBooking from "../../models/ServiceBookings.mjs";
 import Gallery from "../../models/Gallery.mjs";
 import Photographer from "../../models/Photographer.mjs";
 import PlatformSettings from "../../models/PlatformSettings.mjs";
+import Message from "../../models/Message.mjs";
 
 
 const parseDDMMYYYY = (dateStr) => {
@@ -188,49 +189,90 @@ class ServiceBookingController {
       const limit = Math.max(1, parseInt(req.query.limit) || 20);
       const skip = (page - 1) * limit;
 
+      const today = new Date();
+      today.setUTCHours(0, 0, 0, 0);
+      const todayStr = today.toISOString().split("T")[0];
+
       let filter = {};
 
       if (req.query.fromDate && req.query.toDate) {
-        // 📅 Strict custom date range (overlapping safe logic)
-
+        // 📅 Custom date range filter
         const fromDate = new Date(req.query.fromDate);
         fromDate.setUTCHours(0, 0, 0, 0);
-
         const toDate = new Date(req.query.toDate);
         toDate.setUTCHours(23, 59, 59, 999);
-
         const fromStr = fromDate.toISOString().split("T")[0];
         const toStr = toDate.toISOString().split("T")[0];
 
+        // Match bookings that START within the range AND stay within the range END
         filter = {
-          $or: [
-            { startDate: { $gte: fromStr, $lte: toStr } },
-            { bookingDate: { $gte: fromDate, $lte: toDate } },
-          ],
+          $and: [
+            {
+              $or: [
+                { bookingDate: { $gte: fromDate, $lte: toDate } },
+                { startDate: { $gte: fromStr, $lte: toStr } }
+              ]
+            },
+            // Constrain the end: must not go past requested range end
+            { $or: [{ endDate: { $lte: toStr } }, { endDate: { $exists: false } }, { endDate: "" }] },
+            {
+              $or: [
+                { bookingDate: { $gte: today } },
+                { endDate: { $gte: todayStr } },
+                { $and: [{ endDate: { $exists: false } }, { startDate: { $gte: todayStr } }] }
+              ]
+            }
+          ]
         };
-
       } else {
-        // 📅 Upcoming from today (strict upcoming logic)
-        const today = new Date();
-        today.setUTCHours(0, 0, 0, 0);
-        const todayStr = today.toISOString().split("T")[0];
-
+        // 📅 All Upcoming bookings from today
         filter = {
           $or: [
             { endDate: { $gte: todayStr } },
             { bookingDate: { $gte: today } },
+            { $and: [
+              { endDate: { $exists: false } }, 
+              { startDate: { $gte: todayStr } }
+            ]}
           ],
         };
       }
 
-      const [items, total] = await Promise.all([
+      const [items, total, allUnreadCountData] = await Promise.all([
         ServiceBooking.find(filter)
           .skip(skip)
           .limit(limit)
-          .sort({ createdAt: -1 })
+          .sort({ startDate: 1, bookingDate: 1 })
           .populate("service_id client_id photographer_id"),
         ServiceBooking.countDocuments(filter),
+        // Total Unread Bookings Count (Unique bookings with unread messages)
+        Message.aggregate([
+          { $match: { isAdminRead: false } },
+          {
+            $lookup: {
+              from: "conversations",
+              localField: "conversationId",
+              foreignField: "_id",
+              as: "conversation"
+            }
+          },
+          { $unwind: "$conversation" },
+          { $match: { "conversation.bookingId": { $ne: null } } },
+          {
+            $lookup: {
+              from: "servicebookings",
+              localField: "conversation.bookingId",
+              foreignField: "_id",
+              as: "booking"
+            }
+          },
+          { $match: { "booking.0": { $exists: true } } },
+          { $count: "count" }
+        ])
       ]);
+
+      const allUnreadCount = allUnreadCountData[0]?.count || 0;
+
       const formattedItems = items.map(booking => ({
         bookingId: booking._id,
         veroaBookingId: booking.veroaBookingId,
@@ -243,8 +285,8 @@ class ServiceBookingController {
         location: `${booking.flatOrHouseNo}, ${booking.streetName}, ${booking.landMark ? booking.landMark + ', ' : ''}${booking.city}, ${booking.state} - ${booking.postalCode}`,
         note: booking.notes || "",
         status: booking.status,
-        date: booking.ist_bookingDate ? booking.ist_bookingDate.split(", ")[0] : (booking.startDate || "N/A"),
-        time: (booking.ist_bookingDate && booking.ist_bookingDate !== "N/A") ? booking.ist_bookingDate.split(", ")[1] : "N/A",
+        date: (booking.ist_bookingDate && booking.ist_bookingDate !== "N/A") ? booking.ist_bookingDate.split(", ")[0] : (booking.startDate || "N/A"),
+        time: (booking.ist_bookingDate && booking.ist_bookingDate !== "N/A" && booking.ist_bookingDate.includes(", ")) ? booking.ist_bookingDate.split(", ")[1] : "N/A",
         startDate: booking.startDate || null,
         endDate: booking.endDate || null,
         bookingAmount: booking.totalAmount,
@@ -256,6 +298,7 @@ class ServiceBookingController {
 
       return res.json({
         success: true,
+        allunreadcount: allUnreadCount,
         data: formattedItems,
         meta: { total, page, limit },
       });
@@ -281,10 +324,13 @@ class ServiceBookingController {
       const limit = Math.max(1, parseInt(req.query.limit) || 20);
       const skip = (page - 1) * limit;
 
+      const today = new Date();
+      today.setUTCHours(0, 0, 0, 0);
+      const todayStr = today.toISOString().split("T")[0];
+
       let filter = {};
 
       if (req.query.fromDate && req.query.toDate) {
-        // 📅 Custom date range filter
         const fromDate = new Date(req.query.fromDate);
         fromDate.setUTCHours(0, 0, 0, 0);
         const toDate = new Date(req.query.toDate);
@@ -292,30 +338,76 @@ class ServiceBookingController {
         const fromStr = fromDate.toISOString().split("T")[0];
         const toStr = toDate.toISOString().split("T")[0];
 
-        filter.$or = [
-          { bookingDate: { $gte: fromDate, $lte: toDate } },
-          { startDate: { $gte: fromStr, $lte: toStr } },
-        ];
-      } else {
-        // 📅 Previous bookings compared to today
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        const todayStr = today.toISOString().split("T")[0];
+        const todaysEnd = new Date(today);
+        todaysEnd.setUTCHours(23, 59, 59, 999);
 
-        filter.$or = [
-          { bookingDate: { $lt: today } },
-          { startDate: { $lt: todayStr } },
-        ];
+        // Match bookings that START within the range AND do not exceed the requested range END
+        // Also must be "Done/Previous" relative to today
+        filter = {
+          $and: [
+            {
+              $or: [
+                { bookingDate: { $gte: fromDate, $lte: toDate } },
+                { startDate: { $gte: fromStr, $lte: toStr } }
+              ]
+            },
+            // Constrain the end: must not go past requested range end
+            { $or: [{ endDate: { $lte: toStr } }, { endDate: { $exists: false } }, { endDate: "" }] },
+            // Mutually exclusive: must be past or today (not purely future)
+            {
+              $or: [
+                { bookingDate: { $lte: todaysEnd } },
+                { endDate: { $lte: todayStr } },
+                { $and: [{ endDate: { $exists: false } }, { startDate: { $lte: todayStr } }] }
+              ]
+            }
+          ]
+        };
+      } else {
+        // 📅 All Previous bookings compared to today
+        filter = {
+          $or: [
+            { bookingDate: { $lt: today } },
+            { endDate: { $lt: todayStr } },
+            { $and: [{ endDate: { $exists: false } }, { startDate: { $lt: todayStr } }] }
+          ],
+        };
       }
 
-      const [items, total] = await Promise.all([
+      const [items, total, allUnreadCountData] = await Promise.all([
         ServiceBooking.find(filter)
           .skip(skip)
           .limit(limit)
-          .sort({ createdAt: -1 })
+          .sort({ startDate: 1, bookingDate: 1 })
           .populate("service_id client_id photographer_id"),
         ServiceBooking.countDocuments(filter),
+        // Total Unread Bookings Count
+        Message.aggregate([
+          { $match: { isAdminRead: false } },
+          {
+            $lookup: {
+              from: "conversations",
+              localField: "conversationId",
+              foreignField: "_id",
+              as: "conversation"
+            }
+          },
+          { $unwind: "$conversation" },
+          { $match: { "conversation.bookingId": { $ne: null } } },
+          {
+            $lookup: {
+              from: "servicebookings",
+              localField: "conversation.bookingId",
+              foreignField: "_id",
+              as: "booking"
+            }
+          },
+          { $match: { "booking.0": { $exists: true } } },
+          { $count: "count" }
+        ])
       ]);
+
+      const allUnreadCount = allUnreadCountData[0]?.count || 0;
 
       const formattedItems = items.map(booking => ({
         bookingId: booking._id,
@@ -324,13 +416,13 @@ class ServiceBookingController {
         client_name: booking.client_id?.username || "",
         assigned_photographer: booking.photographer_id?.basicInfo?.fullName || "",
         team_studio: booking.photographer_id?.professionalDetails?.team_studio || booking.team || "",
-        eventType: booking.shootType || "",
+        eventType: booking.service_id?.serviceName || "", // Fixed field mapping
         eventDate: booking.bookingDate,
         location: `${booking.flatOrHouseNo}, ${booking.streetName}, ${booking.landMark ? booking.landMark + ', ' : ''}${booking.city}, ${booking.state} - ${booking.postalCode}`,
         note: booking.notes || "",
         status: booking.status,
-        date: booking.ist_bookingDate ? booking.ist_bookingDate.split(", ")[1] ? booking.ist_bookingDate.split(", ")[0] : booking.ist_bookingDate : (booking.startDate || "N/A"),
-        time: (booking.ist_bookingDate && booking.ist_bookingDate.includes(", ")) ? booking.ist_bookingDate.split(", ")[1] : "N/A",
+        date: (booking.ist_bookingDate && booking.ist_bookingDate !== "N/A") ? booking.ist_bookingDate.split(", ")[0] : (booking.startDate || "N/A"),
+        time: (booking.ist_bookingDate && booking.ist_bookingDate !== "N/A" && booking.ist_bookingDate.includes(", ")) ? booking.ist_bookingDate.split(", ")[1] : "N/A",
         startDate: booking.startDate || null,
         endDate: booking.endDate || null,
         bookingAmount: booking.totalAmount,
@@ -342,8 +434,9 @@ class ServiceBookingController {
 
       return res.json({
         success: true,
+        allunreadcount: allUnreadCount,
         data: formattedItems,
-        meta: { total, page, limit },
+        meta: { total, page, limit, fromDate: req.query.fromDate, toDate: req.query.toDate },
       });
 
     } catch (err) {
@@ -672,7 +765,7 @@ class ServiceBookingController {
       const galleryData = gallery.toObject();
 
       galleryData.gallery = galleryData.gallery.map(path =>
-        path.startsWith("http") ? path : `${baseUrl}/${path}`
+        path.startsWith("http") ? path : `${baseUrl}/${path.replace(/\\/g, "/").replace(/^\//, "")}`
       );
 
       return res.json({
@@ -718,7 +811,7 @@ class ServiceBookingController {
       const limit = Math.max(1, parseInt(req.query.limit) || 20);
       const skip = (page - 1) * limit;
 
-      const [items, total] = await Promise.all([
+      const [items, total, allUnreadCountData] = await Promise.all([
         ServiceBooking.aggregate([
           {
             $lookup: {
@@ -728,7 +821,7 @@ class ServiceBookingController {
               as: "conversation",
             },
           },
-          { $unwind: { path: "$conversation", preserveNullAndEmptyArrays: true } },
+          { $addFields: { conversation: { $arrayElemAt: ["$conversation", 0] } } },
           {
             $lookup: {
               from: "messages",
@@ -766,7 +859,7 @@ class ServiceBookingController {
               as: "service_id",
             },
           },
-          { $unwind: { path: "$service_id", preserveNullAndEmptyArrays: true } },
+          { $addFields: { service_id: { $arrayElemAt: ["$service_id", 0] } } },
           {
             $lookup: {
               from: "users",
@@ -775,7 +868,7 @@ class ServiceBookingController {
               as: "client_id",
             },
           },
-          { $unwind: { path: "$client_id", preserveNullAndEmptyArrays: true } },
+          { $addFields: { client_id: { $arrayElemAt: ["$client_id", 0] } } },
           {
             $lookup: {
               from: "photographers",
@@ -784,7 +877,7 @@ class ServiceBookingController {
               as: "photographer_id",
             },
           },
-          { $unwind: { path: "$photographer_id", preserveNullAndEmptyArrays: true } },
+          { $addFields: { photographer_id: { $arrayElemAt: ["$photographer_id", 0] } } },
           { $sort: { unreadCount: -1, "conversation.lastMessageAt": -1, createdAt: -1 } },
           { $skip: skip },
           { $limit: limit },
@@ -823,10 +916,37 @@ class ServiceBookingController {
           },
         ]),
         ServiceBooking.countDocuments(),
+        // Total Unread Bookings Count (Unique bookings with unread messages)
+        Message.aggregate([
+          { $match: { isAdminRead: false } },
+          {
+            $lookup: {
+              from: "conversations",
+              localField: "conversationId",
+              foreignField: "_id",
+              as: "conversation"
+            }
+          },
+          { $unwind: "$conversation" },
+          { $match: { "conversation.bookingId": { $ne: null } } },
+          {
+            $lookup: {
+              from: "servicebookings",
+              localField: "conversation.bookingId",
+              foreignField: "_id",
+              as: "booking"
+            }
+          },
+          { $match: { "booking.0": { $exists: true } } },
+          { $count: "count" }
+        ])
       ]);
+
+      const allUnreadCount = allUnreadCountData[0]?.count || 0;
 
       return res.json({
         success: true,
+        allunreadcount: allUnreadCount,
         data: items,
         meta: { total, page, limit },
       });

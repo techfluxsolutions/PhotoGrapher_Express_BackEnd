@@ -58,7 +58,7 @@ class PhotographerController {
         const baseUrl = req ? `${req.protocol}://${req.get("host")}` : "";
         let profilePhoto = p.basicInfo?.profilePhoto || "";
         if (profilePhoto && !profilePhoto.startsWith("http")) {
-            profilePhoto = `${baseUrl}${profilePhoto}`;
+            profilePhoto = `${baseUrl}/${profilePhoto.replace(/\\/g, "/").replace(/^\//, "")}`;
         }
 
         return {
@@ -169,7 +169,7 @@ class PhotographerController {
             const photographerObj = photographer.toObject();
             if (photographerObj.basicInfo?.profilePhoto && !photographerObj.basicInfo.profilePhoto.startsWith("http")) {
                 const baseUrl = `${req.protocol}://${req.get("host")}`;
-                photographerObj.basicInfo.profilePhoto = `${baseUrl}${photographerObj.basicInfo.profilePhoto}`;
+                photographerObj.basicInfo.profilePhoto = `${baseUrl}/${photographerObj.basicInfo.profilePhoto.replace(/\\/g, "/").replace(/^\//, "")}`;
             }
 
             res.status(200).json({ success: true, message: "Photographer fetched successfully", photographer: photographerObj });
@@ -190,7 +190,7 @@ class PhotographerController {
             const missing = Object.keys(required).filter(k => !required[k]);
 
             if (missing.length > 0) {
-                return res.status(400).json({
+                return res.status(200).json({
                     success: false,
                     message: `${missing.join(", ")} is required.`
                 });
@@ -274,7 +274,7 @@ class PhotographerController {
             const requiredFields = ['name', 'email', 'phone', 'experience', 'city'];
             for (const field of requiredFields) {
                 if (req.body[field] === "") {
-                    return res.status(400).json({ success: false, message: `${field} cannot be empty.` });
+                    return res.status(200).json({ success: false, message: `${field} cannot be empty.` });
                 }
             }
 
@@ -591,7 +591,6 @@ class PhotographerController {
 
             // 3. Handle Profile Photo Upload
             if (req.file) {
-                const baseUrl = `${req.protocol}://${req.get("host")}`;
                 updateData.basicInfo.profilePhoto = `/uploads/${req.file.filename}`;
             }
 
@@ -634,7 +633,7 @@ class PhotographerController {
             const photographerObj = photographer.toObject();
             if (photographerObj.basicInfo?.profilePhoto && !photographerObj.basicInfo.profilePhoto.startsWith("http")) {
                 const baseUrl = `${req.protocol}://${req.get("host")}`;
-                photographerObj.basicInfo.profilePhoto = `${baseUrl}${photographerObj.basicInfo.profilePhoto}`;
+                photographerObj.basicInfo.profilePhoto = `${baseUrl}/${photographerObj.basicInfo.profilePhoto.replace(/\\/g, "/").replace(/^\//, "")}`;
             }
 
             res.status(200).json({ message: "Photographer updated successfully", photographer: photographerObj });
@@ -769,7 +768,7 @@ class PhotographerController {
                 const baseUrl = `${req.protocol}://${req.get("host")}`;
                 let photo = p.basicInfo?.profilePhoto || "";
                 if (photo && !photo.startsWith("http")) {
-                    photo = `${baseUrl}${photo}`;
+                    photo = `${baseUrl}/${photo.replace(/\\/g, "/").replace(/^\//, "")}`;
                 }
 
                 return {
