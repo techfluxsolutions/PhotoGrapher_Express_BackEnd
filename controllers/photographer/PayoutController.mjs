@@ -21,6 +21,30 @@ class PayoutController {
                 filter.booking_id = req.query.booking_id;
             }
 
+            // Strict Date Range Filter
+            const { startDate, endDate } = req.query;
+            if (startDate || endDate) {
+                if (!startDate || !endDate) {
+                    return res.status(200).json({ success: false, message: "Both startDate and endDate must be provided." });
+                }
+                const sDate = new Date(startDate);
+                const eDate = new Date(endDate);
+                if (isNaN(sDate.getTime()) || isNaN(eDate.getTime())) {
+                    return res.status(200).json({ success: false, message: "Invalid startDate or endDate format." });
+                }
+                if (sDate > eDate) {
+                    return res.status(200).json({ success: false, message: "startDate cannot be greater than endDate." });
+                }
+
+                sDate.setUTCHours(0, 0, 0, 0);
+                eDate.setUTCHours(23, 59, 59, 999);
+
+                filter.payout_date = {
+                    $gte: sDate,
+                    $lte: eDate
+                };
+            }
+
             // Populate details to match the requested view (Client Name, Event Type, etc.)
             const payouts = await Payout.find(filter)
                 .populate({

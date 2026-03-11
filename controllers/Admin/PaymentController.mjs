@@ -296,26 +296,39 @@ class PaymentController {
    */
   async getByDateRange(req, res, next) {
     try {
-      const { fromDate, toDate } = req.query;
+      const { startDate, endDate } = req.query;
       const page = Math.max(1, parseInt(req.query.page) || 1);
       const limit = Math.max(1, parseInt(req.query.limit) || 20);
       const skip = (page - 1) * limit;
 
-      if (!fromDate || !toDate) {
-        return res.status(400).json({
+      if (!startDate || !endDate) {
+        return res.status(200).json({
           success: false,
-          message: "Both fromDate and toDate are required",
+          message: "Both startDate and endDate are required",
         });
       }
 
-      const startDate = new Date(fromDate);
-      const endDate = new Date(toDate);
-      endDate.setHours(23, 59, 59, 999);
+      const sDate = new Date(startDate);
+      const eDate = new Date(endDate);
+
+      if (isNaN(sDate.getTime()) || isNaN(eDate.getTime())) {
+        return res.status(200).json({ success: false, message: "Invalid startDate or endDate format." });
+      }
+
+      if (sDate > eDate) {
+        return res.status(200).json({
+          success: false,
+          message: "startDate cannot be greater than endDate.",
+        });
+      }
+
+      sDate.setHours(0, 0, 0, 0);
+      eDate.setHours(23, 59, 59, 999);
 
       const filter = {
         payment_date: {
-          $gte: startDate,
-          $lte: endDate,
+          $gte: sDate,
+          $lte: eDate,
         },
       };
 
@@ -331,7 +344,7 @@ class PaymentController {
       return res.json({
         success: true,
         data: items,
-        meta: { total, page, limit, fromDate, toDate },
+        meta: { total, page, limit, startDate, endDate },
       });
     } catch (err) {
       return next(err);

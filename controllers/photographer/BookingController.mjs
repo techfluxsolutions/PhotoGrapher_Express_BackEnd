@@ -107,27 +107,40 @@ class BookingController {
                 filter.status = req.query.status;
             }
 
-            // Date Range Filter
-            if (req.query.fromDate && req.query.toDate) {
-                const fDate = new Date(req.query.fromDate);
-                fDate.setUTCHours(0, 0, 0, 0);
-                const tDate = new Date(req.query.toDate);
-                tDate.setUTCHours(23, 59, 59, 999);
-                const fs = fDate.toISOString().split("T")[0];
-                const ts = tDate.toISOString().split("T")[0];
+            // Strict Date Range Filter
+            const { startDate, endDate } = req.query;
+            if (startDate || endDate) {
+                if (!startDate || !endDate) {
+                    return res.status(200).json({ success: false, message: "Both startDate and endDate must be provided." });
+                }
+                const sDate = new Date(startDate);
+                const eDate = new Date(endDate);
+                if (isNaN(sDate.getTime()) || isNaN(eDate.getTime())) {
+                    return res.status(200).json({ success: false, message: "Invalid startDate or endDate format." });
+                }
+                if (sDate > eDate) {
+                    return res.status(200).json({ success: false, message: "startDate cannot be greater than endDate." });
+                }
+
+                sDate.setUTCHours(0, 0, 0, 0);
+                eDate.setUTCHours(23, 59, 59, 999);
+                const fs = sDate.toISOString().split("T")[0];
+                const ts = eDate.toISOString().split("T")[0];
 
                 if (filter.$or) {
                     // Wrap existing $or in $and if it exists to avoid conflicts
                     const existingOr = filter.$or;
                     delete filter.$or;
                     filter.$and = [{ $or: existingOr }];
+                } else if (filter.$and) {
+                    // Already an $and, just push
                 } else {
-                    filter.$and = filter.$and || [];
+                    filter.$and = [];
                 }
 
                 filter.$and.push({
                     $or: [
-                        { bookingDate: { $gte: fDate, $lte: tDate } },
+                        { bookingDate: { $gte: sDate, $lte: eDate } },
                         { startDate: { $gte: fs, $lte: ts } }
                     ]
                 });

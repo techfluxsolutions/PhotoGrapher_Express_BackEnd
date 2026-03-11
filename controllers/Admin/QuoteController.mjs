@@ -131,15 +131,27 @@ class QuoteController {
         quoteStatus: "upcommingBookings",
       };
 
-      // Add date range filter if provided
-      if (req.query.fromDate && req.query.toDate) {
-        const fromDate = new Date(req.query.fromDate);
-        const toDate = new Date(req.query.toDate);
-        toDate.setHours(23, 59, 59, 999);
+      // Strict Date Range Filter
+      const { startDate, endDate } = req.query;
+      if (startDate || endDate) {
+        if (!startDate || !endDate) {
+          return res.status(200).json({ success: false, message: "Both startDate and endDate must be provided." });
+        }
+        const sDate = new Date(startDate);
+        const eDate = new Date(endDate);
+        if (isNaN(sDate.getTime()) || isNaN(eDate.getTime())) {
+          return res.status(200).json({ success: false, message: "Invalid startDate or endDate format." });
+        }
+        if (sDate > eDate) {
+          return res.status(200).json({ success: false, message: "startDate cannot be greater than endDate." });
+        }
+
+        sDate.setHours(0, 0, 0, 0);
+        eDate.setHours(23, 59, 59, 999);
 
         filter.eventDate = {
-          $gte: fromDate,
-          $lte: toDate,
+          $gte: sDate,
+          $lte: eDate,
         };
       }
 
@@ -176,15 +188,27 @@ class QuoteController {
         quoteStatus: "previousBookings",
       };
 
-      // Add date range filter if provided
-      if (req.query.fromDate && req.query.toDate) {
-        const fromDate = new Date(req.query.fromDate);
-        const toDate = new Date(req.query.toDate);
-        toDate.setHours(23, 59, 59, 999);
+      // Strict Date Range Filter
+      const { startDate, endDate } = req.query;
+      if (startDate || endDate) {
+        if (!startDate || !endDate) {
+          return res.status(200).json({ success: false, message: "Both startDate and endDate must be provided." });
+        }
+        const sDate = new Date(startDate);
+        const eDate = new Date(endDate);
+        if (isNaN(sDate.getTime()) || isNaN(eDate.getTime())) {
+          return res.status(200).json({ success: false, message: "Invalid startDate or endDate format." });
+        }
+        if (sDate > eDate) {
+          return res.status(200).json({ success: false, message: "startDate cannot be greater than endDate." });
+        }
+
+        sDate.setHours(0, 0, 0, 0);
+        eDate.setHours(23, 59, 59, 999);
 
         filter.eventDate = {
-          $gte: fromDate,
-          $lte: toDate,
+          $gte: sDate,
+          $lte: eDate,
         };
       }
 
@@ -455,16 +479,33 @@ class QuoteController {
       const skip = (page - 1) * limit;
 
       if (!startDate || !endDate) {
-        return res.status(400).json({
+        return res.status(200).json({
           success: false,
           message: "Both startDate and endDate are required",
         });
       }
 
+      const sDate = new Date(startDate);
+      const eDate = new Date(endDate);
+
+      if (isNaN(sDate.getTime()) || isNaN(eDate.getTime())) {
+        return res.status(200).json({ success: false, message: "Invalid startDate or endDate format." });
+      }
+
+      if (sDate > eDate) {
+        return res.status(200).json({
+          success: false,
+          message: "startDate cannot be greater than endDate.",
+        });
+      }
+
+      sDate.setHours(0, 0, 0, 0);
+      eDate.setHours(23, 59, 59, 999);
+
       const filter = {
         eventDate: {
-          $gte: new Date(startDate),
-          $lte: new Date(endDate),
+          $gte: sDate,
+          $lte: eDate,
         },
       };
 

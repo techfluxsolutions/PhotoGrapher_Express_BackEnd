@@ -81,18 +81,33 @@ class ServiceBookingController {
       const skip = (page - 1) * limit;
 
       let filter = {};
-      if (req.query.fromDate && req.query.toDate) {
-        const fromDate = new Date(req.query.fromDate);
-        fromDate.setUTCHours(0, 0, 0, 0);
-        const toDate = new Date(req.query.toDate);
-        toDate.setUTCHours(23, 59, 59, 999);
-        const fromStr = fromDate.toISOString().split("T")[0];
-        const toStr = toDate.toISOString().split("T")[0];
+      // Strict Date Range Filter
+      const { startDate, endDate } = req.query;
+      if (startDate || endDate) {
+        if (!startDate || !endDate) {
+          return res.status(200).json({ success: false, message: "Both startDate and endDate must be provided." });
+        }
+        const sDate = new Date(startDate);
+        const eDate = new Date(endDate);
+        if (isNaN(sDate.getTime()) || isNaN(eDate.getTime())) {
+          return res.status(200).json({ success: false, message: "Invalid startDate or endDate format." });
+        }
+        if (sDate > eDate) {
+          return res.status(200).json({ success: false, message: "startDate cannot be greater than endDate." });
+        }
 
-        filter.$or = [
-          { bookingDate: { $gte: fromDate, $lte: toDate } },
-          { startDate: { $gte: fromStr, $lte: toStr } },
-        ];
+        sDate.setUTCHours(0, 0, 0, 0);
+        eDate.setUTCHours(23, 59, 59, 999);
+        const fs = sDate.toISOString().split("T")[0];
+        const ts = eDate.toISOString().split("T")[0];
+
+        filter.$and = filter.$and || [];
+        filter.$and.push({
+          $or: [
+            { bookingDate: { $gte: sDate, $lte: eDate } },
+            { startDate: { $gte: fs, $lte: ts } },
+          ]
+        });
       }
 
       const [items, total] = await Promise.all([
@@ -191,25 +206,32 @@ class ServiceBookingController {
 
       let filter = {};
 
-      if (req.query.fromDate && req.query.toDate) {
-        // 📅 Strict custom date range (overlapping safe logic)
+      // Strict Date Range Filter
+      const { startDate, endDate } = req.query;
+      if (startDate || endDate) {
+        if (!startDate || !endDate) {
+          return res.status(200).json({ success: false, message: "Both startDate and endDate must be provided." });
+        }
+        const sDate = new Date(startDate);
+        const eDate = new Date(endDate);
+        if (isNaN(sDate.getTime()) || isNaN(eDate.getTime())) {
+          return res.status(200).json({ success: false, message: "Invalid startDate or endDate format." });
+        }
+        if (sDate > eDate) {
+          return res.status(200).json({ success: false, message: "startDate cannot be greater than endDate." });
+        }
 
-        const fromDate = new Date(req.query.fromDate);
-        fromDate.setUTCHours(0, 0, 0, 0);
-
-        const toDate = new Date(req.query.toDate);
-        toDate.setUTCHours(23, 59, 59, 999);
-
-        const fromStr = fromDate.toISOString().split("T")[0];
-        const toStr = toDate.toISOString().split("T")[0];
+        sDate.setUTCHours(0, 0, 0, 0);
+        eDate.setUTCHours(23, 59, 59, 999);
+        const fs = sDate.toISOString().split("T")[0];
+        const ts = eDate.toISOString().split("T")[0];
 
         filter = {
           $or: [
-            { startDate: { $gte: fromStr, $lte: toStr } },
-            { bookingDate: { $gte: fromDate, $lte: toDate } },
+            { startDate: { $gte: fs, $lte: ts } },
+            { bookingDate: { $gte: sDate, $lte: eDate } },
           ],
         };
-
       } else {
         // 📅 Upcoming from today (strict upcoming logic)
         const today = new Date();
@@ -284,19 +306,32 @@ class ServiceBookingController {
 
       let filter = {};
 
-      if (req.query.fromDate && req.query.toDate) {
-        // 📅 Custom date range filter
-        const fromDate = new Date(req.query.fromDate);
-        fromDate.setUTCHours(0, 0, 0, 0);
-        const toDate = new Date(req.query.toDate);
-        toDate.setUTCHours(23, 59, 59, 999);
-        const fromStr = fromDate.toISOString().split("T")[0];
-        const toStr = toDate.toISOString().split("T")[0];
+      // Strict Date Range Filter
+      const { startDate, endDate } = req.query;
+      if (startDate || endDate) {
+        if (!startDate || !endDate) {
+          return res.status(200).json({ success: false, message: "Both startDate and endDate must be provided." });
+        }
+        const sDate = new Date(startDate);
+        const eDate = new Date(endDate);
+        if (isNaN(sDate.getTime()) || isNaN(eDate.getTime())) {
+          return res.status(200).json({ success: false, message: "Invalid startDate or endDate format." });
+        }
+        if (sDate > eDate) {
+          return res.status(200).json({ success: false, message: "startDate cannot be greater than endDate." });
+        }
 
-        filter.$or = [
-          { bookingDate: { $gte: fromDate, $lte: toDate } },
-          { startDate: { $gte: fromStr, $lte: toStr } },
-        ];
+        sDate.setUTCHours(0, 0, 0, 0);
+        eDate.setUTCHours(23, 59, 59, 999);
+        const fs = sDate.toISOString().split("T")[0];
+        const ts = eDate.toISOString().split("T")[0];
+
+        filter = {
+          $or: [
+            { startDate: { $gte: fs, $lte: ts } },
+            { bookingDate: { $gte: sDate, $lte: eDate } },
+          ],
+        };
       } else {
         // 📅 Previous bookings compared to today
         const today = new Date();
