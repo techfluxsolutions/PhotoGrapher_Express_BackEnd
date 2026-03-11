@@ -218,7 +218,7 @@ class BookingController {
                 const baseUrl = `${req.protocol}://${req.get("host")}`;
                 formattedGallery = gallery.toObject();
                 formattedGallery.gallery = formattedGallery.gallery.map(path =>
-                    path.startsWith("http") ? path : `${baseUrl}/${path}`
+                    path.startsWith("http") ? path : `${baseUrl}/${path.replace(/\\/g, "/").replace(/^\//, "")}`
                 );
             }
 
@@ -409,7 +409,7 @@ class BookingController {
             const baseUrl = `${req.protocol}://${req.get("host")}`;
             const galleryData = gallery.toObject();
             galleryData.gallery = galleryData.gallery.map(path =>
-                path.startsWith("http") ? path : `${baseUrl}/${path}`
+                path.startsWith("http") ? path : `${baseUrl}/${path.replace(/\\/g, "/").replace(/^\//, "")}`
             );
 
             return sendSuccessResponse(res, { gallery: galleryData }, "Gallery uploaded to server successfully");
@@ -470,7 +470,7 @@ class BookingController {
             const baseUrl = `${req.protocol}://${req.get("host")}`;
             const galleryData = gallery.toObject();
             galleryData.gallery = galleryData.gallery.map(path =>
-                path.startsWith("http") ? path : `${baseUrl}/${path}`
+                path.startsWith("http") ? path : `${baseUrl}/${path.replace(/\\/g, "/").replace(/^\//, "")}`
             );
 
             return sendSuccessResponse(res, { gallery: galleryData }, "Gallery uploaded to cloud successfully (Simulation)");

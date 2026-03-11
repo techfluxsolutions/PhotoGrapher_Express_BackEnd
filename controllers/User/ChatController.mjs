@@ -28,7 +28,7 @@ class ChatController {
                 if (convObj.participants) {
                     convObj.participants = convObj.participants.map(p => {
                         if (p.avatar && !p.avatar.startsWith("http")) {
-                            p.avatar = `${baseUrl}/${p.avatar.replace(/\\/g, "/")}`;
+                            p.avatar = `${baseUrl}/${p.avatar.replace(/\\/g, "/").replace(/^\//, "")}`;
                         }
                         return p;
                     });
@@ -93,7 +93,7 @@ class ChatController {
                 pinedBookings = gotBookings.toObject();
                 // Format client avatar if it's the client's profile image
                 if (pinedBookings.client_id && pinedBookings.client_id.avatar && !pinedBookings.client_id.avatar.startsWith("http")) {
-                   pinedBookings.client_id.avatar = `${baseUrl}/${pinedBookings.client_id.avatar.replace(/\\/g, "/")}`;
+                   pinedBookings.client_id.avatar = `${baseUrl}/${pinedBookings.client_id.avatar.replace(/\\/g, "/").replace(/^\//, "")}`;
                 }
             } else {
                 const quoteData = await Quote.findOne({ _id: conversation.quoteId })
@@ -112,7 +112,7 @@ class ChatController {
                     pinedBookings = quoteData.toObject();
                     // Format client avatar if it's the client's profile image
                     if (pinedBookings.clientId && pinedBookings.clientId.avatar && !pinedBookings.clientId.avatar.startsWith("http")) {
-                       pinedBookings.clientId.avatar = `${baseUrl}/${pinedBookings.clientId.avatar.replace(/\\/g, "/")}`;
+                       pinedBookings.clientId.avatar = `${baseUrl}/${pinedBookings.clientId.avatar.replace(/\\/g, "/").replace(/^\//, "")}`;
                     }
                 }
             }
@@ -125,7 +125,7 @@ class ChatController {
             const formattedMessages = messages.map(msg => {
                 const msgObj = msg.toObject();
                 if (msgObj.senderId && msgObj.senderId.avatar && !msgObj.senderId.avatar.startsWith("http")) {
-                    msgObj.senderId.avatar = `${baseUrl}/${msgObj.senderId.avatar.replace(/\\/g, "/")}`;
+                    msgObj.senderId.avatar = `${baseUrl}/${msgObj.senderId.avatar.replace(/\\/g, "/").replace(/^\//, "")}`;
                 }
                 return msgObj;
             });
@@ -471,7 +471,7 @@ class ChatController {
             const baseUrl = `${req.protocol}://${req.get("host")}`;
             const messageObj = newMessage.toObject();
             if (messageObj.senderId && messageObj.senderId.avatar && !messageObj.senderId.avatar.startsWith("http")) {
-                messageObj.senderId.avatar = `${baseUrl}/${messageObj.senderId.avatar.replace(/\\/g, "/")}`;
+                messageObj.senderId.avatar = `${baseUrl}/${messageObj.senderId.avatar.replace(/\\/g, "/").replace(/^\//, "")}`;
             }
 
             // Notify others via socket

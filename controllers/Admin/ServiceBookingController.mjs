@@ -672,7 +672,7 @@ class ServiceBookingController {
       const galleryData = gallery.toObject();
 
       galleryData.gallery = galleryData.gallery.map(path =>
-        path.startsWith("http") ? path : `${baseUrl}/${path}`
+        path.startsWith("http") ? path : `${baseUrl}/${path.replace(/\\/g, "/").replace(/^\//, "")}`
       );
 
       return res.json({
