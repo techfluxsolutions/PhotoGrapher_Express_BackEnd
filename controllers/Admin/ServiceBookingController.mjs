@@ -207,18 +207,21 @@ class ServiceBookingController {
       let filter = {};
 
       // Strict Date Range Filter
-      const { startDate, endDate } = req.query;
-      if (startDate || endDate) {
-        if (!startDate || !endDate) {
-          return res.status(200).json({ success: false, message: "Both startDate and endDate must be provided." });
+      const { startDate, endDate, fromDate, toDate } = req.query;
+      const start = startDate || fromDate;
+      const end = endDate || toDate;
+
+      if (start || end) {
+        if (!start || !end) {
+          return res.status(200).json({ success: false, message: "Both fromDate and toDate must be provided." });
         }
-        const sDate = new Date(startDate);
-        const eDate = new Date(endDate);
+        const sDate = new Date(start);
+        const eDate = new Date(end);
         if (isNaN(sDate.getTime()) || isNaN(eDate.getTime())) {
-          return res.status(200).json({ success: false, message: "Invalid startDate or endDate format." });
+          return res.status(200).json({ success: false, message: "Invalid date format." });
         }
         if (sDate > eDate) {
-          return res.status(200).json({ success: false, message: "startDate cannot be greater than endDate." });
+          return res.status(200).json({ success: false, message: "fromDate cannot be greater than toDate." });
         }
 
         sDate.setUTCHours(0, 0, 0, 0);
@@ -226,12 +229,40 @@ class ServiceBookingController {
         const fs = sDate.toISOString().split("T")[0];
         const ts = eDate.toISOString().split("T")[0];
 
-        filter = {
-          $or: [
-            { startDate: { $gte: fs, $lte: ts } },
-            { bookingDate: { $gte: sDate, $lte: eDate } },
-          ],
-        };
+        // Strictly Contained Logic: The booking must not start before fs AND must not end after ts
+        filter.$and = [
+          // Start Condition: (startDate >= fs) OR (No startDate and bookingDate >= sDate)
+          {
+            $or: [
+              { startDate: { $gte: fs } },
+              {
+                $and: [
+                  { startDate: { $in: [null, ""] } },
+                  { bookingDate: { $gte: sDate } }
+                ]
+              }
+            ]
+          },
+          // End Condition: (endDate <= ts) OR (No endDate but startDate <= ts) OR (No range fields and bookingDate <= eDate)
+          {
+            $or: [
+              { endDate: { $ne: null, $ne: "", $lte: ts } },
+              {
+                $and: [
+                  { endDate: { $in: [null, ""] } },
+                  { startDate: { $ne: null, $ne: "", $lte: ts } }
+                ]
+              },
+              {
+                $and: [
+                  { endDate: { $in: [null, ""] } },
+                  { startDate: { $in: [null, ""] } },
+                  { bookingDate: { $lte: eDate } }
+                ]
+              }
+            ]
+          }
+        ];
       } else {
         // 📅 Upcoming from today (strict upcoming logic)
         const today = new Date();
@@ -266,10 +297,10 @@ class ServiceBookingController {
         location: `${booking.flatOrHouseNo}, ${booking.streetName}, ${booking.landMark ? booking.landMark + ', ' : ''}${booking.city}, ${booking.state} - ${booking.postalCode}`,
         note: booking.notes || "",
         status: booking.status,
-        date: booking.ist_bookingDate ? booking.ist_bookingDate.split(", ")[0] : (booking.startDate || "N/A"),
-        time: (booking.ist_bookingDate && booking.ist_bookingDate !== "N/A") ? booking.ist_bookingDate.split(", ")[1] : "N/A",
-        startDate: booking.startDate || null,
-        endDate: booking.endDate || null,
+        date: (booking.ist_bookingDate && booking.ist_bookingDate !== "N/A") ? (booking.ist_bookingDate.includes(", ") ? booking.ist_bookingDate.split(", ")[0] : booking.ist_bookingDate) : (booking.startDate || "N/A"),
+        time: (booking.ist_bookingDate && booking.ist_bookingDate.includes(", ")) ? booking.ist_bookingDate.split(", ")[1] : "N/A",
+        startDate: booking.startDate || (booking.bookingDate ? booking.bookingDate.toISOString().split("T")[0] : null),
+        endDate: booking.endDate || (booking.bookingDate ? booking.bookingDate.toISOString().split("T")[0] : null),
         bookingAmount: booking.totalAmount,
         photographerAmount: booking.photographerAmount || 0,
         paymentMode: booking.paymentMode,
@@ -307,18 +338,21 @@ class ServiceBookingController {
       let filter = {};
 
       // Strict Date Range Filter
-      const { startDate, endDate } = req.query;
-      if (startDate || endDate) {
-        if (!startDate || !endDate) {
-          return res.status(200).json({ success: false, message: "Both startDate and endDate must be provided." });
+      const { startDate, endDate, fromDate, toDate } = req.query;
+      const start = startDate || fromDate;
+      const end = endDate || toDate;
+
+      if (start || end) {
+        if (!start || !end) {
+          return res.status(200).json({ success: false, message: "Both fromDate and toDate must be provided." });
         }
-        const sDate = new Date(startDate);
-        const eDate = new Date(endDate);
+        const sDate = new Date(start);
+        const eDate = new Date(end);
         if (isNaN(sDate.getTime()) || isNaN(eDate.getTime())) {
-          return res.status(200).json({ success: false, message: "Invalid startDate or endDate format." });
+          return res.status(200).json({ success: false, message: "Invalid date format." });
         }
         if (sDate > eDate) {
-          return res.status(200).json({ success: false, message: "startDate cannot be greater than endDate." });
+          return res.status(200).json({ success: false, message: "fromDate cannot be greater than toDate." });
         }
 
         sDate.setUTCHours(0, 0, 0, 0);
@@ -326,12 +360,40 @@ class ServiceBookingController {
         const fs = sDate.toISOString().split("T")[0];
         const ts = eDate.toISOString().split("T")[0];
 
-        filter = {
-          $or: [
-            { startDate: { $gte: fs, $lte: ts } },
-            { bookingDate: { $gte: sDate, $lte: eDate } },
-          ],
-        };
+        // Strictly Contained Logic: The booking must not start before fs AND must not end after ts
+        filter.$and = [
+          // Start Condition
+          {
+            $or: [
+              { startDate: { $gte: fs } },
+              {
+                $and: [
+                  { startDate: { $in: [null, ""] } },
+                  { bookingDate: { $gte: sDate } }
+                ]
+              }
+            ]
+          },
+          // End Condition
+          {
+            $or: [
+              { endDate: { $ne: null, $ne: "", $lte: ts } },
+              {
+                $and: [
+                  { endDate: { $in: [null, ""] } },
+                  { startDate: { $ne: null, $ne: "", $lte: ts } }
+                ]
+              },
+              {
+                $and: [
+                  { endDate: { $in: [null, ""] } },
+                  { startDate: { $in: [null, ""] } },
+                  { bookingDate: { $lte: eDate } }
+                ]
+              }
+            ]
+          }
+        ];
       } else {
         // 📅 Previous bookings compared to today
         const today = new Date();
@@ -365,15 +427,15 @@ class ServiceBookingController {
         location: `${booking.flatOrHouseNo}, ${booking.streetName}, ${booking.landMark ? booking.landMark + ', ' : ''}${booking.city}, ${booking.state} - ${booking.postalCode}`,
         note: booking.notes || "",
         status: booking.status,
-        date: booking.ist_bookingDate ? booking.ist_bookingDate.split(", ")[1] ? booking.ist_bookingDate.split(", ")[0] : booking.ist_bookingDate : (booking.startDate || "N/A"),
+        date: (booking.ist_bookingDate && booking.ist_bookingDate !== "N/A") ? (booking.ist_bookingDate.includes(", ") ? booking.ist_bookingDate.split(", ")[0] : booking.ist_bookingDate) : (booking.startDate || "N/A"),
         time: (booking.ist_bookingDate && booking.ist_bookingDate.includes(", ")) ? booking.ist_bookingDate.split(", ")[1] : "N/A",
-        startDate: booking.startDate || null,
-        endDate: booking.endDate || null,
+        startDate: booking.startDate || (booking.bookingDate ? booking.bookingDate.toISOString().split("T")[0] : null),
+        endDate: booking.endDate || (booking.bookingDate ? booking.bookingDate.toISOString().split("T")[0] : null),
         bookingAmount: booking.totalAmount,
         photographerAmount: booking.photographerAmount || 0,
         paymentMode: booking.paymentMode,
         paymentStatus: booking.paymentStatus,
-        bookingStatus: booking.status,
+        bookingStatus: booking.status
       }));
 
       return res.json({
