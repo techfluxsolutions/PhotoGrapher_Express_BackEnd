@@ -216,9 +216,7 @@ router.post("/deleteMultipleFiles", (req, res, next) => uploadController.deleteM
 router.post("/deleteAllFiles", (req, res, next) => uploadController.deleteMultipleS3Files(req, res, next));
 
 // --- Data Links Management ---
-router.get("/data-links", (req, res, next) => DataLinksController.getAll(req, res, next));
-router.get("/data-links/:id", (req, res, next) => DataLinksController.getById(req, res, next));
-router.put("/data-links/:id", (req, res, next) => DataLinksController.update(req, res, next));
-router.delete("/data-links/:id", (req, res, next) => DataLinksController.delete(req, res, next));
+router.get("/datalinks", (req, res, next) => DataLinksController.getAll(req, res, next));
+router.get("/datalinks/:id", (req, res, next) => DataLinksController.getById(req, res, next));
 
 export default router;
