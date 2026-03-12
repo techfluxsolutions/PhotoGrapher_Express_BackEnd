@@ -252,15 +252,7 @@ export const uploadController = {
 
             // Verify access in DataLinks database
             const query = {
-                $and: [
-                    {
-                        $or: [
-                            { clientId: new mongoose.Types.ObjectId(userId) },
-                            { photographerId: new mongoose.Types.ObjectId(userId) }
-                        ]
-                    },
-                    { bookingid: new mongoose.Types.ObjectId(requestedBookingId) }
-                ]
+                bookingid: requestedBookingId
             };
 
             const linkRecord = await DataLinks.findOne(query);
