@@ -208,7 +208,7 @@ router.post("/downloadMultipleFiles", (req, res, next) => uploadController.downl
 router.post("/deleteSingleFile", (req, res, next) => uploadController.deleteSingleS3File(req, res, next));
 router.post("/deleteMultipleFiles", (req, res, next) => uploadController.deleteMultipleS3Files(req, res, next));
 router.post("/deleteAllFiles", (req, res, next) => uploadController.deleteMultipleS3Files(req, res, next));
-
+//
 // --- Admin Management (MUST BE LAST - generic /:id routes) ---
 router.post("/", upload.single("avatar"), (req, res, next) => AdminController.create(req, res, next));
 router.get("/", (req, res, next) => AdminController.getAll(req, res, next));
