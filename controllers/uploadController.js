@@ -89,7 +89,7 @@ export const uploadController = {
             res.status(200).json(partInfo);
         } catch (error) {
             console.error("Upload chunk error:", error);
-            res.status(500).json({ error: error.message });
+            res.status(500).json({ error: error });
         }
     },
 
