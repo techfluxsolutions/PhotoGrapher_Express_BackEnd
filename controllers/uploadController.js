@@ -4,22 +4,57 @@ import archiver from "archiver";
 import mongoose from "mongoose";
 export const uploadController = {
     // 1. Init multipart upload
+    // old one 
+    // startUpload: async (req, res) => {
+    //     try {
+    //         const { fileName, fileType } = req.body;
+
+    //         if (!fileName || !fileType) {
+    //             return res.status(400).json({ error: "fileName and fileType are required." });
+    //         }
+
+    //         const data = await s3Service.startMultipartUpload(fileName, fileType);
+    //         res.status(200).json(data);
+    //     } catch (error) {
+    //         console.error("Start upload error:", error);
+    //         res.status(500).json({ error: error.message });
+    //     }
+    // },
+    // accept files and the folder here 
     startUpload: async (req, res) => {
         try {
-            const { fileName, fileType } = req.body;
+
+            const { fileName, fileType, relativePath, veroaBookingId } = req.body;
 
             if (!fileName || !fileType) {
-                return res.status(400).json({ error: "fileName and fileType are required." });
+                return res.status(400).json({
+                    error: "fileName and fileType are required."
+                });
             }
 
-            const data = await s3Service.startMultipartUpload(fileName, fileType);
-            res.status(200).json(data);
+            let key;
+
+            // If folder upload
+            if (relativePath) {
+                key = `uploads/${veroaBookingId}/${relativePath}`;
+            }
+            // If single file
+            else {
+                key = `uploads/${veroaBookingId}/${Date.now()}-${fileName}`;
+            }
+
+            const data = await s3Service.startMultipartUpload(key, fileType);
+
+            res.status(200).json({
+                ...data,
+                key
+            });
+
         } catch (error) {
             console.error("Start upload error:", error);
             res.status(500).json({ error: error.message });
         }
     },
-
     // 2. Upload a 20MB chunk 
     // Mutler saves the chunk in Memory temporarily via req.file.buffer
     uploadChunk: async (req, res) => {
@@ -57,24 +92,72 @@ export const uploadController = {
     },
 
     // 3. Finalize
+    // completeUpload: async (req, res) => {
+    //     try {
+    //         const { key, uploadId, parts, bookingid, clientId, photographerId, veroaBookingId } = req.body;
+
+    //         if (!key || !uploadId || !parts || !Array.isArray(parts)) {
+    //             return res.status(400).json({ error: "key, uploadId, and parts array are required." });
+    //         }
+
+    //         const fileUrl = await s3Service.completeMultipartUpload(key, uploadId, parts);
+    //         const savedDatalink = await DataLinks.create({
+    //             dataLink: fileUrl,
+    //             key: key,
+    //             bookingid: bookingid,
+    //             clientId: clientId,
+    //             photographerId: photographerId,
+    //             veroaBookingId
+    //         })
+    //         res.status(200).json({ message: "Upload complete successfully", fileUrl, key, savedDatalink });
+    //     } catch (error) {
+    //         console.error("Complete upload error:", error);
+    //         res.status(500).json({ error: error.message });
+    //     }
+    // },
+
+    // detect the folder structure 
+
     completeUpload: async (req, res) => {
         try {
-            const { key, uploadId, parts, bookingid, clientId, photographerId, veroaBookingId } = req.body;
+
+            const {
+                key,
+                uploadId,
+                parts,
+                bookingid,
+                clientId,
+                photographerId,
+                veroaBookingId
+            } = req.body;
 
             if (!key || !uploadId || !parts || !Array.isArray(parts)) {
-                return res.status(400).json({ error: "key, uploadId, and parts array are required." });
+                return res.status(400).json({
+                    error: "key, uploadId, and parts array are required."
+                });
             }
 
             const fileUrl = await s3Service.completeMultipartUpload(key, uploadId, parts);
+
+            // Extract folder path
+            const folderPath = key.substring(0, key.lastIndexOf("/"));
+
             const savedDatalink = await DataLinks.create({
                 dataLink: fileUrl,
                 key: key,
-                bookingid: bookingid,
-                clientId: clientId,
-                photographerId: photographerId,
+                folderPath,
+                bookingid,
+                clientId,
+                photographerId,
                 veroaBookingId
-            })
-            res.status(200).json({ message: "Upload complete successfully", fileUrl, key, savedDatalink });
+            });
+
+            res.status(200).json({
+                message: "Upload complete successfully",
+                fileUrl,
+                key
+            });
+
         } catch (error) {
             console.error("Complete upload error:", error);
             res.status(500).json({ error: error.message });
