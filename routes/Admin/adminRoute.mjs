@@ -21,6 +21,7 @@ import PartnerRegistrationController from "../../controllers/PartnerRegistration
 import ContactUsController from "../../controllers/ContactUsController.mjs";
 import CustomerController from "../../controllers/Admin/CustomerController.mjs";
 import DataLinksController from "../../controllers/DataLinksController.js";
+import authMiddleware from "../../middleware/authmiddleware.mjs";
 const router = express.Router();
 import { uploadController } from "../../controllers/uploadController.js";
 // --- Debug ---
@@ -40,7 +41,7 @@ router.post("/uploadNineServices", (req, res, next) => ServiceController.uploadN
 // });
 
 // Apply Auth and Admin check to all routes below
-// router.use(authMiddleware);
+router.use(authMiddleware);
 
 // --- Package Management ---
 router.post("/packages", (req, res, next) => PackageController.create(req, res, next));
@@ -187,17 +188,11 @@ router.get("/contact-submissions", (req, res, next) => ContactUsController.getAl
 router.get("/contact-submissions/:id", (req, res, next) => ContactUsController.getById(req, res, next));
 router.delete("/contact-submissions/:id", (req, res, next) => ContactUsController.delete(req, res, next));
 
-// --- Admin Management (MUST BE LAST - generic /:id routes) ---
-router.post("/", upload.single("avatar"), (req, res, next) => AdminController.create(req, res, next));
-router.get("/", (req, res, next) => AdminController.getAll(req, res, next));
-router.put("/:id/status", (req, res, next) => AdminController.changeStatus(req, res, next));
-router.get("/:id", (req, res, next) => AdminController.getById(req, res, next));
-router.put("/:id", (req, res, next) => AdminController.update(req, res, next));
-router.delete("/:id", (req, res, next) => AdminController.delete(req, res, next));
+// --- Data Links Management ---
+router.get("/datalinks", (req, res, next) => DataLinksController.getAll(req, res, next));
+router.get("/datalinks/:id", (req, res, next) => DataLinksController.getById(req, res, next));
 
-
-// photo upload routes 
-
+// --- Photo Upload Routes ---
 router.post("/start", uploadController.startUpload);
 router.post("/chunk", chunkUpload.single("chunk"), uploadController.uploadChunk);
 router.post("/complete", uploadController.completeUpload);
@@ -206,17 +201,20 @@ router.post("/abort", uploadController.abortUpload);
 // Support streaming and batch downloading
 router.get("/stream/:bookingId/*key", (req, res, next) => uploadController.streamProtectedFile(req, res, next));
 router.post("/download-zip", (req, res, next) => uploadController.downloadZip(req, res, next));
-
 router.post("/downloadZip", (req, res, next) => uploadController.downloadZip(req, res, next));
 router.post("/downloadZiponFourtyPlus", (req, res, next) => uploadController.downloadZiponFourtyPlus(req, res, next));
-router.post("downloadSingleFile", (req, res, next) => uploadController.downloadSingleFile(req, res, next));
-router.post("downloadMultipleFiles", (req, res, next) => uploadController.downloadMultipleFiles(req, res, next));
+router.post("/downloadSingleFile", (req, res, next) => uploadController.downloadSingleFile(req, res, next));
+router.post("/downloadMultipleFiles", (req, res, next) => uploadController.downloadMultipleFiles(req, res, next));
 router.post("/deleteSingleFile", (req, res, next) => uploadController.deleteSingleS3File(req, res, next));
 router.post("/deleteMultipleFiles", (req, res, next) => uploadController.deleteMultipleS3Files(req, res, next));
 router.post("/deleteAllFiles", (req, res, next) => uploadController.deleteMultipleS3Files(req, res, next));
 
-// --- Data Links Management ---
-router.get("/datalinks", (req, res, next) => DataLinksController.getAll(req, res, next));
-router.get("/datalinks/:id", (req, res, next) => DataLinksController.getById(req, res, next));
+// --- Admin Management (MUST BE LAST - generic /:id routes) ---
+router.post("/", upload.single("avatar"), (req, res, next) => AdminController.create(req, res, next));
+router.get("/", (req, res, next) => AdminController.getAll(req, res, next));
+router.put("/:id/status", (req, res, next) => AdminController.changeStatus(req, res, next));
+router.get("/:id", (req, res, next) => AdminController.getById(req, res, next));
+router.put("/:id", (req, res, next) => AdminController.update(req, res, next));
+router.delete("/:id", (req, res, next) => AdminController.delete(req, res, next));
 
 export default router;

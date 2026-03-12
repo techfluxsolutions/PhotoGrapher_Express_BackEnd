@@ -113,11 +113,18 @@ app.use("/api/chat", chatRoutes); // Mount Chat Routes
 app.use("/upload", uploadRoutes);
 
 // Optional mongoose connection if MONGODB_URI is provided
+console.log("MONGODB_URI defined:", !!process.env.MONGODB_URI);
 if (process.env.MONGODB_URI) {
   mongoose
     .connect(process.env.MONGODB_URI)
-    .then(() => console.log("MongoDB connected"))
-    .catch((err) => console.error("MongoDB connection error:", err));
+    .then(() => {
+      console.log("✅ MongoDB successfully connected to:", process.env.MONGODB_URI.split('@')[1]);
+    })
+    .catch((err) => {
+      console.error("❌ MongoDB connection error:", err.message);
+    });
+} else {
+  console.error("⚠️ MONGODB_URI is not defined in environment variables!");
 }
 
 // Sample routeƒ

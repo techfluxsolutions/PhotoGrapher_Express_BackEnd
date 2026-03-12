@@ -20,9 +20,8 @@ const DataLinksSchema = new mongoose.Schema({
     },
     key: {
         type: String,
-        required: true,
-        index: true
+        required: true
     }
-})
+}, { collection: 'datalinks' });
 
 export default mongoose.model("DataLinks", DataLinksSchema);
