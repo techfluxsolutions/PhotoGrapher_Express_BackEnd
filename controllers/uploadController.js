@@ -45,11 +45,11 @@ export const uploadController = {
                 key = `uploads/${veroaBookingId}/${Date.now()}-${fileName}`;
             }
 
-            const data = await s3Service.startMultipartUpload(key, fileType);
+            const data = await s3Service.startMultipartUpload(fileName, fileType, key);
 
             res.status(200).json({
                 ...data,
-                key
+                key: data.key // Use the key returned by S3 service for consistency
             });
 
         } catch (error) {
