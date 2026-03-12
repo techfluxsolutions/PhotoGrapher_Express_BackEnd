@@ -252,7 +252,7 @@ export const uploadController = {
 
             // Verify access in DataLinks database
             const query = {
-                bookingid: requestedBookingId
+                bookingid: new mongoose.Types.ObjectId(requestedBookingId)
             };
 
             const linkRecord = await DataLinks.findOne(query);
