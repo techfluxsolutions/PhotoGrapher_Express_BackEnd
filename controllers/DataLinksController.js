@@ -15,46 +15,16 @@ class DataLinksController {
                     message: "Booking ID or Photographer ID is required",
                 });
             }
-            const query = { $or: [] };
-
-            // Only add conditions if the parameters exist and are valid
-            if (bookingId && bookingId.trim() !== "") {
-                // bookingid is a String in schema
-                query.$or.push({ bookingid: bookingId });
-            }
-
-            if (photographerId && mongoose.Types.ObjectId.isValid(photographerId)) {
-                query.$or.push({ photographerId: new mongoose.Types.ObjectId(photographerId) });
-            }
-
-            // Add client conditions
-            if (clientId && mongoose.Types.ObjectId.isValid(clientId)) {
-                query.$or.push(
-                    { clientId: new mongoose.Types.ObjectId(clientId) },
-                    { photographerId: new mongoose.Types.ObjectId(clientId) }
-                );
-            }
 
             // If no valid conditions were added, return empty result or handle error
-            if (query.$or.length === 0) {
-                return res.status(200).json({
-                    success: true,
-                    data: [],
-                    meta: {
-                        total: 0,
-                        page,
-                        limit,
-                        pages: 0
-                    },
-                });
-            }
+
             const [items, total] = await Promise.all([
-                DataLinks.find(query)
+                DataLinks.find({ bookingid: bookingId, photographerId: photographerId })
                     .skip(skip)
                     .limit(limit)
                     .sort({ _id: -1 })
                     .select('key'),
-                DataLinks.countDocuments(query),
+                DataLinks.countDocuments({ bookingid: bookingId, photographerId: photographerId }),
             ]);
 
             return res.status(200).json({
