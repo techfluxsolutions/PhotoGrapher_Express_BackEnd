@@ -40,6 +40,15 @@ router.put("/status", (req, res, next) => PhotographerController.updatePhotograp
 router.post("/status", (req, res, next) => PhotographerController.updatePhotographerStatus(req, res, next));
 router.patch("/me", upload.single('profilePhoto'), (req, res, next) => PhotographerController.updatePhotographer(req, res, next));
 
+
+
+
+
+// --- Data Links ---
+router.get("/datalinks", (req, res, next) => DataLinksController.getAll(req, res, next));
+router.get("/datalinks/:id", (req, res, next) => DataLinksController.getById(req, res, next));
+
+
 // --- Availability ---
 router.post("/availability", (req, res, next) => AvailabilityController.create(req, res, next));
 router.get("/availability", (req, res, next) => AvailabilityController.getAll(req, res, next));
@@ -115,8 +124,6 @@ router.post("/deleteSingleFile", (req, res, next) => uploadController.deleteSing
 router.post("/deleteMultipleFiles", (req, res, next) => uploadController.deleteMultipleS3Files(req, res, next));
 router.post("/deleteAllFiles", (req, res, next) => uploadController.deleteMultipleS3Files(req, res, next));
 
-// --- Data Links ---
-router.get("/datalinks", (req, res, next) => DataLinksController.getAll(req, res, next));
-router.get("/datalinks/:id", (req, res, next) => DataLinksController.getById(req, res, next));
+
 
 export default router;
