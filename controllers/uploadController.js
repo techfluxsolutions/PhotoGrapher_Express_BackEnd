@@ -91,9 +91,18 @@ export const uploadController = {
      */
     getPartUploadUrl: async (req, res) => {
         try {
+            if (!req.body) {
+                return res.status(400).json({
+                    error: "Request body is missing. Ensure Content-Type is application/json."
+                });
+            }
+
             const { key, uploadId, partNumber } = req.body;
             if (!key || !uploadId || !partNumber) {
-                return res.status(400).json({ error: "key, uploadId, and partNumber are required." });
+                return res.status(400).json({
+                    error: "key, uploadId, and partNumber are required in the request body.",
+                    received: { key: !!key, uploadId: !!uploadId, partNumber: !!partNumber }
+                });
             }
 
             const uploadUrl = await s3Service.getPresignedUrlForPart(key, uploadId, parseInt(partNumber, 10));
