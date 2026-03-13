@@ -23,6 +23,7 @@ import { uploadController } from "../controllers/uploadController.js";
 
 // Partner Registration (Public)
 router.post("/partner-registration", (req, res, next) => PartnerRegistrationController.create(req, res, next));
+router.get("/partner-registration", (req, res, next) => PartnerRegistrationController.getAll(req, res, next));
 
 // Contact Us (Public)
 router.post("/contact-us", (req, res, next) => ContactUsController.create(req, res, next));

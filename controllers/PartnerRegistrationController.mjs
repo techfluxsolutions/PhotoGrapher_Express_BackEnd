@@ -40,14 +40,36 @@ class PartnerRegistrationController {
         }
     }
 
-    // Get all registrations (Admin side)
+    // Get all registrations (with pagination)
     async getAll(req, res, next) {
         try {
-            const registrations = await PartnerRegistration.find().sort({ createdAt: -1 });
+            const { page = 1, limit = 10, emailId, phoneNumber } = req.query;
+            const filter = {};
+            if (emailId) filter.emailId = emailId;
+            if (phoneNumber) filter.phoneNumber = phoneNumber;
+
+            const pageNumber = parseInt(page, 10);
+            const limitNumber = parseInt(limit, 10);
+            const skip = (pageNumber - 1) * limitNumber;
+
+            const [registrations, total] = await Promise.all([
+                PartnerRegistration.find(filter)
+                    .sort({ createdAt: -1 })
+                    .skip(skip)
+                    .limit(limitNumber),
+                PartnerRegistration.countDocuments(filter),
+            ]);
+
             return res.status(200).json({
                 success: true,
-                count: registrations.length,
+                message: "Partner registrations retrieved successfully",
                 data: registrations,
+                pagination: {
+                    totalRecords: total,
+                    currentPage: pageNumber,
+                    totalPages: Math.ceil(total / limitNumber),
+                    limit: limitNumber,
+                },
             });
         } catch (error) {
             next(error);
@@ -66,6 +88,7 @@ class PartnerRegistrationController {
             }
             return res.status(200).json({
                 success: true,
+                message: "Partner registration retrieved successfully",
                 data: registration,
             });
         } catch (error) {
