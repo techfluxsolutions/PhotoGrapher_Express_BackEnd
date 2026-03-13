@@ -21,7 +21,7 @@ import PartnerRegistrationController from "../../controllers/PartnerRegistration
 import ContactUsController from "../../controllers/ContactUsController.mjs";
 import CustomerController from "../../controllers/Admin/CustomerController.mjs";
 import DataLinksController from "../../controllers/DataLinksController.js";
-//import authMiddleware from "../../middleware/authmiddleware.mjs";
+import authMiddleware from "../../middleware/authmiddleware.mjs";
 const router = express.Router();
 import { uploadController } from "../../controllers/uploadController.js";
 // --- Debug ---
@@ -41,7 +41,7 @@ router.post("/uploadNineServices", (req, res, next) => ServiceController.uploadN
 // });
 
 // Apply Auth and Admin check to all routes below
-// router.use(authMiddleware);
+router.use(authMiddleware);
 
 // --- Package Management ---
 router.post("/packages", (req, res, next) => PackageController.create(req, res, next));
@@ -210,7 +210,7 @@ router.post("/deleteMultipleFiles", (req, res, next) => uploadController.deleteM
 router.post("/deleteAllFiles", (req, res, next) => uploadController.deleteMultipleS3Files(req, res, next));
 
 // test direct upload to the S3 bucket
-router.post("/get-part-url", uploadController.getPartUploadUrl);
+//router.post("/get-part-url", uploadController.getPartUploadUrl);
 //
 // --- Admin Management (MUST BE LAST - generic /:id routes) ---
 router.post("/", upload.single("avatar"), (req, res, next) => AdminController.create(req, res, next));
