@@ -21,7 +21,7 @@ import PartnerRegistrationController from "../../controllers/PartnerRegistration
 import ContactUsController from "../../controllers/ContactUsController.mjs";
 import CustomerController from "../../controllers/Admin/CustomerController.mjs";
 import DataLinksController from "../../controllers/DataLinksController.js";
-import authMiddleware from "../../middleware/authmiddleware.mjs";
+//import authMiddleware from "../../middleware/authmiddleware.mjs";
 const router = express.Router();
 import { uploadController } from "../../controllers/uploadController.js";
 // --- Debug ---
@@ -41,7 +41,7 @@ router.post("/uploadNineServices", (req, res, next) => ServiceController.uploadN
 // });
 
 // Apply Auth and Admin check to all routes below
-router.use(authMiddleware);
+// router.use(authMiddleware);
 
 // --- Package Management ---
 router.post("/packages", (req, res, next) => PackageController.create(req, res, next));

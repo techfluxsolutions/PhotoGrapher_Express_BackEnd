@@ -5,21 +5,21 @@ import mongoose from "mongoose";
 export const uploadController = {
     // 1. Init multipart upload
     // old one 
-    // startUpload: async (req, res) => {
-    //     try {
-    //         const { fileName, fileType } = req.body;
+    startUpload: async (req, res) => {
+        try {
+            const { fileName, fileType } = req.body;
 
-    //         if (!fileName || !fileType) {
-    //             return res.status(400).json({ error: "fileName and fileType are required." });
-    //         }
+            if (!fileName || !fileType) {
+                return res.status(400).json({ error: "fileName and fileType are required." });
+            }
 
-    //         const data = await s3Service.startMultipartUpload(fileName, fileType);
-    //         res.status(200).json(data);
-    //     } catch (error) {
-    //         console.error("Start upload error:", error);
-    //         res.status(500).json({ error: error.message });
-    //     }
-    // },
+            const data = await s3Service.startMultipartUpload(fileName, fileType);
+            res.status(200).json(data);
+        } catch (error) {
+            console.error("Start upload error:", error);
+            res.status(500).json({ error: error.message });
+        }
+    },
     // accept files and the folder here 
 
     //
@@ -28,91 +28,91 @@ export const uploadController = {
      * Files < 100MB: Presigned Single PUT URL
      * Files >= 100MB: Multipart Upload with Presigned Part URLs
      */
-    startUpload: async (req, res) => {
-        const startTime = Date.now();
-        try {
-            const { fileName, fileType, relativePath, veroaBookingId, fileSize } = req.body;
+    // startUpload: async (req, res) => {
+    //     const startTime = Date.now();
+    //     try {
+    //         const { fileName, fileType, relativePath, veroaBookingId, fileSize } = req.body;
 
-            if (!fileName || !fileType) {
-                return res.status(400).json({ error: "fileName and fileType are required." });
-            }
+    //         if (!fileName || !fileType) {
+    //             return res.status(400).json({ error: "fileName and fileType are required." });
+    //         }
 
-            let key;
-            if (relativePath) {
-                key = `uploads/${veroaBookingId}/${relativePath}`;
-            } else {
-                key = `uploads/${veroaBookingId}/${Date.now()}-${fileName.replace(/\s+/g, "-")}`;
-            }
+    //         let key;
+    //         if (relativePath) {
+    //             key = `uploads/${veroaBookingId}/${relativePath}`;
+    //         } else {
+    //             key = `uploads/${veroaBookingId}/${Date.now()}-${fileName.replace(/\s+/g, "-")}`;
+    //         }
 
-            const STRATEGY_THRESHOLD = 100 * 1024 * 1024; // 100MB
-            const CHUNK_SIZE = 20 * 1024 * 1024; // 20MB parts
+    //         const STRATEGY_THRESHOLD = 100 * 1024 * 1024; // 100MB
+    //         const CHUNK_SIZE = 20 * 1024 * 1024; // 20MB parts
 
-            if (fileSize && fileSize < STRATEGY_THRESHOLD) {
-                // Strategy: Single PUT (faster for small files)
-                console.log(`[Upload] Single PUT strategy selected for ${fileName} (${(fileSize / 1024 / 1024).toFixed(2)} MB)`);
-                const uploadUrl = await s3Service.getPresignedUrl(key, fileType);
+    //         if (fileSize && fileSize < STRATEGY_THRESHOLD) {
+    //             // Strategy: Single PUT (faster for small files)
+    //             console.log(`[Upload] Single PUT strategy selected for ${fileName} (${(fileSize / 1024 / 1024).toFixed(2)} MB)`);
+    //             const uploadUrl = await s3Service.getPresignedUrl(key, fileType);
 
-                const duration = Date.now() - startTime;
-                console.log(`[Metrics] startUpload (Single) took ${duration}ms`);
+    //             const duration = Date.now() - startTime;
+    //             console.log(`[Metrics] startUpload (Single) took ${duration}ms`);
 
-                return res.status(200).json({
-                    strategy: "single",
-                    uploadUrl,
-                    uploadId: null, // For API consistency
-                    key,
-                    metrics: { duration }
-                });
-            } else {
-                // Strategy: Multipart Upload (better for large files, supports resume)
-                console.log(`[Upload] Multipart strategy selected for ${fileName} (${fileSize ? (fileSize / 1024 / 1024).toFixed(2) : "Unknown"} MB)`);
-                const { uploadId, key: s3Key } = await s3Service.startMultipartUpload(fileName, fileType, key);
+    //             return res.status(200).json({
+    //                 strategy: "single",
+    //                 uploadUrl,
+    //                 uploadId: null, // For API consistency
+    //                 key,
+    //                 metrics: { duration }
+    //             });
+    //         } else {
+    //             // Strategy: Multipart Upload (better for large files, supports resume)
+    //             console.log(`[Upload] Multipart strategy selected for ${fileName} (${fileSize ? (fileSize / 1024 / 1024).toFixed(2) : "Unknown"} MB)`);
+    //             const { uploadId, key: s3Key } = await s3Service.startMultipartUpload(fileName, fileType, key);
 
-                // For multipart, we'll return the uploadId and key. 
-                // The frontend will request presigned URLs for each part.
-                const duration = Date.now() - startTime;
-                console.log(`[Metrics] startUpload (Multipart Init) took ${duration}ms`);
+    //             // For multipart, we'll return the uploadId and key. 
+    //             // The frontend will request presigned URLs for each part.
+    //             const duration = Date.now() - startTime;
+    //             console.log(`[Metrics] startUpload (Multipart Init) took ${duration}ms`);
 
-                return res.status(200).json({
-                    strategy: "multipart",
-                    uploadId,
-                    key: s3Key,
-                    chunkSize: CHUNK_SIZE,
-                    metrics: { duration }
-                });
-            }
+    //             return res.status(200).json({
+    //                 strategy: "multipart",
+    //                 uploadId,
+    //                 key: s3Key,
+    //                 chunkSize: CHUNK_SIZE,
+    //                 metrics: { duration }
+    //             });
+    //         }
 
-        } catch (error) {
-            console.error("Start upload error:", error);
-            res.status(500).json({ error: error.message });
-        }
-    },
+    //     } catch (error) {
+    //         console.error("Start upload error:", error);
+    //         res.status(500).json({ error: error.message });
+    //     }
+    // },
 
     /**
      * Get Presigned URL for a specific part (Frontend calls this for each part)
      */
-    getPartUploadUrl: async (req, res) => {
-        try {
-            if (!req.body) {
-                return res.status(400).json({
-                    error: "Request body is missing. Ensure Content-Type is application/json."
-                });
-            }
+    // getPartUploadUrl: async (req, res) => {
+    //     try {
+    //         if (!req.body) {
+    //             return res.status(400).json({
+    //                 error: "Request body is missing. Ensure Content-Type is application/json."
+    //             });
+    //         }
 
-            const { key, uploadId, partNumber } = req.body;
-            if (!key || !uploadId || !partNumber) {
-                return res.status(400).json({
-                    error: "key, uploadId, and partNumber are required in the request body.",
-                    received: { key: !!key, uploadId: !!uploadId, partNumber: !!partNumber }
-                });
-            }
+    //         const { key, uploadId, partNumber } = req.body;
+    //         if (!key || !uploadId || !partNumber) {
+    //             return res.status(400).json({
+    //                 error: "key, uploadId, and partNumber are required in the request body.",
+    //                 received: { key: !!key, uploadId: !!uploadId, partNumber: !!partNumber }
+    //             });
+    //         }
 
-            const uploadUrl = await s3Service.getPresignedUrlForPart(key, uploadId, parseInt(partNumber, 10));
-            res.status(200).json({ uploadUrl });
-        } catch (error) {
-            console.error("Get part URL error:", error);
-            res.status(500).json({ error: error.message });
-        }
-    },
+    //         const uploadUrl = await s3Service.getPresignedUrlForPart(key, uploadId, parseInt(partNumber, 10));
+    //         res.status(200).json({ uploadUrl });
+    //     } catch (error) {
+    //         console.error("Get part URL error:", error);
+    //         res.status(500).json({ error: error.message });
+    //     }
+    // },
     // 2. Upload a 20MB chunk 
     // Mutler saves the chunk in Memory temporarily via req.file.buffer
     uploadChunk: async (req, res) => {
