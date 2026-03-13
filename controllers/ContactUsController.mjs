@@ -40,14 +40,37 @@ class ContactUsController {
         }
     }
 
-    // Get all contact submissions (Admin side)
+    // Get all contact submissions (with pagination)
     async getAll(req, res, next) {
         try {
-            const submissions = await ContactUs.find().sort({ createdAt: -1 });
+            const { page = 1, limit = 10, emailId, phoneNumber } = req.query;
+            const filter = {};
+            if (emailId) filter.emailId = emailId;
+            if (phoneNumber) filter.phoneNumber = phoneNumber;
+
+            const pageNumber = parseInt(page, 10);
+            const limitNumber = parseInt(limit, 10);
+            const skip = (pageNumber - 1) * limitNumber;
+
+            const [submissions, total] = await Promise.all([
+                ContactUs.find(filter)
+                    .sort({ createdAt: -1 })
+                    .skip(skip)
+                    .limit(limitNumber),
+                ContactUs.countDocuments(filter),
+            ]);
+
             return res.status(200).json({
                 success: true,
-                count: submissions.length,
+                message: "Contact submissions retrieved successfully",
+                
                 data: submissions,
+                pagination: {
+                    totalRecords: total,
+                    currentPage: pageNumber,
+                    totalPages: Math.ceil(total / limitNumber),
+                    limit: limitNumber,
+                },
             });
         } catch (error) {
             next(error);
@@ -66,6 +89,7 @@ class ContactUsController {
             }
             return res.status(200).json({
                 success: true,
+                message: "Contact submission retrieved successfully",
                 data: submission,
             });
         } catch (error) {

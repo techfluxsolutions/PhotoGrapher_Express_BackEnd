@@ -27,6 +27,7 @@ router.get("/partner-registration", (req, res, next) => PartnerRegistrationContr
 
 // Contact Us (Public)
 router.post("/contact-us", (req, res, next) => ContactUsController.create(req, res, next));
+router.get("/contact-us", (req, res, next) => ContactUsController.getAll(req, res, next));
 // router.use(authMiddleware); // Removed global auth middleware to allow public routes
 
 
