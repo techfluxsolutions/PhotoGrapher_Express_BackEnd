@@ -58,6 +58,7 @@ export const uploadController = {
                 return res.status(200).json({
                     strategy: "single",
                     uploadUrl,
+                    uploadId: null, // For API consistency
                     key,
                     metrics: { duration }
                 });
@@ -187,13 +188,21 @@ export const uploadController = {
                 veroaBookingId
             } = req.body;
 
-            if (!key || !uploadId || !parts || !Array.isArray(parts)) {
+            if (!key || !parts || !Array.isArray(parts)) {
                 return res.status(400).json({
-                    error: "key, uploadId, and parts array are required."
+                    error: "key and parts array are required."
                 });
             }
 
-            const fileUrl = await s3Service.completeMultipartUpload(key, uploadId, parts);
+            let fileUrl;
+            if (uploadId) {
+                // Multipart Completion
+                fileUrl = await s3Service.completeMultipartUpload(key, uploadId, parts);
+            } else {
+                // Single Upload Completion (Construct URL directly)
+                const baseUrl = process.env.SPACES_CDN_URL || process.env.AWS_PUBLIC_URL || "";
+                fileUrl = `${baseUrl}/${key}`;
+            }
 
             // Extract folder path
             const folderPath = key.substring(0, key.lastIndexOf("/"));
