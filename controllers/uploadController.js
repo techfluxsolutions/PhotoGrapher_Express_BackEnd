@@ -350,19 +350,56 @@ export const uploadController = {
 
     getUrlsListArray: async (req, res) => {
         try {
-            const { bookingId, keys } = req.body;
-
-            if (!bookingId || !keys || keys.length == 0) {
-                return res.status(200).json({
-                    success: true,
-                    message: "No keys available"
+            const { page, limit } = req.query;
+            const bookingId = req.params.bookingId;
+            if (!bookingId) {
+                return res.status(400).json({
+                    success: false,
+                    message: "bookingId is required"
                 });
             }
+
+            const skip = (Number(page) - 1) * Number(limit);
+
+            // Fetch paginated keys
+            const files = await DataLinks.find({ bookingid: bookingId })
+                .select("key")
+                .skip(skip)
+                .limit(Number(limit))
+                .lean();
+
+            if (!files || files.length === 0) {
+                return res.status(200).json({
+                    success: true,
+                    message: "No keys available",
+                    imagesArray: [],
+                    pagination: {
+                        page: Number(page),
+                        limit: Number(limit),
+                        hasMore: false
+                    }
+                });
+            }
+
+            const keys = files.map(f => f.key).filter(Boolean);
+
+            // Generate signed URLs only for this page
             const imagesArray = await s3Service.getBatchSignedUrls(keys);
+
+            // OPTIONAL: total count for frontend pagination
+            const total = await DataLinks.countDocuments({ bookingid: bookingId });
+
             return res.status(200).json({
                 success: true,
                 message: "Images array fetched successfully",
-                imagesArray
+                imagesArray,
+                pagination: {
+                    page: Number(page),
+                    limit: Number(limit),
+                    total,
+                    totalPages: Math.ceil(total / limit),
+                    hasMore: skip + files.length < total
+                }
             });
         }
         catch (error) {
@@ -459,7 +496,7 @@ export const uploadController = {
                 bookingid: bookingid,
                 clientId: clientId,
                 photographerId: photographerId
-            }).select('key');
+            }).select('key').lean();
 
             if (!files.length) {
                 return res.status(404).json({ error: "No files found for this booking." });
@@ -581,8 +618,8 @@ export const uploadController = {
                     });
                 } catch (err) {
                     if (err.name === 'NoSuchKey') {
-                         console.warn(`File not found in S3, skipping from ZIP: ${key}`);
-                         continue;
+                        console.warn(`File not found in S3, skipping from ZIP: ${key}`);
+                        continue;
                     }
                     throw err;
                 }
