@@ -350,8 +350,9 @@ export const uploadController = {
 
     getUrlsListArray: async (req, res) => {
         try {
-            const { page, limit } = req.query;
+            const { page = 1, limit = 20 } = req.query;
             const bookingId = req.params.bookingId;
+
             if (!bookingId) {
                 return res.status(400).json({
                     success: false,
@@ -359,23 +360,25 @@ export const uploadController = {
                 });
             }
 
-            const skip = (Number(page) - 1) * Number(limit);
+            const pageNum = Number(page);
+            const limitNum = Number(limit);
+            const skip = (pageNum - 1) * limitNum;
 
-            // Fetch paginated keys
+            // ✅ Fetch paginated keys
             const files = await DataLinks.find({ bookingid: bookingId })
                 .select("key")
                 .skip(skip)
-                .limit(Number(limit))
+                .limit(limitNum)
                 .lean();
 
             if (!files || files.length === 0) {
                 return res.status(200).json({
                     success: true,
                     message: "No keys available",
-                    imagesArray: [],
+                    data: [],
                     pagination: {
-                        page: Number(page),
-                        limit: Number(limit),
+                        page: pageNum,
+                        limit: limitNum,
                         hasMore: false
                     }
                 });
@@ -383,29 +386,34 @@ export const uploadController = {
 
             const keys = files.map(f => f.key).filter(Boolean);
 
-            // Generate signed URLs only for this page
-            const imagesArray = await s3Service.getBatchSignedUrls(keys);
+            // ✅ Generate signed URLs
+            const signedUrls = await s3Service.getBatchSignedUrls(keys);
 
-            // OPTIONAL: total count for frontend pagination
+            // ✅ Combine key + URL
+            const data = keys.map((key, index) => ({
+                key,
+                imageUrl: signedUrls[index] || null
+            }));
+
             const total = await DataLinks.countDocuments({ bookingid: bookingId });
 
             return res.status(200).json({
                 success: true,
-                message: "Images array fetched successfully",
-                imagesArray,
+                message: "Images fetched successfully",
+                data,
                 pagination: {
-                    page: Number(page),
-                    limit: Number(limit),
+                    page: pageNum,
+                    limit: limitNum,
                     total,
-                    totalPages: Math.ceil(total / limit),
+                    totalPages: Math.ceil(total / limitNum),
                     hasMore: skip + files.length < total
                 }
             });
-        }
-        catch (error) {
+
+        } catch (error) {
             return res.status(500).json({
                 success: false,
-                message: "Error fetching images array",
+                message: "Error fetching images",
                 error: error.message
             });
         }
