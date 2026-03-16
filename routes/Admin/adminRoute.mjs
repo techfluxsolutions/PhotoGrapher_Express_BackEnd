@@ -207,7 +207,7 @@ router.post("/downloadSingleFile", (req, res, next) => uploadController.download
 router.post("/downloadMultipleFiles", (req, res, next) => uploadController.downloadMultipleFiles(req, res, next));
 router.post("/deleteSingleFile", (req, res, next) => uploadController.deleteSingleS3File(req, res, next));
 router.post("/deleteMultipleFiles", (req, res, next) => uploadController.deleteMultipleS3Files(req, res, next));
-router.post("/deleteAllFiles", (req, res, next) => uploadController.deleteMultipleS3Files(req, res, next));
+router.delete("/deleteAllFiles/:bookingId", (req, res, next) => uploadController.deleteAllS3Files(req, res, next));
 
 // test direct upload to the S3 bucket
 //router.post("/get-part-url", uploadController.getPartUploadUrl);

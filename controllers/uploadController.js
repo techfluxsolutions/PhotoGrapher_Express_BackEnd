@@ -540,25 +540,233 @@ export const uploadController = {
             res.status(500).json({ error: error.message });
         }
     },
-
     deleteMultipleS3Files: async (req, res) => {
         try {
             const { key, bookingId } = req.body;
 
-            if (!key || !bookingId) {
-                return res.status(400).json({ error: "Missing required fields." });
+            // ────────────────────────────────────────────────
+            // Validation
+            // ────────────────────────────────────────────────
+            if (!bookingId?.trim()) {
+                return res.status(400).json({
+                    error: "bookingId is required"
+                });
             }
-            const s3Data = await s3Service.deleteMultipleFiles(key);
-            if (s3Data) {
-                await DataLinks.deleteMany({ bookingid: bookingId, key: { $in: key } });
+
+            if (!key || (Array.isArray(key) && key.length === 0)) {
+                return res.status(400).json({
+                    error: "At least one key is required"
+                });
             }
-            res.status(200).json({ message: "Files deleted successfully." });
-        } catch (error) {
-            console.error("Delete file error:", error);
-            res.status(500).json({ error: error.message });
+
+            // Normalize to array
+            const keys = Array.isArray(key) ? key : [key];
+
+            // Remove invalid / empty entries early
+            const validKeys = keys
+                .filter(k => typeof k === 'string' && k.trim())
+                .map(k => k.trim());
+
+            if (validKeys.length === 0) {
+                return res.status(400).json({
+                    error: "No valid S3 keys provided"
+                });
+            }
+
+            // Optional: you could also verify these keys exist in DB first
+            // (adds one query but prevents unnecessary S3 calls for phantom keys)
+
+            // ────────────────────────────────────────────────
+            // Delete from S3
+            // ────────────────────────────────────────────────
+            const s3Result = await s3Service.deleteMultipleFiles(validKeys);
+
+            const successfullyDeleted = s3Result.deleted?.length ?? 0;
+            const failedCount = s3Result.errors?.length ?? 0;
+
+            // ────────────────────────────────────────────────
+            // Only clean up DB for keys that were actually deleted
+            // ────────────────────────────────────────────────
+            let dbDeletedCount = 0;
+
+            if (successfullyDeleted > 0) {
+                const deletedKeys = s3Result.deleted.map(d => d.Key);
+
+                const { deletedCount } = await DataLinks.deleteMany({
+                    bookingid: bookingId,
+                    key: { $in: deletedKeys }
+                });
+
+                dbDeletedCount = deletedCount;
+            }
+
+            // ────────────────────────────────────────────────
+            // Response logic
+            // ────────────────────────────────────────────────
+            if (failedCount === 0) {
+                return res.status(200).json({
+                    message: "Files deleted successfully",
+                    deletedCount: successfullyDeleted,
+                    dbRemoved: dbDeletedCount
+                });
+            }
+
+            // Partial or complete failure → still 200 + detailed info
+            // (use 207 Multi-Status if your API clients support it)
+            return res.status(200).json({
+                message: failedCount === validKeys.length
+                    ? "No files could be deleted"
+                    : "Some files could not be deleted",
+                deletedCount: successfullyDeleted,
+                failedCount,
+                dbRemoved: dbDeletedCount,
+                failedDetails: s3Result.errors?.map(e => ({
+                    key: e.Key,
+                    code: e.Code,
+                    message: e.Message
+                })) ?? []
+            });
+
+        } catch (err) {
+            console.error("deleteMultipleS3Files failed:", {
+                bookingId: req.body.bookingId,
+                keys: req.body.key,
+                error: err.message,
+                stack: err.stack?.slice(0, 300)
+            });
+
+            return res.status(500).json({
+                error: "Failed to delete files",
+                message: err.message
+            });
         }
     },
 
+    // deleteMultipleS3Files: async (req, res) => {
+    //     try {
+    //         const { key, bookingId } = req.body;
+
+    //         if (!key || !bookingId) {
+    //             return res.status(400).json({ error: "Missing required fields." });
+    //         }
+    //         const s3Data = await s3Service.deleteMultipleFiles(key);
+    //         if (s3Data) {
+    //             await DataLinks.deleteMany({ bookingid: bookingId, key: { $in: key } });
+    //         }
+    //         res.status(200).json({ message: "Files deleted successfully." });
+    //     } catch (error) {
+    //         console.error("Delete file error:", error);
+    //         res.status(500).json({ error: error.message });
+    //     }
+    // },
+    // deleteAllS3Files: async (req, res) => {
+    //     try {
+    //         const { bookingId } = req.params;
+    //         const keys = await DataLinks.find({ bookingid: bookingId }).select('key');
+    //         if (!bookingId) {
+    //             return res.status(400).json({ error: "Missing required fields." });
+    //         }
+    //         const s3Data = await s3Service.deleteMultipleFiles(keys.map(key => key.key));
+    //         if (s3Data) {
+    //             await DataLinks.deleteMany({ bookingid: bookingId });
+    //         }
+    //         res.status(200).json({ message: "Files deleted successfully." });
+    //     } catch (error) {
+    //         console.error("Delete file error:", error);
+    //         res.status(500).json({ error: error.message });
+    //     }
+    // },
+
+
+    deleteAllS3Files: async (req, res) => {
+        try {
+            const { bookingId } = req.params;
+
+            if (!bookingId?.trim()) {
+                return res.status(400).json({
+                    error: "bookingId is required"
+                });
+            }
+
+            // ────────────────────────────────────────────────
+            //  Option A: get only the keys we actually need
+            // ────────────────────────────────────────────────
+            const records = await DataLinks
+                .find({ bookingid: bookingId })
+                .select('key')
+                .lean(); // ← small perf gain + cleaner
+
+            if (records.length === 0) {
+                return res.status(200).json({
+                    message: "No files found for this booking",
+                    deletedCount: 0
+                });
+            }
+
+            const keys = records.map(r => r.key).filter(Boolean);
+
+            if (keys.length === 0) {
+                return res.status(200).json({
+                    message: "No valid S3 keys found",
+                    deletedCount: 0
+                });
+            }
+
+            // ────────────────────────────────────────────────
+            //  Delete from S3 first
+            // ────────────────────────────────────────────────
+            const s3Result = await s3Service.deleteMultipleFiles(keys);
+
+            const successfullyDeleted = s3Result.deleted?.length ?? 0;
+            const failedCount = s3Result.errors?.length ?? 0;
+
+            // ────────────────────────────────────────────────
+            //  Only then remove from DB (atomicity is still best-effort)
+            // ────────────────────────────────────────────────
+            let dbDeletedCount = 0;
+            if (successfullyDeleted > 0) {
+                const { deletedCount } = await DataLinks.deleteMany({
+                    bookingid: bookingId,
+                    key: { $in: s3Result.deleted.map(d => d.Key) }
+                });
+                dbDeletedCount = deletedCount;
+            }
+
+            // Decide response status
+            if (failedCount === 0) {
+                return res.status(200).json({
+                    message: "All files deleted successfully",
+                    deletedCount: successfullyDeleted,
+                    dbRemoved: dbDeletedCount
+                });
+            }
+
+            // Partial failure → 207 Multi-Status or just 200 + info
+            return res.status(200).json({
+                message: "Some files could not be deleted",
+                deletedCount: successfullyDeleted,
+                failedCount,
+                dbRemoved: dbDeletedCount,
+                failedKeys: s3Result.errors?.map(e => ({
+                    key: e.Key,
+                    code: e.Code,
+                    message: e.Message
+                })) ?? []
+            });
+
+        } catch (err) {
+            console.error("deleteAllS3Files failed:", {
+                bookingId: req.params.bookingId,
+                error: err.message,
+                stack: err.stack?.slice(0, 300)
+            });
+
+            return res.status(500).json({
+                error: "Failed to delete files",
+                message: err.message
+            });
+        }
+    },
 
 
 };
