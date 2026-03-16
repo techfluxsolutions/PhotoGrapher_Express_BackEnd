@@ -124,6 +124,8 @@ router.post("/downloadMultipleFiles", (req, res, next) => uploadController.downl
 router.post("/deleteSingleFile", (req, res, next) => uploadController.deleteSingleS3File(req, res, next));
 router.post("/deleteMultipleFiles", (req, res, next) => uploadController.deleteMultipleS3Files(req, res, next));
 router.delete("/deleteAllFiles/:bookingId", (req, res, next) => uploadController.deleteAllS3Files(req, res, next));
+router.get("/getArrayImages/:bookingId", (req, res, next) => uploadController.getUrlsListArray(req, res, next));
+
 
 
 

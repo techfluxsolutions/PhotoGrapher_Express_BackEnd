@@ -348,7 +348,77 @@ export const uploadController = {
 
     // optimize stream protected 
 
-    // Optimized Logic (Now Streaming for Blob Compatibility)
+    getUrlsListArray: async (req, res) => {
+        try {
+            const { page = 1, limit = 20 } = req.query;
+            const bookingId = req.params.bookingId;
+
+            if (!bookingId) {
+                return res.status(400).json({
+                    success: false,
+                    message: "bookingId is required"
+                });
+            }
+
+            const pageNum = Number(page);
+            const limitNum = Number(limit);
+            const skip = (pageNum - 1) * limitNum;
+
+            // ✅ Fetch paginated keys
+            const files = await DataLinks.find({ bookingid: bookingId })
+                .select("key")
+                .skip(skip)
+                .limit(limitNum)
+                .lean();
+
+            if (!files || files.length === 0) {
+                return res.status(200).json({
+                    success: true,
+                    message: "No keys available",
+                    data: [],
+                    pagination: {
+                        page: pageNum,
+                        limit: limitNum,
+                        hasMore: false
+                    }
+                });
+            }
+
+            const keys = files.map(f => f.key).filter(Boolean);
+
+            // ✅ Generate signed URLs
+            const signedUrls = await s3Service.getBatchSignedUrls(keys);
+
+            // ✅ Combine key + URL
+            const data = keys.map((key, index) => ({
+                key,
+                imageUrl: signedUrls[index] || null
+            }));
+
+            const total = await DataLinks.countDocuments({ bookingid: bookingId });
+
+            return res.status(200).json({
+                success: true,
+                message: "Images fetched successfully",
+                data,
+                pagination: {
+                    page: pageNum,
+                    limit: limitNum,
+                    total,
+                    totalPages: Math.ceil(total / limitNum),
+                    hasMore: skip + files.length < total
+                }
+            });
+
+        } catch (error) {
+            return res.status(500).json({
+                success: false,
+                message: "Error fetching images",
+                error: error.message
+            });
+        }
+    },
+    // Optimized Logic
     streamProtectedFile: async (req, res) => {
         let key = null;
         try {
@@ -461,7 +531,7 @@ export const uploadController = {
                 bookingid: bookingid,
                 clientId: clientId,
                 photographerId: photographerId
-            }).select('key');
+            }).select('key').lean();
 
             if (!files.length) {
                 return res.status(404).json({ error: "No files found for this booking." });
@@ -475,22 +545,46 @@ export const uploadController = {
                 `attachment; filename="booking-${bookingid}-files.zip"`
             );
 
-            const archive = archiver("zip", { zlib: { level: 9 } });
+            // Use STORE mode (level: 0) for photos/videos instead of full compression (level: 9).
+            // Media is already heavily compressed, so further compression just burns CPU and causes slowness.
+            const archive = archiver("zip", { zlib: { level: 0 } });
 
             archive.pipe(res);
 
             archive.on("error", (err) => {
-                throw err;
+                console.error("Archive error:", err);
+                if (!res.headersSent) {
+                    res.status(500).json({ error: err.message });
+                } else {
+                    res.end();
+                }
             });
 
-            // Fetch files from S3 / Spaces
+            // Fetch files from S3 / Spaces ONE BY ONE
+            // Important: Waiting for the previous stream to end avoids creating 100+ concurrent
+            // connections to S3, which normally results in Socket timeouts / AbortErrors downstream.
             for (const key of keys) {
-                const s3Data = await s3Service.getFileStream(key);
-                const fileName = key.split("/").pop();
+                try {
+                    const s3Data = await s3Service.getFileStream(key);
+                    const fileName = key.split("/").pop();
 
-                archive.append(s3Data.Body, {
-                    name: fileName
-                });
+                    archive.append(s3Data.Body, {
+                        name: fileName
+                    });
+
+                    // Wait until stream has been fully pulled by archiver before opening the next
+                    await new Promise((resolve, reject) => {
+                        s3Data.Body.on('end', resolve);
+                        s3Data.Body.on('error', reject);
+                    });
+                } catch (err) {
+                    // Log warning and skip the file if it was deleted or lost, keep zipping the rest
+                    if (err.name === 'NoSuchKey') {
+                        console.warn(`File not found in S3, skipping from ZIP: ${key}`);
+                        continue;
+                    }
+                    throw err; // For anything else, abort the process
+                }
             }
 
             await archive.finalize();
@@ -527,22 +621,43 @@ export const uploadController = {
                 `attachment; filename="booking-${bookingid}-files.zip"`
             );
 
-            const archive = archiver("zip", { zlib: { level: 9 } });
+            // Set ZIP compression level to 0 (STORE) to save CPU loops for pre-compressed media
+            const archive = archiver("zip", { zlib: { level: 0 } });
 
             archive.pipe(res);
 
             archive.on("error", (err) => {
-                throw err;
+                console.error("Archive error:", err);
+                if (!res.headersSent) {
+                    res.status(500).json({ error: err.message });
+                } else {
+                    res.end();
+                }
             });
 
-            // Fetch files from S3 / Spaces
+            // Iterate sequentially so we only maintain 1 open active stream with S3
+            // This prevents AWS 'AbortError' caused by stream timeouts.
             for (const key of keys) {
-                const s3Data = await s3Service.getFileStream(key);
-                const fileName = key.split("/").pop();
+                try {
+                    const s3Data = await s3Service.getFileStream(key);
+                    const fileName = key.split("/").pop();
 
-                archive.append(s3Data.Body, {
-                    name: fileName
-                });
+                    archive.append(s3Data.Body, {
+                        name: fileName
+                    });
+
+                    // Safely wait for archiver to slurp the file
+                    await new Promise((resolve, reject) => {
+                        s3Data.Body.on('end', resolve);
+                        s3Data.Body.on('error', reject);
+                    });
+                } catch (err) {
+                    if (err.name === 'NoSuchKey') {
+                        console.warn(`File not found in S3, skipping from ZIP: ${key}`);
+                        continue;
+                    }
+                    throw err;
+                }
             }
 
             await archive.finalize();
