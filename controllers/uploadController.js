@@ -291,77 +291,103 @@ export const uploadController = {
     },
 
     // 6. Protected streaming for Users/Photographers
+    // streamProtectedFile: async (req, res) => {
+    //     let key = null;
+    //     try {
+    //         key = req.params.key || req.params[0];
+    //         const range = req.headers.range;
+    //         const userId = req.user.id;
+    //         const requestedBookingId = req.params.bookingId;
+
+
+
+    //         if (!key) {
+    //             return res.status(400).json({ error: "File key is required." });
+    //         }
+
+    //         // Handle key: it might be a string or an array depending on wildcard capture
+    //         if (Array.isArray(key)) {
+    //             key = key.join('/');
+    //         }
+
+    //         // Sanitize key: ensure it is a string and remove leading slashes or asterisk 
+    //         key = String(key || "").replace(/^[\/\*]+/, "");
+
+    //         // Verify access in DataLinks database
+    //         const query = {
+    //             bookingid: new mongoose.Types.ObjectId(requestedBookingId)
+    //         };
+
+    //         const linkRecord = await DataLinks.findOne(query);
+
+    //         if (!linkRecord) {
+    //             return res.status(403).json({
+    //                 error: "Unauthorized access. You do not have permission to view this file or the booking ID mismatch."
+    //             });
+    //         }
+    //         // if (linkRecord) {
+    //         //     return res.status(200).json({
+    //         //         message: "File found in DataLinks database.",
+    //         //         linkRecord,
+    //         //         key
+    //         //     })
+    //         // }
+    //         const data = await s3Service.getFileStream(
+    //             key,
+    //             range);
+
+    //         // Set inline disposition
+    //         res.setHeader("Content-Disposition", `inline; filename="${key.split('/').pop()}"`);
+
+    //         if (data.ContentType) res.setHeader("Content-Type", data.ContentType);
+    //         if (data.ContentLength) res.setHeader("Content-Length", data.ContentLength);
+    //         if (data.ContentRange) res.setHeader("Content-Range", data.ContentRange);
+    //         if (data.AcceptRanges) res.setHeader("Accept-Ranges", data.AcceptRanges);
+
+    //         const statusCode = range ? 206 : 200;
+    //         res.status(statusCode);
+
+    //         data.Body.pipe(res);
+
+    //     } catch (error) {
+
+
+    //         if (error.name === "NoSuchKey") {
+    //             return res.status(404).json({
+    //                 error: "File not found in S3.",
+    //                 triedKey: key
+    //             });
+    //         }
+    //         res.status(500).json({
+    //             error: error.message,
+    //             details: error.name
+    //         });
+    //     }
+    // },
+
+    // optimize stream protected 
+
+    // Optimized Logic
     streamProtectedFile: async (req, res) => {
-        let key = null;
         try {
-            key = req.params.key || req.params[0];
-            const range = req.headers.range;
-            const userId = req.user.id;
+            const key = (req.params.key || req.params[0]).replace(/^[\/\*]+/, "");
             const requestedBookingId = req.params.bookingId;
 
-
-
-            if (!key) {
-                return res.status(400).json({ error: "File key is required." });
-            }
-
-            // Handle key: it might be a string or an array depending on wildcard capture
-            if (Array.isArray(key)) {
-                key = key.join('/');
-            }
-
-            // Sanitize key: ensure it is a string and remove leading slashes or asterisk 
-            key = String(key || "").replace(/^[\/\*]+/, "");
-
-            // Verify access in DataLinks database
-            const query = {
+            // 1. Quick DB Validation
+            const linkRecord = await DataLinks.findOne({
                 bookingid: new mongoose.Types.ObjectId(requestedBookingId)
-            };
+            });
 
-            const linkRecord = await DataLinks.findOne(query);
+            if (!linkRecord) return res.status(403).json({ error: "Unauthorized" });
 
-            if (!linkRecord) {
-                return res.status(403).json({
-                    error: "Unauthorized access. You do not have permission to view this file or the booking ID mismatch."
-                });
-            }
-            // if (linkRecord) {
-            //     return res.status(200).json({
-            //         message: "File found in DataLinks database.",
-            //         linkRecord,
-            //         key
-            //     })
-            // }
-            const data = await s3Service.getFileStream(
-                key,
-                range);
+            // 2. Instead of streaming, generate a Signed URL (valid for 1 hour)
+            const signedUrl = await s3Service.getSignedUrl(key, 3600);
 
-            // Set inline disposition
-            res.setHeader("Content-Disposition", `inline; filename="${key.split('/').pop()}"`);
-
-            if (data.ContentType) res.setHeader("Content-Type", data.ContentType);
-            if (data.ContentLength) res.setHeader("Content-Length", data.ContentLength);
-            if (data.ContentRange) res.setHeader("Content-Range", data.ContentRange);
-            if (data.AcceptRanges) res.setHeader("Accept-Ranges", data.AcceptRanges);
-
-            const statusCode = range ? 206 : 200;
-            res.status(statusCode);
-
-            data.Body.pipe(res);
+            // 3. Redirect the user or return the URL
+            return res.json({ url: signedUrl });
 
         } catch (error) {
-
-
-            if (error.name === "NoSuchKey") {
-                return res.status(404).json({
-                    error: "File not found in S3.",
-                    triedKey: key
-                });
-            }
-            res.status(500).json({
-                error: error.message,
-                details: error.name
-            });
+            res.status(500).json({ error: error.message });
         }
     },
     downloadSingleFile: async (req, res) => {
