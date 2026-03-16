@@ -470,7 +470,8 @@ export const uploadController = {
     },
     downloadSingleFile: async (req, res) => {
         try {
-            const { key, bookingId } = req.body;
+            const key = (req.body && req.body.key) || req.query.key;
+            const bookingId = (req.body && req.body.bookingId) || req.query.bookingId;
             if (!key) {
                 return res.status(400).json({ error: "Missing required fields." });
             }
@@ -519,8 +520,11 @@ export const uploadController = {
 
     downloadZip: async (req, res) => {
         try {
-            const { bookingid, clientId, photographerId } = req.body;
-            console.log("bi", bookingid)
+            const bookingid = (req.body && req.body.bookingid) || req.query.bookingid;
+            const clientId = (req.body && req.body.clientId) || req.query.clientId;
+            const photographerId = (req.body && req.body.photographerId) || req.query.photographerId;
+            
+            console.log("Zip download request for booking:", bookingid)
 
             if (!bookingid || !clientId || !photographerId) {
                 return res.status(400).json({ error: "Missing required fields." });
@@ -600,7 +604,16 @@ export const uploadController = {
 
     downloadZiponFourtyPlus: async (req, res) => {
         try {
-            const { bookingid, keys } = req.body;
+            const bookingid = (req.body && req.body.bookingid) || req.query.bookingid;
+            let keys = req.body ? req.body.keys : null;
+            
+            if (!keys && req.query.keys) {
+                try {
+                    keys = JSON.parse(req.query.keys);
+                } catch (e) {
+                    keys = req.query.keys.split(',');
+                }
+            }
             if (!bookingid || !keys || keys.length === 0) {
                 return res.status(400).json({ error: "Missing required fields." });
             }
