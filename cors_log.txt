@@ -1,0 +1,5 @@
+ENV CHECK:
+AWS_BUCKET: veroastudiozproduction
+AWS_REGION: sgp1
+AWS_ENDPOINT: https://sgp1.digitaloceanspaces.com
+Success! CORS is fully enabled.
