@@ -110,6 +110,7 @@ router.post("/uploads/complete", (req, res, next) => UploadController.completeUp
 // s3 
 
 router.post("/start", uploadController.startUpload);
+router.post("/get-part-url", uploadController.getPartUploadUrl);
 router.post("/chunk", chunkUpload.single("chunk"), uploadController.uploadChunk);
 router.post("/complete", uploadController.completeUpload);
 router.post("/abort", uploadController.abortUpload);
