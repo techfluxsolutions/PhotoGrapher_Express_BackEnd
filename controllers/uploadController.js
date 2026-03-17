@@ -420,30 +420,58 @@ export const uploadController = {
     },
     // Optimized Logic
     streamProtectedFile: async (req, res) => {
+        let key = null;
         try {
-            const key = (req.params.key || req.params[0]).replace(/^[\/\*]+/, "");
+            key = req.params.key || req.params[0];
             const requestedBookingId = req.params.bookingId;
+            const range = req.headers.range;
 
-            // 1. Quick DB Validation
+            // Handle key: it might be a string or an array depending on wildcard capture
+            if (Array.isArray(key)) {
+                key = key.join('/');
+            }
+
+            // Sanitize key: ensure it is a string and remove leading slashes or asterisk 
+            key = String(key || "").replace(/^[\/\*]+/, "");
+
+            // 1. Permission Validation
             const linkRecord = await DataLinks.findOne({
-                bookingid: new mongoose.Types.ObjectId(requestedBookingId)
+                bookingid: requestedBookingId,
+                key: key
             });
 
-            if (!linkRecord) return res.status(403).json({ error: "Unauthorized" });
+            if (!linkRecord) {
+                return res.status(403).json({ error: "Unauthorized access or file not found." });
+            }
 
-            // 2. Instead of streaming, generate a Signed URL (valid for 1 hour)
-            const signedUrl = await s3Service.getSignedUrl(key, 3600);
+            // 2. Fetch Stream from S3
+            const data = await s3Service.getFileStream(key, range);
 
-            // 3. Redirect the user or return the URL
-            return res.json({ url: signedUrl });
+            // 3. Set standard streaming headers
+            res.setHeader("Content-Disposition", `inline; filename="${key.split('/').pop()}"`);
+            if (data.ContentType) res.setHeader("Content-Type", data.ContentType);
+            if (data.ContentLength) res.setHeader("Content-Length", data.ContentLength);
+            if (data.ContentRange) res.setHeader("Content-Range", data.ContentRange);
+            if (data.AcceptRanges) res.setHeader("Accept-Ranges", data.AcceptRanges);
+
+            const statusCode = range ? 206 : 200;
+            res.status(statusCode);
+
+            // 4. Pipe the S3 stream directly to response
+            data.Body.pipe(res);
 
         } catch (error) {
+            console.error("Protected stream error:", error);
+            if (error.name === "NoSuchKey") {
+                return res.status(404).json({ error: "File not found in S3.", key });
+            }
             res.status(500).json({ error: error.message });
         }
     },
     downloadSingleFile: async (req, res) => {
         try {
-            const { key, bookingId } = req.body;
+            const key = (req.body && req.body.key) || req.query.key;
+            const bookingId = (req.body && req.body.bookingId) || req.query.bookingId;
             if (!key) {
                 return res.status(400).json({ error: "Missing required fields." });
             }
@@ -492,8 +520,11 @@ export const uploadController = {
 
     downloadZip: async (req, res) => {
         try {
-            const { bookingid, clientId, photographerId } = req.body;
-            console.log("bi", bookingid)
+            const bookingid = (req.body && req.body.bookingid) || req.query.bookingid;
+            const clientId = (req.body && req.body.clientId) || req.query.clientId;
+            const photographerId = (req.body && req.body.photographerId) || req.query.photographerId;
+            
+            console.log("Zip download request for booking:", bookingid)
 
             if (!bookingid || !clientId || !photographerId) {
                 return res.status(400).json({ error: "Missing required fields." });
@@ -573,7 +604,16 @@ export const uploadController = {
 
     downloadZiponFourtyPlus: async (req, res) => {
         try {
-            const { bookingid, keys } = req.body;
+            const bookingid = (req.body && req.body.bookingid) || req.query.bookingid;
+            let keys = req.body ? req.body.keys : null;
+            
+            if (!keys && req.query.keys) {
+                try {
+                    keys = JSON.parse(req.query.keys);
+                } catch (e) {
+                    keys = req.query.keys.split(',');
+                }
+            }
             if (!bookingid || !keys || keys.length === 0) {
                 return res.status(400).json({ error: "Missing required fields." });
             }

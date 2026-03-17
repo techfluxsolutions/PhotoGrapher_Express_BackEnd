@@ -67,7 +67,7 @@ app.use("/api", limiter);
 // 3) BODY PARSERS & SANITIZATION
 // ==========================================
 // Middleware to parse JSON bodies with size limit for security
-app.use(express.json({ limit: "10kb" }));
+app.use(express.json({ limit: "200kb" }));
 
 // Data sanitization against NoSQL query injection
 // app.use(mongoSanitize()); // Removed due to Express 5 TypeError: Cannot set property query of #<IncomingMessage>
@@ -94,9 +94,16 @@ app.use(compression(
 
 // Request Timeout Protection
 app.use((req, res, next) => {
-  res.setTimeout(30000, () => { // 30 seconds
-    res.status(408).send('Request Timeout');
-  });
+  // Increase timeout for specific long-running paths (Download/Stream)
+  if (req.path.includes('/download') || req.path.includes('/stream') || req.path.includes('/zip')) {
+    res.setTimeout(600000); // 10 minutes
+  } else {
+    res.setTimeout(30000, () => { // 30 seconds for normal routes
+      if (!res.headersSent) {
+        res.status(408).send('Request Timeout');
+      }
+    });
+  }
   next();
 });
 app.use(cookieParser());
