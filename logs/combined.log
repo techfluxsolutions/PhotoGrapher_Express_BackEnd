@@ -22,3 +22,5 @@
 {"level":"info","message":"::1 - - [16/Mar/2026:12:16:08 +0000] \"GET /api/users/getArrayImages/69affcc42a0ba3684ecb7def?page=1&limit=2 HTTP/1.1\" 400 51 \"-\" \"PostmanRuntime/7.51.1\"","timestamp":"2026-03-16 17:46:08"}
 {"level":"info","message":"::1 - - [16/Mar/2026:12:16:43 +0000] \"GET /api/users/getArrayImages/69affcc42a0ba3684ecb7def?page=1&limit=2 HTTP/1.1\" 200 - \"-\" \"PostmanRuntime/7.51.1\"","timestamp":"2026-03-16 17:46:43"}
 {"level":"info","message":"::1 - - [16/Mar/2026:12:44:15 +0000] \"GET /api/users/getArrayImages/69affcc42a0ba3684ecb7def?page=1&limit=2 HTTP/1.1\" 200 - \"-\" \"PostmanRuntime/7.51.1\"","timestamp":"2026-03-16 18:14:15"}
+{"level":"info","message":"::1 - - [16/Mar/2026:13:03:29 +0000] \"GET /api/photographers/getArrayImages/69affcc42a0ba3684ecb7def?page=1&limit=2 HTTP/1.1\" 401 70 \"-\" \"PostmanRuntime/7.51.1\"","timestamp":"2026-03-16 18:33:29"}
+{"level":"info","message":"::1 - - [16/Mar/2026:13:05:25 +0000] \"GET /api/admins/getArrayImages/69affcc42a0ba3684ecb7def?page=1&limit=2 HTTP/1.1\" 200 - \"-\" \"PostmanRuntime/7.51.1\"","timestamp":"2026-03-16 18:35:25"}
