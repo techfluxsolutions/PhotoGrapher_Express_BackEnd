@@ -16,11 +16,9 @@ import ReviewAndRatingController from "../controllers/User/ReviewAndRating.mjs";
 import SubscribedUserController from "../controllers/User/SubscribedUserController.mjs";
 import PartnerRegistrationController from "../controllers/PartnerRegistrationController.mjs";
 import ContactUsController from "../controllers/ContactUsController.mjs";
-import AuthController from "../controllers/User/AuthController.mjs";
 import DataLinksController from "../controllers/DataLinksController.js";
 const router = express.Router();
 import { uploadController } from "../controllers/uploadController.js";
-
 // Partner Registration (Public)
 router.post("/partner-registration", (req, res, next) => PartnerRegistrationController.create(req, res, next));
 router.get("/partner-registration", (req, res, next) => PartnerRegistrationController.getAll(req, res, next));

@@ -21,6 +21,7 @@ import PartnerRegistrationController from "../../controllers/PartnerRegistration
 import ContactUsController from "../../controllers/ContactUsController.mjs";
 import CustomerController from "../../controllers/Admin/CustomerController.mjs";
 import DataLinksController from "../../controllers/DataLinksController.js";
+import ReviewAndRatingController from "../../controllers/User/ReviewAndRating.mjs";
 import authMiddleware from "../../middleware/authmiddleware.mjs";
 const router = express.Router();
 import { uploadController } from "../../controllers/uploadController.js";
@@ -188,6 +189,13 @@ router.get("/contact-submissions", (req, res, next) => ContactUsController.getAl
 router.get("/contact-submissions/:id", (req, res, next) => ContactUsController.getById(req, res, next));
 router.delete("/contact-submissions/:id", (req, res, next) => ContactUsController.delete(req, res, next));
 
+
+//rating and review
+
+router.post("/giveRating", (req, res, next) => ReviewAndRatingController.create(req, res, next));
+router.get("/getAdminRating", (req, res, next) => ReviewAndRatingController.getAdminRating(req, res, next));
+router.put("/editRating/:ratingId", (req, res, next) => ReviewAndRatingController.editRating(req, res, next));
+
 // --- Data Links Management ---
 router.get("/datalinks", (req, res, next) => DataLinksController.getAll(req, res, next));
 router.get("/datalinks/:id", (req, res, next) => DataLinksController.getById(req, res, next));
@@ -216,8 +224,6 @@ router.delete("/deleteAllFiles/:bookingId", (req, res, next) => uploadController
 
 router.get("/getArrayImages/:bookingId", (req, res, next) => uploadController.getUrlsListArray(req, res, next));
 
-// test direct upload to the S3 bucket
-//router.post("/get-part-url", uploadController.getPartUploadUrl);
 //
 // --- Admin Management (MUST BE LAST - generic /:id routes) ---
 router.post("/", upload.single("avatar"), (req, res, next) => AdminController.create(req, res, next));

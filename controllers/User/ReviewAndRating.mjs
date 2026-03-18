@@ -1,3 +1,4 @@
+
 import ReviewAndRating from "../../models/ReviewAndRating.mjs";
 
 class ReviewAndRatingController {
@@ -5,6 +6,7 @@ class ReviewAndRatingController {
     async create(req, res, next) {
         try {
             const {
+                createdBy,
                 clientId,
                 photographerId,
                 bookingId,
@@ -14,20 +16,30 @@ class ReviewAndRatingController {
             } = req.body;
 
             // Prevent duplicate review for same booking by same client
-            const existingReview = await ReviewAndRating.findOne({
-                clientId,
-                bookingId,
-                serviceId
-            });
-
+            let existingReview;
+            if (createdBy === "user") {
+                existingReview = await ReviewAndRating.findOne({
+                    createdBy,
+                    bookingId,
+                    serviceId,
+                });
+            }
+            if (createdBy === "admin") {
+                existingReview = await ReviewAndRating.findOne({
+                    createdBy,
+                    photographerId,
+                });
+            }
             if (existingReview) {
-                return res.status(409).json({
-                    success: false,
+                return res.status(200).json({
+                    success: true,
                     message: "Review already submitted for this booking",
+                    existingReview: existingReview
                 });
             }
 
             const review = await ReviewAndRating.create({
+                createdBy,
                 clientId,
                 photographerId,
                 serviceId,
@@ -100,6 +112,84 @@ class ReviewAndRatingController {
         }
     }
 
+    async getAverageOfPhotographerRating(req, res, next) {
+        const photographerId = req.user.id;
+
+        try {
+            const ratings = await ReviewAndRating.find({
+                photographerId,
+                createdBy: "user"
+            });
+
+            if (ratings.length === 0) {
+                return res.status(200).json({
+                    success: true,
+                    averageRating: 0,
+                    totalUserRatings: 0,
+                    adminRating: null
+                });
+            }
+
+            const totalRating = ratings.reduce(
+                (acc, rating) => acc + rating.ratingCount,
+                0
+            );
+
+            const averageRating = totalRating / ratings.length;
+
+            const adminRating = await ReviewAndRating.findOne({
+                photographerId,
+                createdBy: "admin"
+            }).populate("photographerId", 'professionalDetails.expertiseLevel');
+
+            return res.status(200).json({
+                success: true,
+                averageRating,
+                totalUserRatings: ratings.length,
+                adminRating
+            });
+
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    // get rating given by admin 
+
+    async getAdminRating(req, res, next) {
+        try {
+            const adminRating = await ReviewAndRating.find({
+                createdBy: "admin"
+            })
+            return res.status(200).json({
+                success: true,
+                adminRating
+            });
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    //edit rating
+
+    async editRating(req, res, next) {
+        try {
+            const { ratingId } = req.params
+            const editingRating = await ReviewAndRating.findByIdAndUpdate(ratingId, req.body, { new: true })
+            if (!editingRating) {
+                return res.status(404).json({
+                    success: false,
+                    message: "Rating not found",
+                });
+            }
+            return res.status(200).json({
+                success: true,
+                data: editingRating,
+            });
+        } catch (error) {
+            next(error);
+        }
+    }
 
 }
 
