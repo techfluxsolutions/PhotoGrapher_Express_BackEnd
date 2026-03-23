@@ -78,6 +78,10 @@ router.get("/bookings/completed", (req, res, next) => BookingController.getCompl
 router.patch("/bookings/:id/status", (req, res, next) => BookingController.updateBookingStatus(req, res, next));
 router.post("/bookings/initialize-status", (req, res, next) => BookingController.initializePreviousBookingsStatus(req, res, next));
 
+// get booking counts 
+
+router.get('/getcount', (req, res, next) => BookingController.getBookingCount(req, res, next));
+
 router.get("/bookings/:id", (req, res, next) => BookingController.getBookingById(req, res, next));
 router.post("/bookings", (req, res, next) => BookingController.createBooking(req, res, next));
 router.put("/bookings/:id", (req, res, next) => BookingController.updateBooking(req, res, next));

@@ -1093,3 +1093,9 @@
 {"level":"info","message":"::1 - - [18/Mar/2026:14:19:47 +0000] \"GET /api/photographers/ratings HTTP/1.1\" 500 - \"-\" \"PostmanRuntime/7.51.1\"","timestamp":"2026-03-18 19:49:47"}
 {"level":"info","message":"::1 - - [18/Mar/2026:14:20:32 +0000] \"GET /api/photographers/ratings HTTP/1.1\" 200 574 \"-\" \"PostmanRuntime/7.51.1\"","timestamp":"2026-03-18 19:50:32"}
 {"level":"info","message":"::1 - - [18/Mar/2026:14:21:06 +0000] \"GET /api/photographers/ratings HTTP/1.1\" 200 384 \"-\" \"PostmanRuntime/7.51.1\"","timestamp":"2026-03-18 19:51:06"}
+{"level":"info","message":"::1 - - [23/Mar/2026:13:37:19 +0000] \"POST /api/photographers/getcount HTTP/1.1\" 404 - \"-\" \"PostmanRuntime/7.51.1\"","timestamp":"2026-03-23 19:07:19"}
+{"level":"info","message":"::1 - - [23/Mar/2026:13:38:15 +0000] \"GET /api/photographers/getcount HTTP/1.1\" 500 92 \"-\" \"PostmanRuntime/7.51.1\"","timestamp":"2026-03-23 19:08:15"}
+{"level":"info","message":"::1 - - [23/Mar/2026:13:38:45 +0000] \"GET /api/photographers/getcount HTTP/1.1\" 500 48 \"-\" \"PostmanRuntime/7.51.1\"","timestamp":"2026-03-23 19:08:45"}
+{"level":"info","message":"::1 - - [23/Mar/2026:13:39:49 +0000] \"GET /api/photographers/getcount HTTP/1.1\" 200 124 \"-\" \"PostmanRuntime/7.51.1\"","timestamp":"2026-03-23 19:09:49"}
+{"level":"info","message":"::1 - - [23/Mar/2026:13:40:31 +0000] \"GET /api/photographers/getcount HTTP/1.1\" 200 124 \"-\" \"PostmanRuntime/7.51.1\"","timestamp":"2026-03-23 19:10:31"}
+{"level":"info","message":"::1 - - [23/Mar/2026:13:45:00 +0000] \"GET /api/photographers/getcount HTTP/1.1\" 200 142 \"-\" \"PostmanRuntime/7.51.1\"","timestamp":"2026-03-23 19:15:00"}
