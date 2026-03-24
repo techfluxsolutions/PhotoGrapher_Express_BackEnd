@@ -1099,3 +1099,11 @@
 {"level":"info","message":"::1 - - [23/Mar/2026:13:39:49 +0000] \"GET /api/photographers/getcount HTTP/1.1\" 200 124 \"-\" \"PostmanRuntime/7.51.1\"","timestamp":"2026-03-23 19:09:49"}
 {"level":"info","message":"::1 - - [23/Mar/2026:13:40:31 +0000] \"GET /api/photographers/getcount HTTP/1.1\" 200 124 \"-\" \"PostmanRuntime/7.51.1\"","timestamp":"2026-03-23 19:10:31"}
 {"level":"info","message":"::1 - - [23/Mar/2026:13:45:00 +0000] \"GET /api/photographers/getcount HTTP/1.1\" 200 142 \"-\" \"PostmanRuntime/7.51.1\"","timestamp":"2026-03-23 19:15:00"}
+{"level":"info","message":"::1 - - [24/Mar/2026:09:10:31 +0000] \"GET /api/photographers/getcount HTTP/1.1\" 500 92 \"-\" \"PostmanRuntime/7.51.1\"","timestamp":"2026-03-24 14:40:31"}
+{"level":"info","message":"::1 - - [24/Mar/2026:09:12:24 +0000] \"GET /api/photographers/getcount HTTP/1.1\" 200 164 \"-\" \"PostmanRuntime/7.51.1\"","timestamp":"2026-03-24 14:42:24"}
+{"level":"info","message":"::1 - - [24/Mar/2026:09:55:20 +0000] \"POST /api/auth/login HTTP/1.1\" 200 50 \"-\" \"PostmanRuntime/7.51.1\"","timestamp":"2026-03-24 15:25:20"}
+{"level":"info","message":"::1 - - [24/Mar/2026:09:57:45 +0000] \"POST /api/auth/login HTTP/1.1\" 200 50 \"-\" \"PostmanRuntime/7.51.1\"","timestamp":"2026-03-24 15:27:45"}
+{"level":"info","message":"::1 - - [24/Mar/2026:09:58:05 +0000] \"POST /api/auth/verify HTTP/1.1\" 400 70 \"-\" \"PostmanRuntime/7.51.1\"","timestamp":"2026-03-24 15:28:05"}
+{"level":"info","message":"::1 - - [24/Mar/2026:09:58:51 +0000] \"POST /api/auth/verify HTTP/1.1\" 400 70 \"-\" \"PostmanRuntime/7.51.1\"","timestamp":"2026-03-24 15:28:51"}
+{"level":"info","message":"::1 - - [24/Mar/2026:09:58:57 +0000] \"POST /api/auth/login HTTP/1.1\" 200 50 \"-\" \"PostmanRuntime/7.51.1\"","timestamp":"2026-03-24 15:28:57"}
+{"level":"info","message":"::1 - - [24/Mar/2026:09:59:12 +0000] \"POST /api/auth/verify HTTP/1.1\" 400 70 \"-\" \"PostmanRuntime/7.51.1\"","timestamp":"2026-03-24 15:29:12"}

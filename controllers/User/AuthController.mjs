@@ -48,7 +48,7 @@ class AuthController {
   // Production Routes
   async sendOTP(req, res, next) {
     try {
-      const { mobileNumber } = req.body;
+      const { mobileNumber, role } = req.body;
 
       /* 1️⃣ Validate mobile */
       if (!mobileNumber) {
@@ -84,12 +84,21 @@ class AuthController {
       }
 
       /* 3️⃣ Find or create user */
-      let user = await User.findOne({ mobileNumber: cleanedMobile });
+      const Model = roleModelMap[role] || User;
+      let user = await Model.findOne({ mobileNumber: cleanedMobile });
+
       if (!user) {
-        user = await User.create({
-          mobileNumber: cleanedMobile,
-          userType: "user",
-        });
+        if (role === "photographer") {
+          return res.status(404).json({
+            success: false,
+            message: "Please contact admin",
+          });
+        } else {
+          user = await Model.create({
+            mobileNumber: cleanedMobile,
+            userType: role || "user",
+          });
+        }
       }
 
       /* 4️⃣ OTP Bypass */
@@ -118,6 +127,8 @@ class AuthController {
           message: `Account locked due to too many failed attempts. Please try again in ${waitMinutes} minutes.`,
         });
       }
+
+
 
       if (
         user.lastOtpSentAt &&
@@ -222,7 +233,7 @@ class AuthController {
   // ======================= */
   async verifyOTP(req, res) {
     try {
-      const { mobileNumber, otp, fcmToken } = req.body;
+      const { mobileNumber, otp, fcmToken, role } = req.body;
 
       /* 1️⃣ Validate input */
       if (!mobileNumber) {
@@ -249,9 +260,16 @@ class AuthController {
       }
 
       /* 2️⃣ Find user */
-      const user = await User.findOne({ mobileNumber: cleanedMobile });
+      const Model = roleModelMap[role] || User;
+      const user = await Model.findOne({ mobileNumber: cleanedMobile });
 
       if (!user) {
+        if (role === "photographer") {
+          return res.status(404).json({
+            success: false,
+            message: "Please contact admin",
+          });
+        }
         return res.status(404).json({
           success: false,
           message: "User not found",
@@ -458,13 +476,6 @@ class AuthController {
 
       user.token = token;
       await user.save();
-
-      res.cookie("token", token, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
-        sameSite: "strict",
-        maxAge: 7 * 24 * 60 * 60 * 1000,
-      });
 
       return res.status(200).json({
         success: true,
@@ -707,12 +718,13 @@ class AuthController {
         });
       }
 
-      const user = await User.findById(decoded.id);
+      const Model = roleModelMap[decoded.userType] || User;
+      const user = await Model.findById(decoded.id);
 
       if (!user) {
         return res.status(404).json({
           success: false,
-          message: "User not foundd",
+          message: "User not found",
         });
       }
 
