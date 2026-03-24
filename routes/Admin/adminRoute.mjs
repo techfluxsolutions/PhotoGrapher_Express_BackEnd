@@ -28,6 +28,9 @@ import { uploadController } from "../../controllers/uploadController.js";
 // --- Debug ---
 router.get("/photographers/sorted", (req, res, next) => PhotographerController.getSortedPhotographers(req, res, next));
 
+//sorting photographers
+router.get("/photographers/sort", (req, res, next) => PhotographerController.getSortPhotographers(req, res, next));
+
 // --- Admin Authentication (No middleware required) ---
 router.post("/auth/login", (req, res, next) => AdminEmailAuthController.login(req, res, next));
 //

@@ -1,3 +1,0 @@
-Total Final Quotes: 11
-Missing finalizeAt: 0
-Null finalizeAt: 11
