@@ -139,6 +139,41 @@ const photographerSchema = new mongoose.Schema(
     },
     resetPasswordToken: String,
     resetPasswordExpires: Date,
+
+    // Auth & OTP verification fields
+    userType: {
+      type: String,
+      default: "photographer",
+    },
+    isVerified: {
+      type: Boolean,
+      default: false,
+    },
+    verificationId: {
+      type: String,
+      default: null,
+    },
+    verificationExpiry: {
+      type: Date,
+      default: null,
+    },
+    fcmToken: {
+      type: String,
+      default: null,
+    },
+    otpAttempts: {
+      type: Number,
+      default: 0
+    },
+    lockUntil: {
+      type: Date
+    },
+    lastOtpSentAt: {
+      type: Date
+    },
+    token: {
+      type: String,
+    },
     commissionPercentage: {
       type: Number,
       default: 0,
