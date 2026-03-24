@@ -689,7 +689,8 @@ class BookingController {
             const data = {
                 upcommingBookingCount,
                 completedBookingCount,
-                uploadPending
+                uploadPending,
+                totalBookingCount: upcommingBookingCount + completedBookingCount
             }
             return sendSuccessResponse(res, data, "Booking count fetched successfully");
         } catch (error) {
