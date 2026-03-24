@@ -80,7 +80,7 @@ router.post("/bookings/initialize-status", (req, res, next) => BookingController
 
 // get booking counts 
 
-router.get('/getcount', (req, res, next) => BookingController.getBookingCount(req, res, next));
+
 
 router.get("/bookings/:id", (req, res, next) => BookingController.getBookingById(req, res, next));
 router.post("/bookings", (req, res, next) => BookingController.createBooking(req, res, next));
@@ -139,6 +139,12 @@ router.get("/getArrayImages/:bookingId", (req, res, next) => uploadController.ge
 
 
 
+// Extraa routes for mobile 
 
+// dashboard get count of upcomming , pending bookings
+router.get('/getcount', (req, res, next) => BookingController.getBookingCount(req, res, next));
 
+// get todays schedule bookings
+
+router.get('/gettodaysbookings', (req, res, next) => BookingController.todaysBooking(req, res, next));
 export default router;

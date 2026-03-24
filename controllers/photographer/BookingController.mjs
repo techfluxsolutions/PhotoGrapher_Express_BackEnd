@@ -697,6 +697,22 @@ class BookingController {
             return sendErrorResponse(res, error, 500);
         }
     }
+    async todaysBooking(req, res, next) {
+        try {
+            const myId = new mongoose.Types.ObjectId(req.user.id);
+            const todaysDate = new Date();
+            const todaysBooking = await ServiceBooking.find({
+                photographer_id: myId,
+                bookingStatus: "accepted",
+                date: {
+                    $eq: todaysDate
+                }
+            });
+            return sendSuccessResponse(res, todaysBooking, "Todays bookings fetched successfully");
+        } catch (error) {
+            return sendErrorResponse(res, error, 500);
+        }
+    }
 }
 
 export default new BookingController();
