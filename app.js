@@ -165,7 +165,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/admins", adminRoutes);
 app.use("/api/photographers", photographerRoutes);
 app.use("/api/users", userRoutes);
-app.use("/api/chat", chatRoutes); // Mount Chat Routes
+app.use("/api/chat", chatRoutes); 
 
 // Mount S3 Large Upload/Streaming Module
 app.use("/upload", uploadRoutes);
