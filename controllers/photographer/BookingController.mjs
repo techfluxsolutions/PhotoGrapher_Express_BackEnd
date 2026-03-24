@@ -667,6 +667,36 @@ class BookingController {
         // Delegate to InvoiceController logic
         return downloadInvoice(req, res, next);
     }
+    async getBookingCount(req, res, next) {
+        try {
+            const myId = new mongoose.Types.ObjectId(req.user.id);
+            const todaysDate = new Date();
+            const upcommingBookingCount = await ServiceBooking.countDocuments({
+                photographer_id: myId,
+                bookingStatus: "accepted",
+                date: {
+                    $gte: todaysDate
+                }
+            });
+            const completedBookingCount = await ServiceBooking.countDocuments({
+                photographer_id: myId,
+                bookingStatus: "completed"
+            });
+            const uploadPending = await ServiceBooking.countDocuments({
+                photographer_id: myId,
+                galleryStatus: "Upload Pending"
+            })
+            const data = {
+                upcommingBookingCount,
+                completedBookingCount,
+                uploadPending,
+                totalBookingCount: upcommingBookingCount + completedBookingCount
+            }
+            return sendSuccessResponse(res, data, "Booking count fetched successfully");
+        } catch (error) {
+            return sendErrorResponse(res, error, 500);
+        }
+    }
 }
 
 export default new BookingController();

@@ -14,6 +14,7 @@ import ServiceController from "../../controllers/User/ServiceController.mjs";
 import NotificationController from "../../controllers/photographer/NotificationController.mjs";
 import { uploadController } from "../../controllers/uploadController.js";
 import DataLinksController from "../../controllers/DataLinksController.js";
+import ReviewAndRatingController from "../../controllers/User/ReviewAndRating.mjs";
 const router = express.Router();
 
 // --- Auth Routes ---
@@ -77,6 +78,10 @@ router.get("/bookings/completed", (req, res, next) => BookingController.getCompl
 router.patch("/bookings/:id/status", (req, res, next) => BookingController.updateBookingStatus(req, res, next));
 router.post("/bookings/initialize-status", (req, res, next) => BookingController.initializePreviousBookingsStatus(req, res, next));
 
+// get booking counts 
+
+router.get('/getcount', (req, res, next) => BookingController.getBookingCount(req, res, next));
+
 router.get("/bookings/:id", (req, res, next) => BookingController.getBookingById(req, res, next));
 router.post("/bookings", (req, res, next) => BookingController.createBooking(req, res, next));
 router.put("/bookings/:id", (req, res, next) => BookingController.updateBooking(req, res, next));
@@ -114,6 +119,12 @@ router.post("/get-part-url", uploadController.getPartUploadUrl);
 router.post("/chunk", chunkUpload.single("chunk"), uploadController.uploadChunk);
 router.post("/complete", uploadController.completeUpload);
 router.post("/abort", uploadController.abortUpload);
+
+//RatingsAnd Review
+
+//getPhotographer average ratings by users and the admin 
+
+router.get("/ratings", (req, res, next) => ReviewAndRatingController.getAverageOfPhotographerRating(req, res, next));
 
 // Support streaming and batch downloading
 router.get("/stream/:bookingId/*key", (req, res, next) => uploadController.streamProtectedFile(req, res, next));
