@@ -74,12 +74,9 @@ class StaffController {
                     status: 'active'
                 });
 
-                // Send welcome email with credentials
-                try {
-                    await sendWelcomeEmail(email, name, password);
-                } catch (emailError) {
-                    console.error("Error sending welcome email to staff:", emailError);
-                }
+                // Send welcome email with credentials (non-blocking)
+                sendWelcomeEmail(email, name, password)
+                    .catch(emailError => console.error("Error sending welcome email to staff:", emailError));
 
                 return sendSuccessResponse(res, {
                     staff: {
@@ -126,9 +123,13 @@ class StaffController {
                 .limit(limit)
                 .sort({ createdAt: -1 });
 
-            // Enhance with Role info from AdminEmailAuth
-            const enhancedStaff = await Promise.all(staffProfiles.map(async (profile) => {
-                const auth = await AdminEmailAuth.findOne({ email: profile.email }).populate('role');
+            // Optimized Enhancement with Role info from AdminEmailAuth
+            const emails = staffProfiles.map(profile => profile.email);
+            const auths = await AdminEmailAuth.find({ email: { $in: emails } }).populate('role');
+            const authMap = new Map(auths.map(auth => [auth.email, auth]));
+
+            const enhancedStaff = staffProfiles.map((profile) => {
+                const auth = authMap.get(profile.email);
                 return {
                     _id: profile._id,
                     name: profile.username,
@@ -140,7 +141,7 @@ class StaffController {
                     lastLogin: auth?.lastLogin,
                     createdAt: profile.createdAt
                 };
-            }));
+            });
 
             return res.status(200).json({
                 success: true,
