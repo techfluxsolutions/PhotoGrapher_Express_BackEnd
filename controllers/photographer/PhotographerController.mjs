@@ -3,6 +3,7 @@ import PlatformSettings from "../../models/PlatformSettings.mjs";
 import bcrypt from "bcrypt";
 import { sendWelcomeEmail } from "../../utils/emailService.mjs";
 import mongoose from "mongoose";
+import { sendMessageCentral, verifyMessageCentral } from "../../utils/messageCentral.mjs";
 
 class PhotographerController {
     // Get All Photographers (Unified endpoint with filtering)
@@ -76,9 +77,9 @@ class PhotographerController {
             commissionPercentage: p.commissionPercentage || 0,
             team_studio: p.professionalDetails?.team_studio || "",
             isAbleToVerify: (
-                !p.professionalDetails?.yearsOfExperience || 
-                !p.professionalDetails?.primaryLocation || 
-                !p.professionalDetails?.expertiseLevel || 
+                !p.professionalDetails?.yearsOfExperience ||
+                !p.professionalDetails?.primaryLocation ||
+                !p.professionalDetails?.expertiseLevel ||
                 !p.professionalDetails?.photographerType
             ) ? true : false
         };
@@ -354,22 +355,57 @@ class PhotographerController {
     }
 
     // Verify Photographer (Password + Status Activation Only)
+
+    async sendOTP(req, res) {
+        try {
+            const { mobileNumber } = req.body;
+            if (!mobileNumber) {
+                return res.status(400).json({ message: "Mobile number is required" });
+            }
+            
+            const cleanedMobile = mobileNumber.toString().replace(/\D/g, "");
+            const photographer = await Photographer.findOne({ mobileNumber: cleanedMobile });
+            
+            if (!photographer) {
+                return res.status(404).json({ message: "Photographer not found" });
+            }
+
+            const response = await sendMessageCentral(cleanedMobile);
+            const data = response.data;
+            
+            const verificationId = data?.verificationId || data?.data?.verificationId || data?.id || null;
+            if (!verificationId) {
+                return res.status(502).json({ message: "Failed to send OTP", provider: data });
+            }
+
+            photographer.verificationId = verificationId;
+            photographer.verificationExpiry = new Date(Date.now() + 5 * 60 * 1000); // 5 mins
+            await photographer.save();
+
+            res.status(200).json({ success: true, message: "OTP sent successfully" });
+        } catch (error) {
+            console.error("Send OTP Error:", error);
+            res.status(500).json({ message: "Failed to send OTP", error: error.message });
+        }
+    }
     async verifyPhotographer(req, res) {
         try {
             const { id } = req.params;
-            const { password, confirmPassword } = req.body;
+            const { mobileNumber, OTP } = req.body;
 
-            // 1. Validation
-            if (!password || !confirmPassword) {
-                return res.status(400).json({ message: "Password and Confirm Password are required" });
-            }
-
-            if (password !== confirmPassword) {
-                return res.status(400).json({ message: "Passwords do not match" });
+            if (!mobileNumber || !OTP) {
+                return res.status(400).json({ message: "Mobile number and OTP are required" });
             }
 
             // 2. Find Photographer
-            const photographer = await Photographer.findById(id);
+            let photographer;
+            if (id) {
+                photographer = await Photographer.findById(id);
+            } else {
+                const cleanedMobile = mobileNumber.toString().replace(/\D/g, "");
+                photographer = await Photographer.findOne({ mobileNumber: cleanedMobile });
+            }
+            
             if (!photographer) {
                 return res.status(404).json({ message: "Photographer not found" });
             }
@@ -378,13 +414,22 @@ class PhotographerController {
                 return res.status(400).json({ message: "Photographer is already verified" });
             }
 
-            // 3. Hash Password & Set Credentials
-            const salt = await bcrypt.genSalt(10);
-            const hashedPassword = await bcrypt.hash(password, salt);
+            if (!photographer.verificationId) {
+                return res.status(400).json({ message: "No OTP request found. Please resend OTP." });
+            }
+
+            try {
+                await verifyMessageCentral(photographer.verificationId, OTP);
+            } catch (err) {
+                return res.status(400).json({ message: "Invalid or expired OTP", details: err.response?.data || err.message });
+            }
+
+            // Clear verification details
+            photographer.verificationId = null;
+            photographer.verificationExpiry = null;
 
             // Set username to email as requested
             photographer.username = photographer.email;
-            photographer.password = hashedPassword;
             photographer.status = "active";
 
             await photographer.save();
@@ -444,9 +489,9 @@ class PhotographerController {
             // 3. Bank Details Validation
             if (profileData.bank_account_number && profileData.confirm_account_number) {
                 if (profileData.bank_account_number !== profileData.confirm_account_number) {
-                    return res.status(400).json({ 
-                        success: false, 
-                        message: "Account number and Confirm account number do not match." 
+                    return res.status(400).json({
+                        success: false,
+                        message: "Account number and Confirm account number do not match."
                     });
                 }
             }
@@ -467,7 +512,7 @@ class PhotographerController {
             if (profileData.servicesAndStyles) {
                 const currentServices = (photographer.servicesAndStyles && photographer.servicesAndStyles.services) ? photographer.servicesAndStyles.services.toObject() : {};
                 const currentStyles = (photographer.servicesAndStyles && photographer.servicesAndStyles.styles) ? photographer.servicesAndStyles.styles.toObject() : {};
-                
+
                 photographer.servicesAndStyles = {
                     services: { ...currentServices, ...profileData.servicesAndStyles.services },
                     styles: { ...currentStyles, ...profileData.servicesAndStyles.styles }
@@ -559,9 +604,9 @@ class PhotographerController {
             // 3. Bank Details Validation
             if (updateData.bank_account_number && updateData.confirm_account_number) {
                 if (updateData.bank_account_number !== updateData.confirm_account_number) {
-                    return res.status(400).json({ 
-                        success: false, 
-                        message: "Account number and Confirm account number do not match." 
+                    return res.status(400).json({
+                        success: false,
+                        message: "Account number and Confirm account number do not match."
                     });
                 }
             }

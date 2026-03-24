@@ -1,8 +1,9 @@
 import { signToken } from "../../utils/jwt.mjs";
 import roleModelMap from "../../utils/roleModelMap.mjs";
 import User from "../../models/User.mjs";
-import axios from "axios";
+// import axios from "axios";
 import { verifyToken } from "../../utils/jwt.mjs";
+import { sendMessageCentral, verifyMessageCentral } from "../../utils/messageCentral.mjs";
 const OTP_BYPASS_ENABLED = process.env.OTP_BYPASS_ENABLED === "true";
 const OTP_BYPASS_NUMBERS = (process.env.OTP_BYPASS_NUMBERS || "")
   .split(",")
@@ -63,23 +64,6 @@ class AuthController {
         return res.status(400).json({
           success: false,
           message: "Invalid Indian mobile number",
-        });
-      }
-
-      /* 2️⃣ Validate MessageCentral config */
-      const baseUrl = process.env.MESSAGE_CENTRAL_BASE_URL;
-      const authToken = process.env.MESSAGE_CENTRAL_AUTH_TOKEN;
-      const customerId = process.env.MESSAGE_CENTRAL_CUSTOMER_ID;
-
-      if (!baseUrl || !authToken || !customerId) {
-        console.error("❌ MessageCentral env missing", {
-          baseUrl: !!baseUrl,
-          authToken: !!authToken,
-          customerId: !!customerId,
-        });
-        return res.status(500).json({
-          success: false,
-          message: "SMS service not configured",
         });
       }
 
@@ -147,25 +131,10 @@ class AuthController {
       }
 
       /* 5️⃣ Send OTP via MessageCentral */
-      const params = new URLSearchParams({
-        customerId,
-        countryCode: "91",
-        flowType: "SMS",
-        mobileNumber: cleanedMobile,
-        timeout: "60",
-      });
-
-      const url = `${baseUrl}/verification/v3/send?${params.toString()}`;
-
       let response;
       try {
-        response = await axios.post(url, null, {
-          headers: {
-            AuthToken: authToken,
-            "Content-Type": "application/json",
-          },
-        });
-        console.log("ress", response);
+        response = await sendMessageCentral(cleanedMobile);
+        console.log("ress", response.data);
       } catch (err) {
         const providerData = err.response?.data;
         console.error(
@@ -346,29 +315,11 @@ class AuthController {
         });
       }
 
-      /* 6️⃣ Validate MessageCentral config */
-      const baseUrl = process.env.MESSAGE_CENTRAL_BASE_URL;
-      const authToken = process.env.MESSAGE_CENTRAL_AUTH_TOKEN;
-      const customerId = process.env.MESSAGE_CENTRAL_CUSTOMER_ID;
-
-      if (!baseUrl || !authToken || !customerId) {
-        console.error("❌ MessageCentral not configured properly");
-        return res.status(500).json({
-          success: false,
-          message: "SMS service not configured",
-        });
-      }
-
       /* 7️⃣ VERIFY OTP */
-      const verifyUrl = `${baseUrl}/verification/v3/validateOtp?customerId=${customerId}&verificationId=${user.verificationId}&code=${otp}`;
-
       let response;
 
       try {
-        response = await axios.get(verifyUrl, {
-          headers: { authToken },
-          timeout: 10000,
-        });
+        response = await verifyMessageCentral(user.verificationId, otp);
       } catch (err) {
         console.error("❌ MessageCentral VERIFY error:");
 
@@ -745,3 +696,5 @@ class AuthController {
   }
 }
 export default new AuthController();
+
+
