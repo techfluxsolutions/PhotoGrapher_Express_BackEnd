@@ -1,5 +1,6 @@
 import Photographer from "../../models/Photographer.mjs";
 import PlatformSettings from "../../models/PlatformSettings.mjs";
+import PhotographerRatingsGivenByAdminAndUser from "../../models/PhotographerRatingsGivenByAdmin&User.mjs";
 import bcrypt from "bcrypt";
 import { sendWelcomeEmail } from "../../utils/emailService.mjs";
 import mongoose from "mongoose";
@@ -23,7 +24,7 @@ class PhotographerController {
             }
 
             const items = await Photographer.find(query)
-                .select('basicInfo.fullName basicInfo.profilePhoto email mobileNumber professionalDetails.yearsOfExperience professionalDetails.primaryLocation professionalDetails.startUpDate professionalDetails.team_studio professionalDetails.expertiseLevel professionalDetails.photographerType status createdAt commissionPercentage')
+                .select('basicInfo.fullName basicInfo.profilePhoto email mobileNumber professionalDetails.yearsOfExperience professionalDetails.primaryLocation professionalDetails.startUpDate professionalDetails.team_studio professionalDetails.expertiseLevel professionalDetails.photographerType servicesAndStyles.services status createdAt commissionPercentage')
                 .skip(skip)
                 .limit(limit)
                 .sort({ createdAt: -1 });
@@ -75,6 +76,9 @@ class PhotographerController {
             signUpDate: p.professionalDetails?.startUpDate || `${day}/${month}/${year}`,
             commissionPercentage: p.commissionPercentage || 0,
             team_studio: p.professionalDetails?.team_studio || "",
+            expertiseLevel: p.professionalDetails?.expertiseLevel || "N/A",
+            categories: p.servicesAndStyles?.services ? 
+                Object.keys(p.servicesAndStyles.services).filter(key => p.servicesAndStyles.services[key] === true) : [],
             isAbleToVerify: (
                 !p.professionalDetails?.yearsOfExperience || 
                 !p.professionalDetails?.primaryLocation || 
@@ -788,6 +792,136 @@ class PhotographerController {
         } catch (error) {
             console.error("Error fetching sorted photographers:", error);
             res.status(500).json({ success: false, message: "Failed to fetch photographers", error: error.message });
+        }
+    }
+
+    // Sort photographers based on categories, expertise, and rating
+    async getSortPhotographers(req, res) {
+        try {
+            const { category, expertise, sortBy, rating } = req.query; // sortBy can be 'rating', 'expertise', 'category'
+            const minRating = parseFloat(rating) || 0;
+            const page = Math.max(1, parseInt(req.query.page) || 1);
+            const limit = Math.max(1, parseInt(req.query.limit) || 10);
+            const skip = (page - 1) * limit;
+
+            const pipeline = [];
+
+            // 1. Match active photographers
+            pipeline.push({ $match: { status: "active" } });
+
+            // 2. Filter by specific category boolean flag if provided
+            if (category) {
+                const categoryField = `servicesAndStyles.services.${category}`;
+                pipeline.push({ $match: { [categoryField]: true } });
+            }
+
+            // 3. Filter by expertise if provided
+            if (expertise) {
+                pipeline.push({ $match: { "professionalDetails.expertiseLevel": expertise.toUpperCase() } });
+            }
+
+            // 4. Calculate total categories for sorting by categorization richness
+            pipeline.push({
+                $addFields: {
+                    categoryCount: {
+                        $size: {
+                            $filter: {
+                                input: { $objectToArray: "$servicesAndStyles.services" },
+                                as: "item",
+                                cond: { $eq: ["$$item.v", true] }
+                            }
+                        }
+                    }
+                }
+            });
+
+            // 5. Lookup Ratings for average rating
+            pipeline.push({
+                $lookup: {
+                    from: "photographerratingsgivenbyadminandusers",
+                    localField: "_id",
+                    foreignField: "photographerId",
+                    as: "allRatings"
+                }
+            });
+
+            // 6. Calculate Average Rating and Expertise Score
+            pipeline.push({
+                $addFields: {
+                    avgRating: { $ifNull: [{ $avg: "$allRatings.rating" }, 0] },
+                    expertiseScore: {
+                        $switch: {
+                            branches: [
+                                { case: { $eq: ["$professionalDetails.expertiseLevel", "PRO"] }, then: 3 },
+                                { case: { $eq: ["$professionalDetails.expertiseLevel", "ELITE"] }, then: 2 },
+                                { case: { $eq: ["$professionalDetails.expertiseLevel", "INITIO"] }, then: 1 }
+                            ],
+                            default: 0
+                        }
+                    }
+                }
+            });
+
+            // 7. Filter by maximum rating if provided (Show X or less)
+            if (rating !== undefined && rating !== null) {
+                pipeline.push({ $match: { avgRating: { $lte: minRating } } });
+            }
+
+            // 8. Apply Sorting
+            let sortStage = {};
+            if (sortBy === 'rating') {
+                sortStage = { avgRating: -1, expertiseScore: -1 };
+            } else if (sortBy === 'expertise') {
+                sortStage = { expertiseScore: -1, avgRating: -1 };
+            } else if (sortBy === 'category') {
+                sortStage = { categoryCount: -1, expertiseScore: -1 };
+            } else {
+                // Default sort: Rating then Expertise
+                sortStage = { avgRating: -1, expertiseScore: -1, createdAt: -1 };
+            }
+
+            pipeline.push({ $sort: sortStage });
+
+            // 9. Pagination Facet
+            pipeline.push({
+                $facet: {
+                    metadata: [{ $count: "total" }],
+                    data: [{ $skip: skip }, { $limit: limit }]
+                }
+            });
+
+            const [results] = await Photographer.aggregate(pipeline);
+
+            const total = results.metadata[0]?.total || 0;
+            const photographers = results.data.map(p => {
+                const transformed = this._transformPhotographerData(p, req);
+                return {
+                    ...transformed,
+                    avgRating: parseFloat((p.avgRating || 0).toFixed(1)),
+                    expertiseScore: p.expertiseScore || 0,
+                    categoryCount: p.categoryCount || 0
+                };
+            });
+
+            res.status(200).json({
+                success: true,
+                message: "Photographers filtered and sorted successfully",
+                data: photographers,
+                meta: {
+                    total,
+                    page,
+                    limit,
+                    totalPages: Math.ceil(total / limit)
+                }
+            });
+
+        } catch (error) {
+            console.error("Error in getSortPhotographers:", error);
+            res.status(500).json({
+                success: false,
+                message: "Failed to sort photographers",
+                error: error.message
+            });
         }
     }
 }
