@@ -670,13 +670,17 @@ class BookingController {
     async getBookingCount(req, res, next) {
         try {
             const myId = new mongoose.Types.ObjectId(req.user.id);
-            const todaysDate = new Date();
+            const startOfDay = new Date();
+            startOfDay.setUTCHours(0, 0, 0, 0);
+
             const upcommingBookingCount = await ServiceBooking.countDocuments({
                 photographer_id: myId,
                 bookingStatus: "accepted",
-                date: {
-                    $gte: todaysDate
-                }
+                $or: [
+                    { bookingDate: { $gte: startOfDay } },
+                    { startDate: { $exists: true, $ne: "" } },
+                    { eventDate: { $exists: true, $ne: "" } }
+                ]
             });
             const completedBookingCount = await ServiceBooking.countDocuments({
                 photographer_id: myId,
@@ -700,14 +704,26 @@ class BookingController {
     async todaysBooking(req, res, next) {
         try {
             const myId = new mongoose.Types.ObjectId(req.user.id);
-            const todaysDate = new Date();
-            // Assuming todaysDate is matching the specific implementation or the client's needs
+            const startOfDay = new Date();
+            startOfDay.setUTCHours(0, 0, 0, 0);
+            const endOfDay = new Date();
+            endOfDay.setUTCHours(23, 59, 59, 999);
+            
+            const day = String(startOfDay.getDate()).padStart(2, '0');
+            const month = String(startOfDay.getMonth() + 1).padStart(2, '0');
+            const year = startOfDay.getFullYear();
+            const todayStr1 = startOfDay.toISOString().split("T")[0]; // "YYYY-MM-DD"
+            const todayStr2 = `${day}-${month}-${year}`; // "DD-MM-YYYY"
+            const todayStr3 = `${day}/${month}/${year}`; // "DD/MM/YYYY"
+
             const todaysBooking = await ServiceBooking.find({
                 photographer_id: myId,
                 bookingStatus: "accepted",
-                date: {
-                    $eq: todaysDate
-                }
+                $or: [
+                    { bookingDate: { $gte: startOfDay, $lte: endOfDay } },
+                    { startDate: { $in: [todayStr1, todayStr2, todayStr3] } },
+                    { eventDate: { $in: [todayStr1, todayStr2, todayStr3] } }
+                ]
             })
             .populate("client_id", "username email mobileNumber avatar")
             .populate("service_id", "serviceName");
