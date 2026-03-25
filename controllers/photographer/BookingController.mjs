@@ -312,6 +312,9 @@ class BookingController {
             bookingObj.fromDate = this.formatDMY(booking.startDate || booking.eventDate || booking.bookingDate);
             bookingObj.toDate = this.formatDMY(booking.endDate || booking.startDate || booking.eventDate || booking.bookingDate);
 
+            // Export eventDate explicitly for the UI
+            bookingObj.eventDate = bookingObj.fromDate;
+
 
 
             return sendSuccessResponse(res, {
