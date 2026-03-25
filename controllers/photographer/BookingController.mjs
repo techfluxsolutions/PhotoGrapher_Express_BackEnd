@@ -704,20 +704,40 @@ class BookingController {
 
             const today = new Date().toISOString().split("T")[0]; // "2026-03-25"
 
-            const todaysBooking = await ServiceBooking.find({
+            const bookings = await ServiceBooking.find({
                 photographer_id: myId,
                 bookingStatus: "accepted",
                 $or: [
                     { startDate: today },
                     { endDate: today }
                 ]
+            })
+            .populate("client_id", "username email mobileNumber avatar")
+            .populate("service_id", "serviceName");
+
+            const formattedBookings = bookings.map(booking => {
+                const ist = this.formatIST(booking.bookingDate, booking.startDate || booking.eventDate);
+
+                return {
+                    _id: booking._id,
+                    bookingId: booking.veroaBookingId,
+                    client_id: booking.client_id,
+                    eventType: booking.service_id?.serviceName || "N/A",
+                    requirements: booking.notes || "No requirements",
+                    date: ist.date,
+                    time: ist.time,
+                    fromDate: this.formatDMY(booking.startDate || booking.eventDate || booking.bookingDate),
+                    toDate: this.formatDMY(booking.endDate || booking.startDate || booking.eventDate || booking.bookingDate),
+                    city: booking.city,
+                    status: booking.status,
+                    bookingStatus: booking.bookingStatus,
+                    galleryStatus: booking.galleryStatus || "Upload Pending",
+                    totalAmount: booking.totalAmount,
+                    photographerAmount: booking.photographerAmount || 0
+                };
             });
 
-            return sendSuccessResponse(
-                res,
-                todaysBooking,
-                "Todays bookings fetched successfully"
-            );
+            return sendSuccessResponse(res, formattedBookings, "Todays bookings fetched successfully");
         } catch (error) {
             return sendErrorResponse(res, error, 500);
         }
