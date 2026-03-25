@@ -133,14 +133,14 @@ class ReviewAndRatingController {
                 photographerId,
                 createdBy: "admin"
             }).populate("photographerId", 'professionalDetails.expertiseLevel basicInfo.profilePhoto basicInfo.fullName');
-            
+
             const photographerDetails = await Photograoher.findById(photographerId).select("basicInfo.fullName basicInfo.profilePhoto professionalDetails.expertiseLevel")
             const avatar = process.env.BASE_URL && photographerDetails?.basicInfo?.profilePhoto ? `${process.env.BASE_URL}${photographerDetails.basicInfo.profilePhoto}` : "";
-            
+
             if (adminRating && adminRating.photographerId && adminRating.photographerId.basicInfo) {
                 adminRating.photographerId.basicInfo.profilePhoto = avatar;
             }
-            
+
             return res.status(200).json({
                 success: true,
                 averageRating,
