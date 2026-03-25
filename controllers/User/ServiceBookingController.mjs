@@ -215,8 +215,27 @@ class ServiceBookingController {
       if (payload.bookingDate) {
         payload.bookingDate = parseDDMMYYYY(payload.bookingDate);
       }
-      if (payload.paymentStatus === 'paid' || payload.paymentStatus === 'fully paid') {
+      
+      // Ensure paymentStatus, full_Payment, partial_Payment are synchronized
+      if (
+        payload.paymentStatus === "paid" || 
+        payload.paymentStatus === "fully paid" || 
+        payload.full_Payment === true ||
+        (payload.outStandingAmount !== undefined && Number(payload.outStandingAmount) === 0 && payload.totalAmount)
+      ) {
+        payload.paymentStatus = "fully paid";
         payload.fullyPaidAt = new Date();
+        payload.full_Payment = true;
+        payload.partial_Payment = false;
+        payload.outStandingAmount = 0;
+      } else if (
+        payload.paymentStatus === "partially paid" || 
+        payload.partial_Payment === true || 
+        (payload.outStandingAmount && Number(payload.outStandingAmount) > 0)
+      ) {
+        payload.paymentStatus = "partially paid";
+        payload.partial_Payment = true;
+        payload.full_Payment = false;
       }
       booking = await ServiceBooking.findByIdAndUpdate(id, payload, {
         new: true,

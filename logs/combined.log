@@ -1,0 +1,5 @@
+{"level":"info","message":"::1 - - [25/Mar/2026:16:06:23 +0000] \"GET /api/admins/bookings/upcoming?fromDate=&toDate=&page=1&limit=10 HTTP/1.1\" 200 - \"-\" \"PostmanRuntime/7.52.0\"","timestamp":"2026-03-25 21:36:23"}
+{"level":"info","message":"::1 - - [25/Mar/2026:16:11:08 +0000] \"GET /api/admins/bookings/upcoming?fromDate=&toDate=&page=1&limit=10 HTTP/1.1\" 200 - \"-\" \"PostmanRuntime/7.52.0\"","timestamp":"2026-03-25 21:41:08"}
+{"level":"info","message":"::1 - - [25/Mar/2026:16:19:51 +0000] \"GET /api/admins/bookings/upcoming?fromDate=&toDate=&page=1&limit=10 HTTP/1.1\" 408 15 \"-\" \"PostmanRuntime/7.52.0\"","timestamp":"2026-03-25 21:49:51"}
+{"level":"info","message":"::1 - - [25/Mar/2026:16:20:12 +0000] \"GET /api/admins/bookings/upcoming?fromDate=&toDate=&page=1&limit=10 HTTP/1.1\" 200 - \"-\" \"PostmanRuntime/7.52.0\"","timestamp":"2026-03-25 21:50:12"}
+{"level":"info","message":"::1 - - [25/Mar/2026:16:21:02 +0000] \"PUT /api/admins/bookings/69c3b2798378a84aa9f78bed HTTP/1.1\" 200 - \"-\" \"PostmanRuntime/7.52.0\"","timestamp":"2026-03-25 21:51:02"}
