@@ -1,2 +1,0 @@
-{"level":"info","message":"::1 - - [25/Mar/2026:13:25:06 +0000] \"GET /api/health HTTP/1.1\" 200 126 \"-\" \"Mozilla/5.0 (Windows NT; Windows NT 10.0; en-IN) WindowsPowerShell/5.1.22621.4249\"","timestamp":"2026-03-25 18:55:06"}
-{"level":"info","message":"::1 - - [25/Mar/2026:13:27:20 +0000] \"GET /api/photographers/bookings/69c3b2798378a84aa9f78bed HTTP/1.1\" 500 85 \"-\" \"PostmanRuntime/7.52.0\"","timestamp":"2026-03-25 18:57:20"}
