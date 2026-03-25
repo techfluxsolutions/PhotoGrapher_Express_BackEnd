@@ -1,5 +1,6 @@
 import { s3Service } from "../lib/s3Service.js";
 import DataLinks from "../models/DataLinks.js";
+import ServiceBooking from "../models/ServiceBookings.mjs";
 import archiver from "archiver";
 import mongoose from "mongoose";
 export const uploadController = {
@@ -198,6 +199,14 @@ export const uploadController = {
                 veroaBookingId
             });
 
+            // Update firstPhotoUploadedAt if not already set
+            if (bookingid) {
+                const booking = await ServiceBooking.findById(bookingid).select("firstPhotoUploadedAt");
+                if (booking && !booking.firstPhotoUploadedAt) {
+                    await ServiceBooking.findByIdAndUpdate(bookingid, { firstPhotoUploadedAt: new Date() });
+                }
+            }
+
             res.status(200).json({
                 message: "Upload complete successfully",
                 fileUrl,
@@ -364,6 +373,45 @@ export const uploadController = {
             const limitNum = Number(limit);
             const skip = (pageNum - 1) * limitNum;
 
+            // ✅ Check if any photos exist for this booking (used for legacy fallback)
+            const total = await DataLinks.countDocuments({ bookingid: bookingId });
+            // Fetch booking status to determine isblur
+            const booking = await ServiceBooking.findById(bookingId).select("paymentStatus full_Payment firstPhotoUploadedAt fullyPaidAt");
+            let isblur = true; // Default to true (blurred)
+            let remainingDays = 0; 
+            
+            if (booking) {
+                const isFullyPaid = booking.paymentStatus === "fully paid" || booking.full_Payment === true;
+
+                if (isFullyPaid) {
+                    const effectiveUploadDate = booking.firstPhotoUploadedAt || (total > 0 ? booking.createdAt : null);
+
+                    if (effectiveUploadDate) {
+                        // Countdown starts strictly from when photos are first present
+                        const referenceDate = effectiveUploadDate;
+
+                        const now = new Date();
+                        const refDate = new Date(referenceDate);
+                        const diffTime = now - refDate;
+                        const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+                        
+                        remainingDays = Math.max(0, 14 - diffDays);
+                        isblur = (diffDays > 14);
+
+                        logger.info(`--- [isblur-debug] --- ID: ${bookingId} | Ref: ${referenceDate} | Diff: ${diffDays} | Rem: ${remainingDays}`);
+                    } else {
+                        // Fully paid but no photos yet: Unblurred by default
+                        isblur = false;
+                        remainingDays = 14; 
+                    }
+                } else {
+                    // Partially paid or pending: Always blurred
+                    isblur = true;
+                    remainingDays = 0; 
+                }
+            }
+
+
             // ✅ Fetch paginated keys
             const files = await DataLinks.find({ bookingid: bookingId })
                 .select("key")
@@ -376,6 +424,8 @@ export const uploadController = {
                     success: true,
                     message: "No keys available",
                     data: [],
+                    isblur,
+                    remainingDays,
                     pagination: {
                         page: pageNum,
                         limit: limitNum,
@@ -395,11 +445,11 @@ export const uploadController = {
                 imageUrl: signedUrls[index] || null
             }));
 
-            const total = await DataLinks.countDocuments({ bookingid: bookingId });
-
             return res.status(200).json({
                 success: true,
                 message: "Images fetched successfully",
+                isblur,
+                remainingDays,
                 data,
                 pagination: {
                     page: pageNum,
