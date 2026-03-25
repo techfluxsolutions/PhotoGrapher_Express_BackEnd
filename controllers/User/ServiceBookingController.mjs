@@ -206,6 +206,10 @@ class ServiceBookingController {
     try {
       const { id } = req.params;
       const payload = req.body;
+      
+      console.log(`--- [updatePaymentStatusBooking] --- ID: ${id}`);
+      console.log("Payload received:", JSON.stringify(payload, null, 2));
+
       let booking;
       let quote;
       if (payload.bookingDate) {
