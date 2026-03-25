@@ -154,6 +154,18 @@ const serviceBookingSchema = new mongoose.Schema(
     acceptedAt: {
       type: Date,
       default: null
+    },
+    photosUploadedAt: {
+      type: Date,
+      default: null
+    },
+    firstPhotoUploadedAt: {
+      type: Date,
+      default: null
+    },
+    fullyPaidAt: {
+      type: Date,
+      default: null
     }
   },
   { timestamps: true }

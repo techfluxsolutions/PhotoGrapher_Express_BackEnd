@@ -217,8 +217,8 @@ class QuoteController {
   async QuoteConverToBookings(req, res) {
     try {
       const { quoteId } = req.params;
+      const userId = req.user.id;
       const {
-        clientId,
         flatOrHouseNo,
         streetName,
         city,
@@ -230,9 +230,9 @@ class QuoteController {
       // 🔎 Step 1: Find quote by _id AND clientId
       const quote = await Quote.findOne({
         _id: quoteId,
-        clientId: clientId,
+        clientId: userId,
       });
-      console.log(clientId, quoteId);
+      console.log(userId, quoteId);
       if (!quote) {
         return res.status(404).json({
           success: false,
@@ -286,7 +286,7 @@ class QuoteController {
         city,
         state,
         postalCode,
-        totalAmount: totalAmount,
+        totalAmount: isNaN(Number(totalAmount)) ? 0 : Number(totalAmount),
         quoteId: quote._id,
         bookingSource: "quote",
       });

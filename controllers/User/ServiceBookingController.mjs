@@ -211,6 +211,9 @@ class ServiceBookingController {
       if (payload.bookingDate) {
         payload.bookingDate = parseDDMMYYYY(payload.bookingDate);
       }
+      if (payload.paymentStatus === 'paid' || payload.paymentStatus === 'fully paid') {
+        payload.fullyPaidAt = new Date();
+      }
       booking = await ServiceBooking.findByIdAndUpdate(id, payload, {
         new: true,
         runValidators: true,
