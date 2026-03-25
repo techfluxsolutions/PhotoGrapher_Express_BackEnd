@@ -287,8 +287,7 @@ class AuthController {
         return res.status(200).json({
           success: true,
           message: "OTP verified successfully (bypass)",
-          token,
-          user,
+          token
         });
       }
 
