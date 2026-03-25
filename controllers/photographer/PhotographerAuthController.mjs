@@ -25,6 +25,10 @@ class PhotographerAuthController {
       }
 
       // Password Check (Support both hashed and legacy plain text if needed, but primarily hashed)
+      if (!photographer.password) {
+        return sendErrorResponse(res, "Invalid email or password", 401);
+      }
+
       const isMatch = await bcrypt.compare(password, photographer.password);
 
       if (!isMatch) {
