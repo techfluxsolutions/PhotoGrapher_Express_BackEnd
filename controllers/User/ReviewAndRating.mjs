@@ -1,6 +1,6 @@
 
 import ReviewAndRating from "../../models/ReviewAndRating.mjs";
-
+import Photograoher from "../../models/Photographer.mjs"
 class ReviewAndRatingController {
     // ✅ CREATE REVIEW & RATING
     async create(req, res, next) {
@@ -114,6 +114,7 @@ class ReviewAndRatingController {
 
     async getAverageOfPhotographerRating(req, res, next) {
         const photographerId = req.user.id;
+        console.log(photographerId)
 
         try {
             const ratings = await ReviewAndRating.find({
@@ -121,33 +122,32 @@ class ReviewAndRatingController {
                 createdBy: "user"
             });
 
-            if (ratings.length === 0) {
-                return res.status(200).json({
-                    success: true,
-                    averageRating: 0,
-                    totalUserRatings: 0,
-                    adminRating: null
-                });
-            }
-
             const totalRating = ratings.reduce(
                 (acc, rating) => acc + rating.ratingCount,
                 0
             );
 
-            const averageRating = totalRating / ratings.length;
+            const averageRating = ratings.length > 0 ? totalRating / ratings.length : 0;
 
             const adminRating = await ReviewAndRating.findOne({
                 photographerId,
                 createdBy: "admin"
-            }).populate("photographerId", 'professionalDetails.expertiseLevel basicInfo.profilePhoto basicInfo.fullName').lean();
-            const avatar = process.env.BASE_URL && adminRating.photographerId.basicInfo.profilePhoto ? `${process.env.BASE_URL}${adminRating.photographerId.basicInfo.profilePhoto}` : "";
-            adminRating.photographerId.basicInfo.profilePhoto = avatar;
+            }).populate("photographerId", 'professionalDetails.expertiseLevel basicInfo.profilePhoto basicInfo.fullName');
+            
+            const photographerDetails = await Photograoher.findById(photographerId).select("basicInfo.fullName basicInfo.profilePhoto professionalDetails.expertiseLevel")
+            const avatar = process.env.BASE_URL && photographerDetails?.basicInfo?.profilePhoto ? `${process.env.BASE_URL}${photographerDetails.basicInfo.profilePhoto}` : "";
+            
+            if (adminRating && adminRating.photographerId && adminRating.photographerId.basicInfo) {
+                adminRating.photographerId.basicInfo.profilePhoto = avatar;
+            }
+            
             return res.status(200).json({
                 success: true,
                 averageRating,
                 totalUserRatings: ratings.length,
-                adminRating
+                adminRating,
+                avatar: avatar,
+                photographerDetails
             });
 
         } catch (error) {
