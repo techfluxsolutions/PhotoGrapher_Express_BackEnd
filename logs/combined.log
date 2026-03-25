@@ -1243,3 +1243,5 @@
 {"level":"info","message":"::1 - - [25/Mar/2026:09:57:13 +0000] \"GET /api/photographers/ratings HTTP/1.1\" 500 532 \"-\" \"PostmanRuntime/7.51.1\"","timestamp":"2026-03-25 15:27:13"}
 {"level":"info","message":"::1 - - [25/Mar/2026:09:58:49 +0000] \"GET /api/photographers/ratings HTTP/1.1\" 500 532 \"-\" \"PostmanRuntime/7.51.1\"","timestamp":"2026-03-25 15:28:49"}
 {"level":"info","message":"::1 - - [25/Mar/2026:10:02:09 +0000] \"GET /api/photographers/ratings HTTP/1.1\" 200 247 \"-\" \"PostmanRuntime/7.51.1\"","timestamp":"2026-03-25 15:32:09"}
+{"level":"info","message":"::1 - - [25/Mar/2026:10:36:19 +0000] \"GET /api/photographers/ratings HTTP/1.1\" 200 247 \"-\" \"PostmanRuntime/7.51.1\"","timestamp":"2026-03-25 16:06:19"}
+{"level":"info","message":"::1 - - [25/Mar/2026:11:23:29 +0000] \"GET /api/photographers/gettodaysbookings HTTP/1.1\" 200 - \"-\" \"PostmanRuntime/7.51.1\"","timestamp":"2026-03-25 16:53:29"}
