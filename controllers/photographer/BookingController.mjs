@@ -700,15 +700,24 @@ class BookingController {
     async todaysBooking(req, res, next) {
         try {
             const myId = new mongoose.Types.ObjectId(req.user.id);
-            const todaysDate = new Date();
+            console.log(myId)
+
+            const today = new Date().toISOString().split("T")[0]; // "2026-03-25"
+
             const todaysBooking = await ServiceBooking.find({
                 photographer_id: myId,
                 bookingStatus: "accepted",
-                date: {
-                    $eq: todaysDate
-                }
+                $or: [
+                    { startDate: today },
+                    { endDate: today }
+                ]
             });
-            return sendSuccessResponse(res, todaysBooking, "Todays bookings fetched successfully");
+
+            return sendSuccessResponse(
+                res,
+                todaysBooking,
+                "Todays bookings fetched successfully"
+            );
         } catch (error) {
             return sendErrorResponse(res, error, 500);
         }

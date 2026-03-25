@@ -1206,3 +1206,15 @@
 {"level":"info","message":"::1 - - [24/Mar/2026:13:11:57 +0000] \"POST /api/admins/verify/sendOTP HTTP/1.1\" 200 50 \"-\" \"PostmanRuntime/7.51.1\"","timestamp":"2026-03-24 18:41:57"}
 {"level":"info","message":"::1 - - [24/Mar/2026:13:12:13 +0000] \"POST /api/admins/verify/verifyOTP HTTP/1.1\" 200 175 \"-\" \"PostmanRuntime/7.51.1\"","timestamp":"2026-03-24 18:42:13"}
 >>>>>>> 5b0ca847a6465ba630d4441d7f2ed088331aea7e
+{"level":"info","message":"::1 - - [24/Mar/2026:13:39:00 +0000] \"GET /api/photographers/gettodaysbookings HTTP/1.1\" 200 75 \"-\" \"PostmanRuntime/7.51.1\"","timestamp":"2026-03-24 19:09:00"}
+{"level":"info","message":"::1 - - [24/Mar/2026:13:41:02 +0000] \"GET /api/photographers/gettodaysbookings HTTP/1.1\" 200 75 \"-\" \"PostmanRuntime/7.51.1\"","timestamp":"2026-03-24 19:11:02"}
+{"level":"info","message":"::1 - - [24/Mar/2026:13:43:11 +0000] \"GET /api/photographers/gettodaysbookings HTTP/1.1\" 200 75 \"-\" \"PostmanRuntime/7.51.1\"","timestamp":"2026-03-24 19:13:11"}
+{"level":"info","message":"::1 - - [24/Mar/2026:13:47:38 +0000] \"GET /api/photographers/gettodaysbookings HTTP/1.1\" 200 75 \"-\" \"PostmanRuntime/7.51.1\"","timestamp":"2026-03-24 19:17:38"}
+{"level":"info","message":"::1 - - [25/Mar/2026:06:36:41 +0000] \"GET /api/photographers/gettodaysbookings HTTP/1.1\" 500 141 \"-\" \"PostmanRuntime/7.51.1\"","timestamp":"2026-03-25 12:06:41"}
+{"level":"info","message":"::1 - - [25/Mar/2026:06:47:41 +0000] \"GET /api/photographers/gettodaysbookings HTTP/1.1\" 200 75 \"-\" \"PostmanRuntime/7.51.1\"","timestamp":"2026-03-25 12:17:41"}
+{"level":"info","message":"::1 - - [25/Mar/2026:06:51:41 +0000] \"GET /api/photographers/gettodaysbookings HTTP/1.1\" 200 75 \"-\" \"PostmanRuntime/7.51.1\"","timestamp":"2026-03-25 12:21:41"}
+{"level":"info","message":"::1 - - [25/Mar/2026:06:53:55 +0000] \"GET /api/photographers/gettodaysbookings HTTP/1.1\" 200 75 \"-\" \"PostmanRuntime/7.51.1\"","timestamp":"2026-03-25 12:23:55"}
+{"level":"info","message":"::1 - - [25/Mar/2026:06:56:06 +0000] \"GET /api/photographers/gettodaysbookings HTTP/1.1\" 200 75 \"-\" \"PostmanRuntime/7.51.1\"","timestamp":"2026-03-25 12:26:06"}
+{"level":"info","message":"::1 - - [25/Mar/2026:06:57:10 +0000] \"GET /api/photographers/gettodaysbookings HTTP/1.1\" 200 75 \"-\" \"PostmanRuntime/7.51.1\"","timestamp":"2026-03-25 12:27:10"}
+{"level":"info","message":"::1 - - [25/Mar/2026:06:58:01 +0000] \"GET /api/photographers/gettodaysbookings HTTP/1.1\" 200 75 \"-\" \"PostmanRuntime/7.51.1\"","timestamp":"2026-03-25 12:28:01"}
+{"level":"info","message":"::1 - - [25/Mar/2026:07:00:52 +0000] \"GET /api/photographers/gettodaysbookings HTTP/1.1\" 200 - \"-\" \"PostmanRuntime/7.51.1\"","timestamp":"2026-03-25 12:30:52"}
