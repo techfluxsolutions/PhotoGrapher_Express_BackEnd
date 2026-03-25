@@ -140,8 +140,9 @@ class ReviewAndRatingController {
             const adminRating = await ReviewAndRating.findOne({
                 photographerId,
                 createdBy: "admin"
-            }).populate("photographerId", 'professionalDetails.expertiseLevel');
-
+            }).populate("photographerId", 'professionalDetails.expertiseLevel basicInfo.profilePhoto basicInfo.fullName').lean();
+            const avatar = process.env.BASE_URL && adminRating.photographerId.basicInfo.profilePhoto ? `${process.env.BASE_URL}${adminRating.photographerId.basicInfo.profilePhoto}` : "";
+            adminRating.photographerId.basicInfo.profilePhoto = avatar;
             return res.status(200).json({
                 success: true,
                 averageRating,
