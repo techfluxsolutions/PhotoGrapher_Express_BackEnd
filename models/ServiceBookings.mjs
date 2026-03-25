@@ -151,6 +151,14 @@ const serviceBookingSchema = new mongoose.Schema(
       type: Number,
       default: 0
     },
+    expectedGuests: {
+      type: String,
+      required: false, // this is for the mobile only
+    },
+    budget: {
+      type: String,
+      required: false, // this is for the mobile only
+    },
     acceptedAt: {
       type: Date,
       default: null

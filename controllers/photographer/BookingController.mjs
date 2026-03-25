@@ -701,13 +701,16 @@ class BookingController {
         try {
             const myId = new mongoose.Types.ObjectId(req.user.id);
             const todaysDate = new Date();
+            // Assuming todaysDate is matching the specific implementation or the client's needs
             const todaysBooking = await ServiceBooking.find({
                 photographer_id: myId,
                 bookingStatus: "accepted",
                 date: {
                     $eq: todaysDate
                 }
-            });
+            })
+            .populate("client_id", "username email mobileNumber avatar")
+            .populate("service_id", "serviceName");
             return sendSuccessResponse(res, todaysBooking, "Todays bookings fetched successfully");
         } catch (error) {
             return sendErrorResponse(res, error, 500);

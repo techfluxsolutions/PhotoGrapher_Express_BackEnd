@@ -19,6 +19,7 @@ import {
   photographerRoutes,
   authRoutes,
   chatRoutes,
+  mobileRoutes,
 } from "./routes/index.js";
 import uploadRoutes from "./routes/uploadRoutes.js";
 
@@ -166,6 +167,7 @@ app.use("/api/admins", adminRoutes);
 app.use("/api/photographers", photographerRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/chat", chatRoutes);
+app.use("/api/mobile", mobileRoutes);
 
 // Mount S3 Large Upload/Streaming Module
 app.use("/upload", uploadRoutes);
