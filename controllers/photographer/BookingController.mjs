@@ -268,6 +268,19 @@ class BookingController {
             let bookingObj = booking.toObject({ virtuals: true });
             bookingObj.eventType = booking.service_id?.serviceName || "N/A";
 
+            // Format Status for UI
+            if (bookingObj.status === "confirmed") {
+                bookingObj.displayStatus = "Confirmed Booking";
+            } else if (bookingObj.status === "pending") {
+                bookingObj.displayStatus = "Pending Booking";
+            } else if (bookingObj.status === "completed") {
+                bookingObj.displayStatus = "Completed Booking";
+            } else if (bookingObj.status === "canceled") {
+                bookingObj.displayStatus = "Canceled Booking";
+            } else {
+                bookingObj.displayStatus = bookingObj.status;
+            }
+
             // Construct Venue
             const venueParts = [];
             if (bookingObj.flatOrHouseNo) venueParts.push(bookingObj.flatOrHouseNo);
