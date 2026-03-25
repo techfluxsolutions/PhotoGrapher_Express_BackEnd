@@ -233,7 +233,8 @@ class BookingController {
                 .populate("client_id", "username email mobileNumber avatar state city isVerified")
                 .populate("service_id", "serviceName") // Ensure serviceName is selected
                 .populate("additionalServicesId")
-                .populate("photographer_id", "username");
+                .populate("photographer_id", "username")
+                .populate("quoteId", "requirements");
 
             if (!booking) {
                 return sendErrorResponse(res, { message: "Booking not found" }, 404);
@@ -266,7 +267,21 @@ class BookingController {
             // Enhance response with helper fields while keeping original data
             let bookingObj = booking.toObject({ virtuals: true });
             bookingObj.eventType = booking.service_id?.serviceName || "N/A";
-            bookingObj.requirements = booking.notes || "No requirements";
+
+            // Construct Venue
+            const venueParts = [];
+            if (bookingObj.flatOrHouseNo) venueParts.push(bookingObj.flatOrHouseNo);
+            if (bookingObj.streetName) venueParts.push(bookingObj.streetName);
+            if (bookingObj.city) venueParts.push(bookingObj.city);
+            bookingObj.venue = venueParts.length > 0 ? venueParts.join(", ") : "N/A";
+
+            // Extract Quote Requirements
+            const quoteReqs = booking.quoteId?.requirements;
+            if (quoteReqs && Array.isArray(quoteReqs) && quoteReqs.length > 0) {
+                bookingObj.requirements = quoteReqs;
+            } else {
+                bookingObj.requirements = null;
+            }
 
             // If it's already assigned and has a stored amount, use it.
             // Otherwise calculate it on the fly for this viewing photographer.
