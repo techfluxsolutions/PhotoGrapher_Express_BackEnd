@@ -948,7 +948,7 @@ class PhotographerController {
             }
 
             if (rating !== undefined && rating !== null && rating.toString().trim() !== "") {
-                orFilters.push({ avgRating: { $gte: minRating } });
+                orFilters.push({ avgRating: { $lte: minRating } });
             }
 
             // Apply OR filters if any are present
