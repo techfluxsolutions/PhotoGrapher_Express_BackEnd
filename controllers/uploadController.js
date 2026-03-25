@@ -398,7 +398,6 @@ export const uploadController = {
                         remainingDays = Math.max(0, 14 - diffDays);
                         isblur = (diffDays > 14);
 
-                        logger.info(`--- [isblur-debug] --- ID: ${bookingId} | Ref: ${referenceDate} | Diff: ${diffDays} | Rem: ${remainingDays}`);
                     } else {
                         // Fully paid but no photos yet: Unblurred by default
                         isblur = false;

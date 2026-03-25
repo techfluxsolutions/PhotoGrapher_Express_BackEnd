@@ -1,0 +1,8 @@
+Connected to MongoDB
+Created Booking for Case 1: Fully Paid, Uploaded Today (14 days left, Unblurred): 69c3a8447b22ad4ecedef4bc
+Created Booking for Case 2: Fully Paid, Uploaded 10 Days Ago (4 days left, Unblurred): 69c3a8447b22ad4ecedef4c1
+Created Booking for Case 3: Fully Paid, Uploaded 15 Days Ago (0 days left, Blurred): 69c3a8447b22ad4ecedef4c5
+Created Booking for Case 4: Partially Paid, Uploaded Today (Blurred, No countdown): 69c3a8447b22ad4ecedef4cb
+
+Dummy data created successfully!
+You can now test the endpoint: /upload/getArrayImages/<bookingId>

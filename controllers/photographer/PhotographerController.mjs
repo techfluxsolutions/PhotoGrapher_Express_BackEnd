@@ -780,9 +780,52 @@ class PhotographerController {
             const limit = Math.max(1, parseInt(req.query.limit) || 10);
             const skip = (page - 1) * limit;
 
+            const pipeline = [
+                { $match: { status: "active" } },
+                {
+                    $lookup: {
+                        from: "photographerratingsgivenbyadminandusers",
+                        localField: "_id",
+                        foreignField: "photographerId",
+                        as: "ratings"
+                    }
+                },
+                {
+                    $addFields: {
+                        avgRating: { $ifNull: [{ $avg: "$ratings.rating" }, 0] },
+                        // Extract category names (keys) where value is true
+                        extractedCategories: {
+                            $map: {
+                                input: {
+                                    $filter: {
+                                        input: { $objectToArray: { $ifNull: ["$servicesAndStyles.services", {}] } },
+                                        as: "item",
+                                        cond: { $eq: ["$$item.v", true] }
+                                    }
+                                },
+                                as: "c",
+                                in: "$$c.k"
+                            }
+                        }
+                    }
+                },
+                {
+                    $project: {
+                        _id: 1,
+                        "basicInfo.fullName": 1,
+                        "basicInfo.profilePhoto": 1,
+                        "professionalDetails.expertiseLevel": 1,
+                        "servicesAndStyles.services": 1,
+                        commissionPercentage: 1,
+                        avgRating: 1,
+                        categories: { $ifNull: ["$extractedCategories", []] },
+                        createdAt: 1
+                    }
+                }
+            ];
+
             const [photographers, settings] = await Promise.all([
-                Photographer.find({ status: "active" })
-                    .select('_id basicInfo.fullName basicInfo.profilePhoto professionalDetails.expertiseLevel commissionPercentage'),
+                Photographer.aggregate(pipeline),
                 PlatformSettings.findOne({ type: "commissions" })
             ]);
 
@@ -825,7 +868,9 @@ class PhotographerController {
                     name: p.basicInfo?.fullName || "N/A",
                     level: level,
                     profilePhoto: photo,
-                    commissionPercentage: comm || 0
+                    commissionPercentage: comm || 0,
+                    avgRating: parseFloat((p.avgRating || 0).toFixed(1)),
+                    categories: p.categories || []
                 };
             });
 
@@ -854,33 +899,7 @@ class PhotographerController {
             // 1. Match active photographers
             pipeline.push({ $match: { status: "active" } });
 
-            // 2. Filter by specific category boolean flag if provided
-            if (category) {
-                const categoryField = `servicesAndStyles.services.${category}`;
-                pipeline.push({ $match: { [categoryField]: true } });
-            }
-
-            // 3. Filter by expertise if provided
-            if (expertise) {
-                pipeline.push({ $match: { "professionalDetails.expertiseLevel": expertise.toUpperCase() } });
-            }
-
-            // 4. Calculate total categories for sorting by categorization richness
-            pipeline.push({
-                $addFields: {
-                    categoryCount: {
-                        $size: {
-                            $filter: {
-                                input: { $objectToArray: "$servicesAndStyles.services" },
-                                as: "item",
-                                cond: { $eq: ["$$item.v", true] }
-                            }
-                        }
-                    }
-                }
-            });
-
-            // 5. Lookup Ratings for average rating
+            // 2. Lookup Ratings for average rating (needed early for OR filtering)
             pipeline.push({
                 $lookup: {
                     from: "photographerratingsgivenbyadminandusers",
@@ -890,10 +909,19 @@ class PhotographerController {
                 }
             });
 
-            // 6. Calculate Average Rating and Expertise Score
+            // 3. Calculate fields (avgRating, categoryCount, expertiseScore)
             pipeline.push({
                 $addFields: {
                     avgRating: { $ifNull: [{ $avg: "$allRatings.rating" }, 0] },
+                    categoryCount: {
+                        $size: {
+                            $filter: {
+                                input: { $objectToArray: { $ifNull: ["$servicesAndStyles.services", {}] } },
+                                as: "item",
+                                cond: { $eq: ["$$item.v", true] }
+                            }
+                        }
+                    },
                     expertiseScore: {
                         $switch: {
                             branches: [
@@ -907,9 +935,25 @@ class PhotographerController {
                 }
             });
 
-            // 7. Filter by maximum rating if provided (Show X or less)
-            if (rating !== undefined && rating !== null) {
-                pipeline.push({ $match: { avgRating: { $lte: minRating } } });
+            // 4. Build OR Filter array
+            const orFilters = [];
+            
+            if (category && category.trim() !== "") {
+                const categoryField = `servicesAndStyles.services.${category}`;
+                orFilters.push({ [categoryField]: true });
+            }
+
+            if (expertise && expertise.trim() !== "") {
+                orFilters.push({ "professionalDetails.expertiseLevel": expertise.toUpperCase() });
+            }
+
+            if (rating !== undefined && rating !== null && rating.toString().trim() !== "") {
+                orFilters.push({ avgRating: { $lte: minRating } });
+            }
+
+            // Apply OR filters if any are present
+            if (orFilters.length > 0) {
+                pipeline.push({ $match: { $or: orFilters } });
             }
 
             // 8. Apply Sorting
