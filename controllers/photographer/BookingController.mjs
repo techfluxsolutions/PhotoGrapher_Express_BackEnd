@@ -700,6 +700,8 @@ class BookingController {
     async todaysBooking(req, res, next) {
         try {
             const myId = new mongoose.Types.ObjectId(req.user.id);
+            const limit = req.query.limit ;
+            const skip = req.query.skip || 0;
             console.log(myId)
 
             const today = new Date().toISOString().split("T")[0]; // "2026-03-25"
@@ -711,7 +713,7 @@ class BookingController {
                     { startDate: today },
                     { endDate: today }
                 ]
-            })
+            }).skip(skip).limit(limit)
             .populate("client_id", "username email mobileNumber avatar")
             .populate("service_id", "serviceName");
 
