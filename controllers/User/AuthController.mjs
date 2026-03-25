@@ -432,7 +432,7 @@ class AuthController {
         success: true,
         message: "OTP verified successfully",
         token,
-        //user,
+        user,
       });
 
     } catch (error) {
