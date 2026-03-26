@@ -79,6 +79,8 @@ router.patch("/bookings/:id/status", (req, res, next) => BookingController.updat
 router.post("/bookings/initialize-status", (req, res, next) => BookingController.initializePreviousBookingsStatus(req, res, next));
 
 // get booking counts 
+router.get("/bookings/summary-counts", (req, res, next) => BookingController.getSummaryCounts(req, res, next));
+router.get("/bookings/today-upcoming", (req, res, next) => BookingController.getTodayAndUpcomingBookings(req, res, next));
 
 
 

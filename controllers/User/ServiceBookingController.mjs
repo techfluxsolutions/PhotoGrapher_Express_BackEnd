@@ -206,13 +206,36 @@ class ServiceBookingController {
     try {
       const { id } = req.params;
       const payload = req.body;
+      
+      console.log(`--- [updatePaymentStatusBooking] --- ID: ${id}`);
+      console.log("Payload received:", JSON.stringify(payload, null, 2));
+
       let booking;
       let quote;
       if (payload.bookingDate) {
         payload.bookingDate = parseDDMMYYYY(payload.bookingDate);
       }
-      if (payload.paymentStatus === 'paid' || payload.paymentStatus === 'fully paid') {
+      
+      // Ensure paymentStatus, full_Payment, partial_Payment are synchronized
+      if (
+        payload.paymentStatus === "paid" || 
+        payload.paymentStatus === "fully paid" || 
+        payload.full_Payment === true ||
+        (payload.outStandingAmount !== undefined && Number(payload.outStandingAmount) === 0 && payload.totalAmount)
+      ) {
+        payload.paymentStatus = "fully paid";
         payload.fullyPaidAt = new Date();
+        payload.full_Payment = true;
+        payload.partial_Payment = false;
+        payload.outStandingAmount = 0;
+      } else if (
+        payload.paymentStatus === "partially paid" || 
+        payload.partial_Payment === true || 
+        (payload.outStandingAmount && Number(payload.outStandingAmount) > 0)
+      ) {
+        payload.paymentStatus = "partially paid";
+        payload.partial_Payment = true;
+        payload.full_Payment = false;
       }
       booking = await ServiceBooking.findByIdAndUpdate(id, payload, {
         new: true,
@@ -265,7 +288,23 @@ class ServiceBookingController {
   async getPreviousBookings(req, res, next) {
     try {
       const { id } = req.user;
-      const bookings = await ServiceBooking.find({ client_id: id, status: "completed" }).populate("service_id", "serviceName");
+      const todayMidnight = new Date();
+      todayMidnight.setUTCHours(0, 0, 0, 0);
+      const todayStr = todayMidnight.toISOString().split("T")[0];
+
+      // Previous bookings are those that are explicitly completed 
+      // OR those whose date has already passed.
+      const bookings = await ServiceBooking.find({
+        client_id: id,
+        $or: [
+          { status: "completed" },
+          { bookingDate: { $lt: todayMidnight } },
+          { startDate: { $lt: todayStr } }
+        ]
+      })
+        .sort({ bookingDate: -1, createdAt: -1 }) // Show most recent past bookings first
+        .populate("service_id", "serviceName");
+
       return res.json({ success: true, data: bookings });
     } catch (err) {
       return next(err);
