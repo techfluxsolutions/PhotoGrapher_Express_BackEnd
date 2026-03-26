@@ -10,6 +10,7 @@ import {
 } from "../../utils/handleResponce.mjs";
 import fs from 'fs';
 import path from 'path';
+import { sendBookingSMS } from "../../utils/messageCentral.mjs";
 import { downloadInvoice } from "../../controllers/Admin/InvoiceController.mjs";
 
 class BookingController {
@@ -645,6 +646,10 @@ class BookingController {
                 updateData.photographerIds = []; // Clear invitations once claimed
                 console.log("Photographer accepting booking:", { id, updateData });
 
+                // Generate 4-digit OTP for booking
+                const otp = Math.floor(1000 + Math.random() * 9000).toString();
+                updateData.bookingOtp = otp;
+
                 // Determine commission and net payout
                 const [photographer, settings] = await Promise.all([
                     Photographer.findById(myId),
@@ -663,6 +668,16 @@ class BookingController {
                     }
 
                     updateData.photographerAmount = Math.round(targetBooking.totalAmount * (1 - (commission || 0) / 100));
+
+                    // Send OTP to photographer's mobile
+                    if (photographer.mobileNumber) {
+                        try {
+                            await sendBookingSMS(photographer.mobileNumber, `Your booking acceptance OTP is ${otp}. Please use this to start your job.`);
+                        } catch (smsErr) {
+                            console.error("Failed to send booking OTP SMS:", smsErr.message);
+                            // Still proceed with acceptance, but log the error
+                        }
+                    }
                 }
             } else if (bookingStatus === "rejected") {
                 if (isAssigned) {
@@ -904,6 +919,48 @@ class BookingController {
                 meta: { total, page, limit }
             }, "Today and upcoming bookings fetched successfully");
         } catch (error) {
+            return sendErrorResponse(res, error, 500);
+        }
+    }
+
+    // Resend Booking OTP for photographer
+    async resendBookingOtp(req, res) {
+        try {
+            const { id } = req.params;
+            const myId = new mongoose.Types.ObjectId(req.user.id);
+
+            const booking = await ServiceBooking.findById(id).populate("photographer_id");
+            if (!booking) {
+                return sendErrorResponse(res, { message: "Booking not found" }, 404);
+            }
+
+            // Verify the photographer requesting the OTP is the one assigned
+            const isAssigned = booking.photographer_id?._id.toString() === myId.toString();
+            if (!isAssigned) {
+                return sendErrorResponse(res, { message: "Unauthorized: You are not the assigned photographer for this booking" }, 403);
+            }
+
+            // Generate a fresh 4-digit OTP
+            const otp = Math.floor(1000 + Math.random() * 9000).toString();
+            booking.bookingOtp = otp;
+            await booking.save();
+
+            // Fetch the latest photographer info
+            const photographer = await Photographer.findById(myId);
+            if (photographer && photographer.mobileNumber) {
+                try {
+                    await sendBookingSMS(photographer.mobileNumber, `Your new booking OTP is ${otp}. Please use this to start your job.`);
+                } catch (smsErr) {
+                    console.error("Failed to resend booking OTP SMS:", smsErr.message);
+                    return sendErrorResponse(res, { message: "Failed to send SMS, please try again later" }, 502);
+                }
+            } else {
+                return sendErrorResponse(res, { message: "User phone number not found" }, 400);
+            }
+
+            return sendSuccessResponse(res, { bookingId: id }, "OTP resent via SMS successfully");
+        } catch (error) {
+            console.error("Error resending booking OTP:", error);
             return sendErrorResponse(res, error, 500);
         }
     }

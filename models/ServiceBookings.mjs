@@ -174,6 +174,10 @@ const serviceBookingSchema = new mongoose.Schema(
     fullyPaidAt: {
       type: Date,
       default: null
+    },
+    bookingOtp: {
+      type: String,
+      default: null
     }
   },
   { timestamps: true }

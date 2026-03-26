@@ -23,3 +23,4 @@
 {"level":"info","message":"::1 - - [26/Mar/2026:09:57:53 +0000] \"GET /api/admins/photographers/sorted?bookingId=69c4de2d66639fd6758de5dd&limit=20 HTTP/1.1\" 200 - \"-\" \"PostmanRuntime/7.52.0\"","timestamp":"2026-03-26 15:27:53"}
 {"level":"info","message":"::1 - - [26/Mar/2026:10:13:41 +0000] \"GET /api/admins/bookings/upcoming?fromDate=&toDate=&page=1&limit=10 HTTP/1.1\" 200 - \"-\" \"PostmanRuntime/7.52.0\"","timestamp":"2026-03-26 15:43:41"}
 {"level":"info","message":"::1 - - [26/Mar/2026:10:16:01 +0000] \"GET /api/admins/bookings/upcoming?fromDate=&toDate=&page=1&limit=10 HTTP/1.1\" 200 - \"-\" \"PostmanRuntime/7.52.0\"","timestamp":"2026-03-26 15:46:01"}
+{"level":"info","message":"::1 - - [26/Mar/2026:10:36:27 +0000] \"GET /api/photographers/gettodaysbookings HTTP/1.1\" 200 486 \"-\" \"PostmanRuntime/7.52.0\"","timestamp":"2026-03-26 16:06:27"}
