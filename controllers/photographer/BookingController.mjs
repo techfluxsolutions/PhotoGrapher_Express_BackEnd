@@ -11,7 +11,7 @@ import {
 } from "../../utils/handleResponce.mjs";
 import fs from 'fs';
 import path from 'path';
-import { sendBookingSMS, sendMessageCentral, retryMessageCentral } from "../../utils/messageCentral.mjs";
+import { sendBookingSMS, sendMessageCentral, retryMessageCentral, verifyMessageCentral } from "../../utils/messageCentral.mjs";
 import { downloadInvoice } from "../../controllers/Admin/InvoiceController.mjs";
 
 class BookingController {
@@ -954,7 +954,8 @@ class BookingController {
     async resendBookingOtp(req, res) {
         try {
             const { id } = req.params;
-            const myId = new mongoose.Types.ObjectId(req.user.id);
+            const { mobile: mobileOverride } = req.body;
+            const myId = req.user._id;
 
             const booking = await ServiceBooking.findById(id).populate("photographer_id");
             if (!booking) {
@@ -962,57 +963,119 @@ class BookingController {
             }
 
             // Verify the photographer requesting the OTP is the one assigned
-            const isAssigned = booking.photographer_id?._id.toString() === myId.toString();
-            if (!isAssigned) {
+            const requesterId = req.user?.id || req.user?._id;
+            const assignedId = booking.photographer_id?._id || booking.photographer_id;
+
+            if (String(requesterId) !== String(assignedId)) {
                 return sendErrorResponse(res, { message: "Unauthorized: You are not the assigned photographer for this booking" }, 403);
             }
 
             // ✅ RESEND LOGIC: Self-healing flow (Try retry, if it fails, try fresh)
             const client = await User.findById(booking.client_id);
-            if (!client || !client.mobileNumber) {
-                return sendErrorResponse(res, { message: "Client phone number not found" }, 400);
-            }
+            const targetMobile = (mobileOverride || client?.mobileNumber)?.toString().replace(/\D/g, "");
 
-            // Attempt 1: Try dedicated re-delivery if we have a token
-            if (booking.bookingOtp && booking.bookingOtp.length > 5) {
+            if (!targetMobile) {
+                return sendErrorResponse(res, { message: "Client phone number not found. Please provide it in the body." }, 400);
+            }
+                
+                if (booking.bookingOtp && booking.bookingOtp.length > 5) {
+                    try {
+                        console.log(`[SMS] Attempting re-delivery for ID: ${booking.bookingOtp}`);
+                        await retryMessageCentral(booking.bookingOtp);
+                        return sendSuccessResponse(res, { bookingId: id, client_mobile: targetMobile }, "OTP re-delivered to client successfully");
+                    } catch (retryErr) {
+                        console.warn("[LOG] Re-delivery endpoint failed, pivoting to fresh request...");
+                        // No return here, fall through to Attempt 2
+                    }
+                }
+                
+                // Attempt 2: Fresh OTP request (Starts a new session or links to existing)
                 try {
-                    console.log(`[SMS] Attempting re-delivery for ID: ${booking.bookingOtp}`);
-                    await retryMessageCentral(booking.bookingOtp);
-                    return sendSuccessResponse(res, { bookingId: id, client_mobile: client.mobileNumber }, "OTP re-delivered to client successfully");
-                } catch (retryErr) {
-                    console.warn("[LOG] Re-delivery endpoint failed, pivoting to fresh request...");
-                    // No return here, fall through to Attempt 2
-                }
-            }
-                
-            // Attempt 2: Fresh OTP request (Starts a new session or links to existing)
-            try {
-                const response = await sendMessageCentral(client.mobileNumber, 4);
-                const vId = response.data?.verificationId || response.data?.data?.verificationId || response.data?.id || null;
+                    const response = await sendMessageCentral(targetMobile, 4);
+                    const vId = response.data?.verificationId || response.data?.data?.verificationId || response.data?.id || null;
 
-                if (vId) {
-                    booking.bookingOtp = vId;
-                    await booking.save();
-                    return sendSuccessResponse(res, { bookingId: id, client_mobile: client.mobileNumber }, "Fresh OTP sent to client successfully");
-                } else {
-                    return sendErrorResponse(res, { message: "OTP service reached but no ID returned" }, 502);
-                }
-            } catch (smsErr) {
-                const errorData = smsErr.response?.data;
-                const vIdFromError = errorData?.verificationId || errorData?.data?.verificationId || errorData?.id || null;
-                
-                // If the provider says it already exists (506), capture the NEW id if it changed
-                if (vIdFromError) {
-                    booking.bookingOtp = vIdFromError;
-                    await booking.save();
-                    return sendSuccessResponse(res, { bookingId: id, client_mobile: client.mobileNumber }, "Existing session confirmed, client should check their mobile.");
-                }
+                    if (vId) {
+                        booking.bookingOtp = vId;
+                        await booking.save();
+                        return sendSuccessResponse(res, { bookingId: id, client_mobile: targetMobile }, "Fresh OTP sent to client successfully");
+                    } else {
+                        return sendErrorResponse(res, { message: "OTP service reached but no ID returned" }, 502);
+                    }
+                } catch (smsErr) {
+                    const errorData = smsErr.response?.data;
+                    const vIdFromError = errorData?.verificationId || errorData?.data?.verificationId || errorData?.id || null;
+                    
+                    // If the provider says it already exists (506), capture the NEW id if it changed
+                    if (vIdFromError) {
+                        booking.bookingOtp = vIdFromError;
+                        await booking.save();
+                        return sendSuccessResponse(res, { bookingId: id, client_mobile: targetMobile }, "Existing session confirmed, client should check their mobile.");
+                    }
 
                 console.error("[CRITICAL] Resend failed for Client (v3):", errorData || smsErr.message);
                 return sendErrorResponse(res, { message: "The SMS service is busy, please wait 30 seconds." }, 503);
             }
         } catch (error) {
             console.error("Error resending booking OTP:", error);
+            return sendErrorResponse(res, error, 500);
+        }
+    }
+
+    /**
+     * Verify the 4-digit OTP provided by the client
+     * POST /api/photographers/bookings/:id/verify-otp
+     */
+    async verifyBookingOtp(req, res) {
+        try {
+            const { id } = req.params;
+            const { otp } = req.body;
+            const myId = req.user._id;
+
+            if (!otp) {
+                return sendErrorResponse(res, { message: "OTP is required" }, 400);
+            }
+
+            const booking = await ServiceBooking.findById(id).populate("photographer_id");
+
+            if (!booking) {
+                return sendErrorResponse(res, { message: "Booking not found" }, 404);
+            }
+
+            // Verify the photographer doing the verification is the one assigned
+            const requesterId = req.user?.id || req.user?._id;
+            const assignedId = booking.photographer_id?._id || booking.photographer_id;
+
+            if (String(requesterId) !== String(assignedId)) {
+                return sendErrorResponse(res, { message: "Unauthorized: You are not assigned to this booking" }, 403);
+            }
+
+            if (!booking.bookingOtp) {
+                return sendErrorResponse(res, { message: "No active OTP found for this booking" }, 400);
+            }
+
+            // Call Message Central to verify the 4-digit code against the stored token
+            try {
+                const response = await verifyMessageCentral(booking.bookingOtp, otp);
+                
+                // If we are here, it means the provider returned 200/Success
+                // Mark the booking as verified/confirmed
+                booking.bookingOtp = null; // Clear OTP after success
+                booking.status = "confirmed";
+                
+                await booking.save();
+
+                return sendSuccessResponse(res, { bookingId: id }, "OTP verified successfully. Job confirmed.");
+            } catch (err) {
+                const errorData = err.response?.data || {};
+                console.error("OTP Verification failed for booking:", id, errorData);
+                
+                return sendErrorResponse(res, { 
+                    message: "Invalid or expired OTP", 
+                    provider: errorData.message || errorData.errorMessage
+                }, 400);
+            }
+        } catch (error) {
+            console.error("Error verifying booking OTP:", error);
             return sendErrorResponse(res, error, 500);
         }
     }
