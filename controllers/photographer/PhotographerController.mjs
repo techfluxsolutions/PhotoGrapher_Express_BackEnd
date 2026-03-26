@@ -3,10 +3,10 @@ import PlatformSettings from "../../models/PlatformSettings.mjs";
 import PhotographerRatingsGivenByAdminAndUser from "../../models/PhotographerRatingsGivenByAdmin&User.mjs";
 import ServiceBooking from "../../models/ServiceBookings.mjs";
 import bcrypt from "bcrypt";
-import { sendWelcomeEmail } from "../../utils/emailService.mjs";
+//import { sendWelcomeEmail } from "../../utils/emailService.mjs";
 import mongoose from "mongoose";
 import { sendMessageCentral, verifyMessageCentral } from "../../utils/messageCentral.mjs";
-
+import razorpayInstance from "../../Config/razorpay.mjs";
 class PhotographerController {
     // Get All Photographers (Unified endpoint with filtering)
     async getAllPhotographers(req, res) {
@@ -79,7 +79,7 @@ class PhotographerController {
             commissionPercentage: p.commissionPercentage || 0,
             team_studio: p.professionalDetails?.team_studio || "",
             expertiseLevel: p.professionalDetails?.expertiseLevel || "N/A",
-            categories: p.servicesAndStyles?.services ? 
+            categories: p.servicesAndStyles?.services ?
                 Object.keys(p.servicesAndStyles.services).filter(key => p.servicesAndStyles.services[key] === true) : [],
             isAbleToVerify: (
                 !p.professionalDetails?.yearsOfExperience ||
@@ -367,17 +367,17 @@ class PhotographerController {
             if (!mobileNumber) {
                 return res.status(400).json({ message: "Mobile number is required" });
             }
-            
+
             const cleanedMobile = mobileNumber.toString().replace(/\D/g, "");
             const photographer = await Photographer.findOne({ mobileNumber: cleanedMobile });
-            
+
             if (!photographer) {
                 return res.status(404).json({ message: "Photographer not found" });
             }
 
             const response = await sendMessageCentral(cleanedMobile);
             const data = response.data;
-            
+
             const verificationId = data?.verificationId || data?.data?.verificationId || data?.id || null;
             if (!verificationId) {
                 return res.status(502).json({ message: "Failed to send OTP", provider: data });
@@ -410,7 +410,7 @@ class PhotographerController {
                 const cleanedMobile = mobileNumber.toString().replace(/\D/g, "");
                 photographer = await Photographer.findOne({ mobileNumber: cleanedMobile });
             }
-            
+            console.log(photographer);
             if (!photographer) {
                 return res.status(404).json({ message: "Photographer not found" });
             }
@@ -436,6 +436,25 @@ class PhotographerController {
             // Set username to email as requested
             photographer.username = photographer.email;
             photographer.status = "active";
+            // Create Razorpay account if not exists
+
+            if (!photographer.razorpayAccountId) {
+                const accountData = {
+                    type: 'route',
+                    email: photographer.email,
+                    phone: photographer.mobileNumber || photographer.basicInfo?.phone,
+                    legal_business_name: photographer.bank_account_holder || photographer.basicInfo?.fullName || photographer.username || "Photographer",
+                    business_type: "individual", // Default to individual
+                    contact_name: photographer.basicInfo?.fullName || photographer.username || "Photographer",
+                    profile: {
+                        category: "ecommerce",
+                        subcategory: "digital_goods"
+                    }
+                };
+                const account = await razorpayInstance.accounts.create(accountData);
+                photographer.razorpayAccountId = account.id;
+                // await photographer.save();
+            }
 
             await photographer.save();
 
@@ -537,10 +556,9 @@ class PhotographerController {
             if (profileData.calendar_availability) photographer.calendar_availability = profileData.calendar_availability;
 
             await photographer.save();
-
             res.status(200).json({
                 success: true,
-                message: "Photographer profile created successfully",
+                message: "Photographer profile created successfully and razorpay account created successfully",
                 photographer
             });
 
@@ -854,7 +872,7 @@ class PhotographerController {
                     const isAssignedB = b._id.toString() === assignedPhotographerId;
                     if (isAssignedA) return -1;
                     if (isAssignedB) return 1;
-                    
+
                     const levelA = levelOrder[a.professionalDetails?.expertiseLevel] || 99;
                     const levelB = levelOrder[b.professionalDetails?.expertiseLevel] || 99;
                     return levelA - levelB || b.createdAt - a.createdAt;
@@ -962,7 +980,7 @@ class PhotographerController {
 
             // 4. Build OR Filter array
             const orFilters = [];
-            
+
             if (category && category.trim() !== "") {
                 const categoryField = `servicesAndStyles.services.${category}`;
                 orFilters.push({ [categoryField]: true });
