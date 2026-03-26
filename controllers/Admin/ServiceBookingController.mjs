@@ -2,7 +2,7 @@ import ServiceBooking from "../../models/ServiceBookings.mjs";
 import Gallery from "../../models/Gallery.mjs";
 import Photographer from "../../models/Photographer.mjs";
 import PlatformSettings from "../../models/PlatformSettings.mjs";
-import { sendBookingSMS } from "../../utils/messageCentral.mjs";
+import { sendBookingSMS, sendMessageCentral } from "../../utils/messageCentral.mjs";
 import mongoose from "mongoose";
 import Message from "../../models/Message.mjs";
 
@@ -558,6 +558,7 @@ class ServiceBookingController {
           payload.photographer_id = null;
           payload.bookingStatus = "rejected";
           payload.photographerIds = [];
+          payload.bookingOtp = null;
       }
 
       const booking = await ServiceBooking.findByIdAndUpdate(id, payload, {
@@ -595,7 +596,8 @@ class ServiceBookingController {
           status: "canceled",
           bookingStatus: "rejected", // Mark as rejected/canceled for the photographer
           photographer_id: null,      // Clear assignment
-          photographerIds: []         // Clear any pending invitations
+          photographerIds: [],        // Clear any pending invitations
+          bookingOtp: null            // Clear OTP
         },
         { new: true }
       );
@@ -741,10 +743,6 @@ class ServiceBookingController {
           updateData.status = "confirmed";
           updateData.acceptedAt = new Date(); // To enforce the 48hr rule later
 
-          // Generate 4-digit OTP for booking
-          const otp = Math.floor(1000 + Math.random() * 9000).toString();
-          updateData.bookingOtp = otp;
-
           const [booking, photographer, settings] = await Promise.all([
             ServiceBooking.findById(finalBookingId),
             Photographer.findById(finalPhotographerId),
@@ -763,12 +761,19 @@ class ServiceBookingController {
             }
             updateData.photographerAmount = Math.round(booking.totalAmount * (1 - (commission || 0) / 100));
 
-            // Send OTP to photographer's mobile
+            // ✅ Using the working v3 flow for Admin assignments too
             if (photographer.mobileNumber) {
               try {
-                await sendBookingSMS(photographer.mobileNumber, `Your booking acceptance OTP is ${otp}. Please use this to start your job.`);
+                const response = await sendMessageCentral(photographer.mobileNumber, 4);
+                const vId = response.data?.verificationId || response.data?.data?.verificationId || response.data?.id || null;
+                
+                if (vId) {
+                  updateData.bookingOtp = vId;
+                } else {
+                  console.error("Admin Assign: Provider failed to return verificationId.");
+                }
               } catch (smsErr) {
-                console.error("Failed to send booking OTP SMS (Admin Assignment):", smsErr.message);
+                console.error("Admin Assign: v3 API failed:", smsErr.response?.data || smsErr.message);
               }
             }
           }

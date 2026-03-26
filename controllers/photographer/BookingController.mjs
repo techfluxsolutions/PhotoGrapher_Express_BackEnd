@@ -10,7 +10,7 @@ import {
 } from "../../utils/handleResponce.mjs";
 import fs from 'fs';
 import path from 'path';
-import { sendBookingSMS } from "../../utils/messageCentral.mjs";
+import { sendBookingSMS, sendMessageCentral } from "../../utils/messageCentral.mjs";
 import { downloadInvoice } from "../../controllers/Admin/InvoiceController.mjs";
 
 class BookingController {
@@ -646,10 +646,6 @@ class BookingController {
                 updateData.photographerIds = []; // Clear invitations once claimed
                 console.log("Photographer accepting booking:", { id, updateData });
 
-                // Generate 4-digit OTP for booking
-                const otp = Math.floor(1000 + Math.random() * 9000).toString();
-                updateData.bookingOtp = otp;
-
                 // Determine commission and net payout
                 const [photographer, settings] = await Promise.all([
                     Photographer.findById(myId),
@@ -669,13 +665,23 @@ class BookingController {
 
                     updateData.photographerAmount = Math.round(targetBooking.totalAmount * (1 - (commission || 0) / 100));
 
-                    // Send OTP to photographer's mobile
+                    // ✅ Switching to the working v3 Verification Flow (proven to work for your account)
                     if (photographer.mobileNumber) {
                         try {
-                            await sendBookingSMS(photographer.mobileNumber, `Your booking acceptance OTP is ${otp}. Please use this to start your job.`);
+                            // We request a 4-digit OTP from MessageCentral
+                            const response = await sendMessageCentral(photographer.mobileNumber, 4);
+                            const data = response.data;
+                            const vId = data?.verificationId || data?.data?.verificationId || data?.id || null;
+                            
+                            if (vId) {
+                                // IMPORTANT: We store the verificationId (token) here. 
+                                // The photographer will get a 4-digit SMS from MessageCentral automatically.
+                                updateData.bookingOtp = vId;
+                            } else {
+                                console.error("[CRITICAL] v3 API returned no verificationId:", data);
+                            }
                         } catch (smsErr) {
-                            console.error("Failed to send booking OTP SMS:", smsErr.message);
-                            // Still proceed with acceptance, but log the error
+                            console.error("[CRITICAL] v3 API failed:", smsErr.response?.data || smsErr.message);
                         }
                     }
                 }
@@ -693,6 +699,7 @@ class BookingController {
                     updateData.bookingStatus = "rejected";
                     updateData.status = "canceled";
                     updateData.photographer_id = null; // Remove as assigned photographer
+                    updateData.bookingOtp = null;      // Clear OTP
                 } else if (isInvited) {
                     // Just rejecting an invitation - remove me from the list so it disappears from my pending list
                     await ServiceBooking.findByIdAndUpdate(id, { $pull: { photographerIds: myId } });
@@ -940,19 +947,22 @@ class BookingController {
                 return sendErrorResponse(res, { message: "Unauthorized: You are not the assigned photographer for this booking" }, 403);
             }
 
-            // Generate a fresh 4-digit OTP
-            const otp = Math.floor(1000 + Math.random() * 9000).toString();
-            booking.bookingOtp = otp;
-            await booking.save();
-
-            // Fetch the latest photographer info
+            // Request a NEW 4-digit OTP using the working v3 flow
             const photographer = await Photographer.findById(myId);
             if (photographer && photographer.mobileNumber) {
                 try {
-                    await sendBookingSMS(photographer.mobileNumber, `Your new booking OTP is ${otp}. Please use this to start your job.`);
+                    const response = await sendMessageCentral(photographer.mobileNumber, 4);
+                    const vId = response.data?.verificationId || response.data?.data?.verificationId || response.data?.id || null;
+
+                    if (vId) {
+                        booking.bookingOtp = vId;
+                        await booking.save();
+                    } else {
+                        return sendErrorResponse(res, { message: "Provider reached but no ID returned" }, 502);
+                    }
                 } catch (smsErr) {
-                    console.error("Failed to resend booking OTP SMS:", smsErr.message);
-                    return sendErrorResponse(res, { message: "Failed to send SMS, please try again later" }, 502);
+                    console.error("[CRITICAL] Resend v3 failed:", smsErr.response?.data || smsErr.message);
+                    return sendErrorResponse(res, { message: "SMS provider is currently unavailable" }, 503);
                 }
             } else {
                 return sendErrorResponse(res, { message: "User phone number not found" }, 400);

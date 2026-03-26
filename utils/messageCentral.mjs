@@ -1,6 +1,6 @@
 import axios from "axios";
 
-export const sendMessageCentral = async (mobileNumber) => {
+export const sendMessageCentral = async (mobileNumber, codeLength = 4) => {
     const baseUrl = process.env.MESSAGE_CENTRAL_BASE_URL;
     const authToken = process.env.MESSAGE_CENTRAL_AUTH_TOKEN;
     const customerId = process.env.MESSAGE_CENTRAL_CUSTOMER_ID;
@@ -15,6 +15,8 @@ export const sendMessageCentral = async (mobileNumber) => {
         flowType: "SMS",
         mobileNumber,
         timeout: "60",
+        messageId: "1", // Optional: system requirement for some flows
+        codeLength: codeLength.toString() // Support 4 or 6 digits
     });
 
     const url = `${baseUrl}/verification/v3/send?${params.toString()}`;
@@ -53,18 +55,40 @@ export const sendBookingSMS = async (mobileNumber, message) => {
         throw new Error("SMS service not configured");
     }
 
-    const url = `${baseUrl}/v2/sms/send`;
-    const data = {
-        customerId,
-        destination: [`91${mobileNumber}`],
-        message,
-        reportUrl: ""
-    };
+    // Sanitize mobile number
+    let cleaned = mobileNumber.toString().replace(/\D/g, "");
+    if (cleaned.length > 10 && cleaned.startsWith("91")) {
+        cleaned = cleaned.slice(-10);
+    }
 
-    return await axios.post(url, data, {
-        headers: {
-            AuthToken: authToken,
-            "Content-Type": "application/json",
-        },
-    });
+    // Some MessageCentral accounts use a different base domain for custom SMS vs. verification
+    const customSmsBaseUrl = "https://api.messagecentral.com";
+    const endpoints = [`${customSmsBaseUrl}/v2/sms/send`, `${baseUrl}/v2/sms/send`, `${baseUrl}/v3/sms/send` ];
+    let lastError = null;
+
+    for (const url of endpoints) {
+        console.log(`[SMS DEBUG] Attempting Custom SMS: ${url}`);
+        
+        try {
+            const data = {
+                customerId,
+                phoneNumbers: [`91${cleaned}`],
+                MobileNumber: `91${cleaned}`, // Fallback field
+                message: message,
+            };
+
+            const response = await axios.post(url, data, {
+                headers: { AuthToken: authToken, "Content-Type": "application/json" },
+                timeout: 8000
+            });
+            console.log(`[SMS SUCCESS] delivered via ${url}:`, response.data);
+            return response;
+        } catch (err) {
+            lastError = err.response?.data || err.message;
+            console.error(`[SMS RETRY] failed for ${url}:`, lastError);
+            continue; // try next endpoint
+        }
+    }
+
+    throw new Error(`All SMS endpoints failed. Last error: ${JSON.stringify(lastError)}`);
 };
