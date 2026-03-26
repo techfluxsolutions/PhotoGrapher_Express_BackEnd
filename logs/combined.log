@@ -1245,3 +1245,19 @@
 {"level":"info","message":"::1 - - [25/Mar/2026:11:33:21 +0000] \"GET /api/photographers/bookings/69c3b2798378a84aa9f78bed HTTP/1.1\" 200 - \"-\" \"PostmanRuntime/7.52.0\"","timestamp":"2026-03-25 17:03:21"}
 {"level":"info","message":"::1 - - [25/Mar/2026:11:33:30 +0000] \"GET /api/photographers/gettodaysbookings HTTP/1.1\" 200 - \"-\" \"PostmanRuntime/7.52.0\"","timestamp":"2026-03-25 17:03:30"}
 >>>>>>> amaan
+{"level":"info","message":"::1 - - [26/Mar/2026:06:25:11 +0000] \"POST /api/admins/verify/sendOTP HTTP/1.1\" 500 112 \"-\" \"PostmanRuntime/7.51.1\"","timestamp":"2026-03-26 11:55:11"}
+{"level":"info","message":"::1 - - [26/Mar/2026:06:27:47 +0000] \"POST /api/admins/verify/sendOTP HTTP/1.1\" 200 50 \"-\" \"PostmanRuntime/7.51.1\"","timestamp":"2026-03-26 11:57:47"}
+{"level":"info","message":"::1 - - [26/Mar/2026:06:28:02 +0000] \"POST /api/admins/verify/verifyOTP HTTP/1.1\" 404 36 \"-\" \"PostmanRuntime/7.51.1\"","timestamp":"2026-03-26 11:58:02"}
+{"level":"info","message":"::1 - - [26/Mar/2026:06:30:29 +0000] \"POST /api/admins/verify/verifyOTP/69c38ac797202f1d96ad8762 HTTP/1.1\" 400 1493 \"-\" \"PostmanRuntime/7.51.1\"","timestamp":"2026-03-26 12:00:29"}
+{"level":"info","message":"::1 - - [26/Mar/2026:06:30:44 +0000] \"POST /api/admins/verify/verifyOTP/69c38ac797202f1d96ad8762 HTTP/1.1\" 404 36 \"-\" \"PostmanRuntime/7.51.1\"","timestamp":"2026-03-26 12:00:44"}
+{"level":"info","message":"::1 - - [26/Mar/2026:06:33:08 +0000] \"POST /api/admins/verify/verifyOTP/69c38ac797202f1d96ad8762 HTTP/1.1\" 500 71 \"-\" \"PostmanRuntime/7.51.1\"","timestamp":"2026-03-26 12:03:08"}
+{"level":"info","message":"::1 - - [26/Mar/2026:06:33:32 +0000] \"POST /api/admins/verify/verifyOTP/69c38ac797202f1d96ad8762 HTTP/1.1\" 404 36 \"-\" \"PostmanRuntime/7.51.1\"","timestamp":"2026-03-26 12:03:32"}
+{"level":"info","message":"::1 - - [26/Mar/2026:06:34:18 +0000] \"POST /api/admins/verify/verifyOTP/69c38ac797202f1d96ad8762 HTTP/1.1\" 400 46 \"-\" \"PostmanRuntime/7.51.1\"","timestamp":"2026-03-26 12:04:18"}
+{"level":"info","message":"::1 - - [26/Mar/2026:06:36:29 +0000] \"POST /api/admins/verify/verifyOTP/69c38ac797202f1d96ad8762 HTTP/1.1\" 200 175 \"-\" \"PostmanRuntime/7.51.1\"","timestamp":"2026-03-26 12:06:29"}
+{"level":"info","message":"::1 - - [26/Mar/2026:06:39:52 +0000] \"POST /api/admins/verify/verifyOTP/69c38ac797202f1d96ad8762 HTTP/1.1\" 400 54 \"-\" \"PostmanRuntime/7.51.1\"","timestamp":"2026-03-26 12:09:52"}
+{"level":"info","message":"::1 - - [26/Mar/2026:06:53:45 +0000] \"POST /api/admins/verify/sendOTP HTTP/1.1\" 200 50 \"-\" \"PostmanRuntime/7.51.1\"","timestamp":"2026-03-26 12:23:45"}
+{"level":"info","message":"::1 - - [26/Mar/2026:06:54:30 +0000] \"POST /api/admins/verify/verifyOTP/69c38ac797202f1d96ad8762 HTTP/1.1\" 500 85 \"-\" \"PostmanRuntime/7.51.1\"","timestamp":"2026-03-26 12:24:30"}
+{"level":"info","message":"::1 - - [26/Mar/2026:06:56:58 +0000] \"POST /api/admins/verify/verifyOTP/69c38ac797202f1d96ad8762 HTTP/1.1\" 400 46 \"-\" \"PostmanRuntime/7.51.1\"","timestamp":"2026-03-26 12:26:58"}
+{"level":"info","message":"::1 - - [26/Mar/2026:06:57:39 +0000] \"POST /api/admins/verify/verifyOTP/69c38ac797202f1d96ad8762 HTTP/1.1\" 500 43 \"-\" \"PostmanRuntime/7.51.1\"","timestamp":"2026-03-26 12:27:39"}
+{"level":"info","message":"::1 - - [26/Mar/2026:09:22:34 +0000] \"POST /api/users/payment/create-order HTTP/1.1\" 400 59 \"-\" \"PostmanRuntime/7.51.1\"","timestamp":"2026-03-26 14:52:34"}
+{"level":"info","message":"::1 - - [26/Mar/2026:09:23:29 +0000] \"POST /api/users/payment/create-order HTTP/1.1\" 200 291 \"-\" \"PostmanRuntime/7.51.1\"","timestamp":"2026-03-26 14:53:29"}

@@ -17,6 +17,7 @@ import SubscribedUserController from "../controllers/User/SubscribedUserControll
 import PartnerRegistrationController from "../controllers/PartnerRegistrationController.mjs";
 import ContactUsController from "../controllers/ContactUsController.mjs";
 import DataLinksController from "../controllers/DataLinksController.js";
+import PaymentController from "../controllers/User/PaymentController.mjs";
 const router = express.Router();
 import { uploadController } from "../controllers/uploadController.js";
 // Partner Registration (Public)
@@ -80,6 +81,9 @@ router.get("/incompleteBookings", (req, res, next) => ServiceBookingController.g
 
 // booking payment
 router.put('/updatePaymentStatusBooking/:id', (req, res, next) => ServiceBookingController.updatePaymentStatusBooking(req, res, next));
+router.post('/payment/create-order', (req, res, next) => PaymentController.createRazorpayOrder(req, res, next));
+router.post('/payment/verify', (req, res, next) => PaymentController.verifyRazorpayPayment(req, res, next));
+
 // --- Quotes ---
 router.post("/quotes", (req, res, next) => QuoteController.create(req, res, next));
 router.get("/quotes", (req, res, next) => QuoteController.getAll(req, res, next));
@@ -157,6 +161,8 @@ router.get("/getArrayImages/:bookingId", (req, res, next) => uploadController.ge
 // --- Data Links ---
 router.get("/datalinks", (req, res, next) => DataLinksController.getAll(req, res, next));
 router.get("/datalinks/:id", (req, res, next) => DataLinksController.getById(req, res, next));
+
+
 
 
 

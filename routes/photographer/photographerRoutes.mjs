@@ -15,6 +15,7 @@ import NotificationController from "../../controllers/photographer/NotificationC
 import { uploadController } from "../../controllers/uploadController.js";
 import DataLinksController from "../../controllers/DataLinksController.js";
 import ReviewAndRatingController from "../../controllers/User/ReviewAndRating.mjs";
+import RazorpayController from "../../controllers/photographer/RazorpayController.mjs";
 const router = express.Router();
 
 // --- Auth Routes ---
@@ -62,6 +63,7 @@ router.get("/jobs/:id", (req, res, next) => JobController.getOne(req, res, next)
 router.patch("/jobs/:id", (req, res, next) => JobController.update(req, res, next));
 
 // --- Payouts ---
+router.post("/razorpay-account", (req, res, next) => RazorpayController.createRazorpayAccount(req, res, next));
 router.get("/payouts", (req, res, next) => PayoutController.getAll(req, res, next));
 router.get("/payouts/:id", (req, res, next) => PayoutController.getOne(req, res, next));
 router.post("/payouts", (req, res, next) => PayoutController.create(req, res, next));
