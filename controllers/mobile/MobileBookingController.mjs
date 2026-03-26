@@ -1,3 +1,4 @@
+import mongoose from "mongoose";
 import ServiceBooking from "../../models/ServiceBookings.mjs";
 import Quote from "../../models/Quote.mjs";
 import Payment from "../../models/Payment.mjs";
@@ -283,6 +284,7 @@ class MobileBookingController {
   async getPhotographerUpcomingBookings(req, res, next) {
     try {
       const { id } = req.user;
+      const { eventType } = req.query; // New Filter
       const page = Math.max(1, parseInt(req.query.page) || 1);
       const limit = Math.max(1, parseInt(req.query.limit) || 20);
       const skip = (page - 1) * limit;
@@ -309,9 +311,27 @@ class MobileBookingController {
         ]
       };
 
+      // Add Event Type Filter if provided
+      if (eventType) {
+        // Find matching services first to get their IDs
+        const Service = mongoose.model("Service");
+        const matchingServices = await Service.find({
+          serviceName: { $regex: eventType, $options: "i" }
+        }).select("_id");
+        
+        const serviceIds = matchingServices.map(s => s._id);
+
+        query.$and.push({
+          $or: [
+            { shootType: { $regex: eventType, $options: "i" } },
+            { service_id: { $in: serviceIds } }
+          ]
+        });
+      }
+
       const [bookings, total] = await Promise.all([
         ServiceBooking.find(query)
-          .sort({ bookingDate: 1, startDate: 1 }) // Earliest [Today] first
+          .sort({ startDate: 1, bookingDate: 1, createdAt: 1 }) // Priority sorting
           .populate("client_id", "username email mobileNumber avatar city")
           .populate("service_id", "serviceName")
           .skip(skip)
