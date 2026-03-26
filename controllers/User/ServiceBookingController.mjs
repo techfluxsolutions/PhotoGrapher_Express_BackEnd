@@ -296,6 +296,7 @@ class ServiceBookingController {
       // OR those whose date has already passed.
       const bookings = await ServiceBooking.find({
         client_id: id,
+        status: { $ne: "canceled" },
         $or: [
           { status: "completed" },
           { bookingDate: { $lt: todayMidnight } },

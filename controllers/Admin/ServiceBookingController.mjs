@@ -313,8 +313,8 @@ class ServiceBookingController {
           veroaBookingId: booking.veroaBookingId,
           client_id: booking.client_id?._id || null,
           client_name: booking.client_id?.username || "",
-          assigned_photographer: booking.photographer_id?.basicInfo?.fullName || "",
-          team_studio: booking.photographer_id?.professionalDetails?.team_studio || booking.team || "",
+          assigned_photographer: (booking.status === "canceled") ? "" : (booking.photographer_id?.basicInfo?.fullName || ""),
+          team_studio: (booking.status === "canceled") ? "" : (booking.photographer_id?.professionalDetails?.team_studio || booking.team || ""),
           eventType: booking.service_id?.serviceName || "",
           eventDate: booking.bookingDate,
           location: `${booking.flatOrHouseNo}, ${booking.streetName}, ${booking.landMark ? booking.landMark + ', ' : ''}${booking.city}, ${booking.state} - ${booking.postalCode}`,
@@ -328,7 +328,7 @@ class ServiceBookingController {
           photographerAmount: booking.photographerAmount || 0,
           paymentMode: booking.paymentMode,
           paymentStatus: booking.paymentStatus,
-          bookingStatus: booking.status,
+          bookingStatus: booking.bookingStatus || booking.status,
         };
       });
 
@@ -458,8 +458,8 @@ class ServiceBookingController {
           veroaBookingId: booking.veroaBookingId,
           client_id: booking.client_id?._id || null,
           client_name: booking.client_id?.username || "",
-          assigned_photographer: booking.photographer_id?.basicInfo?.fullName || "",
-          team_studio: booking.photographer_id?.professionalDetails?.team_studio || booking.team || "",
+          assigned_photographer: (booking.status === "canceled") ? "" : (booking.photographer_id?.basicInfo?.fullName || ""),
+          team_studio: (booking.status === "canceled") ? "" : (booking.photographer_id?.professionalDetails?.team_studio || booking.team || ""),
           eventType: booking.service_id?.serviceName || "",
           eventDate: booking.bookingDate,
           location: `${booking.flatOrHouseNo}, ${booking.streetName}, ${booking.landMark ? booking.landMark + ', ' : ''}${booking.city}, ${booking.state} - ${booking.postalCode}`,
@@ -473,7 +473,7 @@ class ServiceBookingController {
           photographerAmount: booking.photographerAmount || 0,
           paymentMode: booking.paymentMode,
           paymentStatus: booking.paymentStatus,
-          bookingStatus: booking.status,
+          bookingStatus: booking.bookingStatus || booking.status,
         };
       });
 
@@ -551,6 +551,13 @@ class ServiceBookingController {
         payload.full_Payment = false;
       }
 
+      // 🚫 If canceling, clear assignment
+      if (payload.status === "canceled") {
+          payload.photographer_id = null;
+          payload.bookingStatus = "rejected";
+          payload.photographerIds = [];
+      }
+
       const booking = await ServiceBooking.findByIdAndUpdate(id, payload, {
         new: true,
         runValidators: true,
@@ -582,7 +589,12 @@ class ServiceBookingController {
 
       const booking = await ServiceBooking.findByIdAndUpdate(
         id,
-        { status: "canceled" },
+        { 
+          status: "canceled",
+          bookingStatus: "rejected", // Mark as rejected/canceled for the photographer
+          photographer_id: null,      // Clear assignment
+          photographerIds: []         // Clear any pending invitations
+        },
         { new: true }
       );
 
@@ -699,7 +711,9 @@ class ServiceBookingController {
    */
   async assignPhotographer(req, res, next) {
     try {
-      const { photographerId, bookingId, photographerIds } = req.body;
+      const { photographerId, bookingId, photographerIds, _id } = req.body;
+      const finalBookingId = bookingId || _id || req.params.id;
+      const finalPhotographerId = photographerId !== undefined ? photographerId : req.body.photographer_id;
 
       const updateData = {};
 
@@ -714,10 +728,10 @@ class ServiceBookingController {
       }
 
       // Handle direct assignment
-      if (photographerId !== undefined) {
-        updateData.photographer_id = photographerId;
+      if (finalPhotographerId !== undefined) {
+        updateData.photographer_id = finalPhotographerId;
 
-        if (photographerId) {
+        if (finalPhotographerId) {
           // If assigning a specific person, clear other invitations
           updateData.photographerIds = [];
           // Direct assignment counts as already accepted
@@ -726,8 +740,8 @@ class ServiceBookingController {
           updateData.acceptedAt = new Date(); // To enforce the 48hr rule later
 
           const [booking, photographer, settings] = await Promise.all([
-            ServiceBooking.findById(bookingId),
-            Photographer.findById(photographerId),
+            ServiceBooking.findById(finalBookingId),
+            Photographer.findById(finalPhotographerId),
             PlatformSettings.findOne({ type: "commissions" })
           ]);
 
@@ -752,7 +766,7 @@ class ServiceBookingController {
       }
 
       const booking = await ServiceBooking.findByIdAndUpdate(
-        bookingId,
+        finalBookingId,
         updateData,
         { new: true }
       ).populate("photographer_id");

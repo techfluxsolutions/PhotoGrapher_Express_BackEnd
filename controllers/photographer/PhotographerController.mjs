@@ -1,6 +1,7 @@
 import Photographer from "../../models/Photographer.mjs";
 import PlatformSettings from "../../models/PlatformSettings.mjs";
 import PhotographerRatingsGivenByAdminAndUser from "../../models/PhotographerRatingsGivenByAdmin&User.mjs";
+import ServiceBooking from "../../models/ServiceBookings.mjs";
 import bcrypt from "bcrypt";
 import { sendWelcomeEmail } from "../../utils/emailService.mjs";
 import mongoose from "mongoose";
@@ -776,6 +777,7 @@ class PhotographerController {
 
     async getSortedPhotographers(req, res) {
         try {
+            const { bookingId } = req.query; // New Param
             const page = Math.max(1, parseInt(req.query.page) || 1);
             const limit = Math.max(1, parseInt(req.query.limit) || 10);
             const skip = (page - 1) * limit;
@@ -824,33 +826,54 @@ class PhotographerController {
                 }
             ];
 
-            const [photographers, settings] = await Promise.all([
+            const [photographersAgg, settings] = await Promise.all([
                 Photographer.aggregate(pipeline),
                 PlatformSettings.findOne({ type: "commissions" })
             ]);
 
             const globalCommissions = settings || { initio: 0, elite: 0, pro: 0 };
+            const levelOrder = { "INITIO": 1, "ELITE": 2, "PRO": 3 };
 
-            const levelOrder = {
-                "INITIO": 1,
-                "ELITE": 2,
-                "PRO": 3
-            };
+            // Fetch booking assignment details if bookingId is provided
+            let assignedPhotographerId = null;
+            let bookingStatus = null;
+            if (bookingId) {
+                const booking = await ServiceBooking.findById(bookingId)
+                    .select("photographer_id bookingStatus");
+                if (booking) {
+                    assignedPhotographerId = booking.photographer_id?.toString();
+                    bookingStatus = booking.bookingStatus;
+                }
+            }
 
-            const sorted = photographers.sort((a, b) => {
-                const levelA = levelOrder[a.professionalDetails?.expertiseLevel] || 99;
-                const levelB = levelOrder[b.professionalDetails?.expertiseLevel] || 99;
-                return levelA - levelB || b.createdAt - a.createdAt; // Secondary sort by newest
-            });
+            // --- Custom Sort Logic for priority ---
+            let sortedPhotographers = photographersAgg;
+            if (assignedPhotographerId && bookingStatus === "accepted") {
+                sortedPhotographers = photographersAgg.sort((a, b) => {
+                    const isAssignedA = a._id.toString() === assignedPhotographerId;
+                    const isAssignedB = b._id.toString() === assignedPhotographerId;
+                    if (isAssignedA) return -1;
+                    if (isAssignedB) return 1;
+                    
+                    const levelA = levelOrder[a.professionalDetails?.expertiseLevel] || 99;
+                    const levelB = levelOrder[b.professionalDetails?.expertiseLevel] || 99;
+                    return levelA - levelB || b.createdAt - a.createdAt;
+                });
+            } else {
+                sortedPhotographers = photographersAgg.sort((a, b) => {
+                    const levelA = levelOrder[a.professionalDetails?.expertiseLevel] || 99;
+                    const levelB = levelOrder[b.professionalDetails?.expertiseLevel] || 99;
+                    return levelA - levelB || b.createdAt - a.createdAt;
+                });
+            }
 
-            const total = sorted.length;
-            const paginatedItems = sorted.slice(skip, skip + limit);
+            const total = sortedPhotographers.length;
+            const paginatedItems = sortedPhotographers.slice(skip, skip + limit);
 
             const result = paginatedItems.map(p => {
                 const level = p.professionalDetails?.expertiseLevel || "N/A";
                 let comm = p.commissionPercentage;
 
-                // If individual commission is 0, fall back to global level-based commission
                 if (!comm) {
                     if (level === "INITIO") comm = globalCommissions.initio;
                     else if (level === "ELITE") comm = globalCommissions.elite;
@@ -870,12 +893,14 @@ class PhotographerController {
                     profilePhoto: photo,
                     commissionPercentage: comm || 0,
                     avgRating: parseFloat((p.avgRating || 0).toFixed(1)),
-                    categories: p.categories || []
+                    categories: p.categories || [],
+                    isAssigned: assignedPhotographerId === p._id.toString() && bookingStatus === "accepted"
                 };
             });
 
             res.status(200).json({
                 success: true,
+                isLock: assignedPhotographerId !== null && bookingStatus === "accepted",
                 data: result,
                 meta: { total, page, limit }
             });
@@ -888,7 +913,7 @@ class PhotographerController {
     // Sort photographers based on categories, expertise, and rating
     async getSortPhotographers(req, res) {
         try {
-            const { category, expertise, sortBy, rating } = req.query; // sortBy can be 'rating', 'expertise', 'category'
+            const { category, expertise, sortBy, rating, bookingId } = req.query; // sortBy can be 'rating', 'expertise', 'category'
             const minRating = parseFloat(rating) || 0;
             const page = Math.max(1, parseInt(req.query.page) || 1);
             const limit = Math.max(1, parseInt(req.query.limit) || 10);
@@ -969,6 +994,19 @@ class PhotographerController {
                 sortStage = { avgRating: -1, expertiseScore: -1, createdAt: -1 };
             }
 
+            // --- Priority Priority Sorting for Assigned Photographer ---
+            if (bookingId) {
+                const booking = await ServiceBooking.findById(bookingId).select("photographer_id bookingStatus");
+                if (booking && booking.bookingStatus === "accepted") {
+                    pipeline.push({
+                        $addFields: {
+                            assignedPriority: { $eq: ["$_id", booking.photographer_id] }
+                        }
+                    });
+                    sortStage = { assignedPriority: -1, ...sortStage };
+                }
+            }
+
             pipeline.push({ $sort: sortStage });
 
             // 9. Pagination Facet
@@ -981,6 +1019,17 @@ class PhotographerController {
 
             const [results] = await Photographer.aggregate(pipeline);
 
+            // Fetch booking assignment details if bookingId is provided
+            let assignedPhotographerId = null;
+            let bookingStatus = null;
+            if (bookingId) {
+                const booking = await ServiceBooking.findById(bookingId).select("photographer_id bookingStatus");
+                if (booking) {
+                    assignedPhotographerId = booking.photographer_id?.toString();
+                    bookingStatus = booking.bookingStatus;
+                }
+            }
+
             const total = results.metadata[0]?.total || 0;
             const photographers = results.data.map(p => {
                 const transformed = this._transformPhotographerData(p, req);
@@ -988,12 +1037,14 @@ class PhotographerController {
                     ...transformed,
                     avgRating: parseFloat((p.avgRating || 0).toFixed(1)),
                     expertiseScore: p.expertiseScore || 0,
-                    categoryCount: p.categoryCount || 0
+                    categoryCount: p.categoryCount || 0,
+                    isAssigned: assignedPhotographerId === p._id.toString() && bookingStatus === "accepted"
                 };
             });
 
             res.status(200).json({
                 success: true,
+                isLock: assignedPhotographerId !== null && bookingStatus === "accepted",
                 message: "Photographers filtered and sorted successfully",
                 data: photographers,
                 meta: {

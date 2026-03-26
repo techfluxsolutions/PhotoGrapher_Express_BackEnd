@@ -95,7 +95,8 @@ class BookingController {
                         todayMidnight.setUTCHours(0, 0, 0, 0);
                         const todayStr = todayMidnight.toISOString().split("T")[0];
 
-                        // Match completed OR past dates
+                        // Match completed OR past dates, but never canceled
+                        filter.status = { $ne: "canceled" };
                         filter.$or = [
                             { status: "completed" },
                             { bookingDate: { $lt: todayMidnight } },
@@ -103,9 +104,6 @@ class BookingController {
                         ];
                         const otherStatuses = statuses.filter(s => s !== "completed");
                         if (otherStatuses.length > 0) {
-                            // If they asked for completed + others? (Unusual but handleable)
-                            // We already set filter.$or, merging other statuses might be complex
-                            // For simplicity in this common case:
                             filter.bookingStatus = { $in: otherStatuses };
                         }
                     } else {
@@ -645,6 +643,7 @@ class BookingController {
                 updateData.acceptedAt = new Date();
                 updateData.photographer_id = myId;
                 updateData.photographerIds = []; // Clear invitations once claimed
+                console.log("Photographer accepting booking:", { id, updateData });
 
                 // Determine commission and net payout
                 const [photographer, settings] = await Promise.all([
@@ -678,6 +677,7 @@ class BookingController {
                     }
                     updateData.bookingStatus = "rejected";
                     updateData.status = "canceled";
+                    updateData.photographer_id = null; // Remove as assigned photographer
                 } else if (isInvited) {
                     // Just rejecting an invitation - remove me from the list so it disappears from my pending list
                     await ServiceBooking.findByIdAndUpdate(id, { $pull: { photographerIds: myId } });
@@ -821,9 +821,10 @@ class BookingController {
             // 2. upcommingBooking: Total photographer accepted booking count
             const totalAcceptedCount = await ServiceBooking.countDocuments(acceptedFilter);
 
-            // 3. completed: Completed count (including past date bookings)
+            // 3. completed: Completed count (including past date bookings, excluding canceled)
             const completedCount = await ServiceBooking.countDocuments({
                 photographer_id: myId,
+                status: { $ne: "canceled" },
                 $or: [
                     { status: "completed" },
                     { bookingDate: { $lt: todayMidnight } },
