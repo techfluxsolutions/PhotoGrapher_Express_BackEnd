@@ -92,3 +92,37 @@ export const sendBookingSMS = async (mobileNumber, message) => {
 
     throw new Error(`All SMS endpoints failed. Last error: ${JSON.stringify(lastError)}`);
 };
+
+export const retryMessageCentral = async (verificationId) => {
+    const baseUrl = process.env.MESSAGE_CENTRAL_BASE_URL;
+    const authToken = process.env.MESSAGE_CENTRAL_AUTH_TOKEN;
+
+    if (!baseUrl || !authToken) {
+        throw new Error("SMS service not configured");
+    }
+
+    const endpoints = [
+        `${baseUrl}/verification/v3/retry`,
+        `${baseUrl}/verification/v3/resend`
+    ];
+
+    let lastError = null;
+    for (const urlBase of endpoints) {
+        try {
+            // Include authKey as a param since 401 suggests the header alone isn't enough for retry
+            const url = `${urlBase}?authKey=${authToken}`; 
+
+            console.log(`[SMS RETRY DEBUG] Attempting re-delivery via: ${urlBase}`);
+            const response = await axios.post(url, { verificationId }, {
+                headers: { AuthToken: authToken, "Content-Type": "application/json" },
+                timeout: 8000
+            });
+            return response;
+        } catch (err) {
+            lastError = err.response?.data || err.message;
+            console.error(`[SMS RETRY FAILED] at ${urlBase}:`, lastError);
+        }
+    }
+
+    throw new Error(`Re-delivery failed on all channels. Last error: ${JSON.stringify(lastError)}`);
+};

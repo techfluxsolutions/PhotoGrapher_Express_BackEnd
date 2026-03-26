@@ -1,8 +1,9 @@
 import ServiceBooking from "../../models/ServiceBookings.mjs";
 import Gallery from "../../models/Gallery.mjs";
 import Photographer from "../../models/Photographer.mjs";
+import User from "../../models/User.mjs";
 import PlatformSettings from "../../models/PlatformSettings.mjs";
-import { sendBookingSMS, sendMessageCentral } from "../../utils/messageCentral.mjs";
+import { sendBookingSMS, sendMessageCentral, retryMessageCentral } from "../../utils/messageCentral.mjs";
 import mongoose from "mongoose";
 import Message from "../../models/Message.mjs";
 
@@ -761,20 +762,39 @@ class ServiceBookingController {
             }
             updateData.photographerAmount = Math.round(booking.totalAmount * (1 - (commission || 0) / 100));
 
-            // ✅ Using the working v3 flow for Admin assignments too
-            if (photographer.mobileNumber) {
-              try {
-                const response = await sendMessageCentral(photographer.mobileNumber, 4);
-                const vId = response.data?.verificationId || response.data?.data?.verificationId || response.data?.id || null;
-                
-                if (vId) {
-                  updateData.bookingOtp = vId;
-                } else {
-                  console.error("Admin Assign: Provider failed to return verificationId.");
+            // ✅ SELF-HEALING OTP FLOW: Try re-delivery first, then fresh session.
+            const client = await User.findById(booking.client_id);
+            if (client && client.mobileNumber) {
+              // Option A: If we already have a token in DB (from a previous attempt), try to force re-delivery
+              if (booking.bookingOtp && booking.bookingOtp.length > 5) {
+                try {
+                  console.log(`[SMS] Admin: Forcing re-delivery for existing session: ${booking.bookingOtp}`);
+                  await retryMessageCentral(booking.bookingOtp);
+                  updateData.bookingOtp = booking.bookingOtp; // Keep existing
+                } catch (retryErr) {
+                   console.log("[SMS] Admin: Re-delivery check failed, trying fresh start...");
+                   // Fall through to Option B
                 }
-              } catch (smsErr) {
-                console.error("Admin Assign: v3 API failed:", smsErr.response?.data || smsErr.message);
               }
+
+              // Option B: Initial or Fresh request
+              if (!updateData.bookingOtp) {
+                try {
+                  const response = await sendMessageCentral(client.mobileNumber, 4); 
+                  const vId = response.data?.verificationId || response.data?.data?.verificationId || response.data?.id || null;
+                  if (vId) updateData.bookingOtp = vId;
+                } catch (smsErr) {
+                  // Catch existing session (506) and extract ID
+                  const errData = smsErr.response?.data;
+                  const vId = errData?.verificationId || errData?.data?.verificationId || errData?.id || null;
+                  if (vId) {
+                    updateData.bookingOtp = vId;
+                    console.log("[LOG] Admin Assign using existing session (506):", vId);
+                  }
+                }
+              }
+            } else {
+              console.error("[LOG] Client or client.mobileNumber not found for booking assignment notification.");
             }
           }
         } else {
