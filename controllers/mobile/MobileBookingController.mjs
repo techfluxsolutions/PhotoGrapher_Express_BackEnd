@@ -1,3 +1,4 @@
+import mongoose from "mongoose";
 import ServiceBooking from "../../models/ServiceBookings.mjs";
 import Quote from "../../models/Quote.mjs";
 import Payment from "../../models/Payment.mjs";
@@ -190,6 +191,28 @@ class MobileBookingController {
       if (payload.bookingDate) {
         payload.bookingDate = parseDDMMYYYY(payload.bookingDate);
       }
+      
+      // Ensure paymentStatus, full_Payment, partial_Payment are synchronized
+      if (
+        payload.paymentStatus === "paid" || 
+        payload.paymentStatus === "fully paid" || 
+        payload.full_Payment === true ||
+        (payload.outStandingAmount !== undefined && Number(payload.outStandingAmount) === 0 && payload.totalAmount)
+      ) {
+        payload.paymentStatus = "fully paid";
+        payload.fullyPaidAt = new Date();
+        payload.full_Payment = true;
+        payload.partial_Payment = false;
+        payload.outStandingAmount = 0;
+      } else if (
+        payload.paymentStatus === "partially paid" || 
+        payload.partial_Payment === true || 
+        (payload.outStandingAmount && Number(payload.outStandingAmount) > 0)
+      ) {
+        payload.paymentStatus = "partially paid";
+        payload.partial_Payment = true;
+        payload.full_Payment = false;
+      }
       booking = await ServiceBooking.findByIdAndUpdate(id, payload, {
         new: true,
         runValidators: true,
@@ -252,6 +275,111 @@ class MobileBookingController {
       const { id } = req.user;
       const bookings = await ServiceBooking.find({ client_id: id, is_Incomplete: true });
       return res.json({ success: true, data: bookings });
+    } catch (err) {
+      return next(err);
+    }
+  }
+
+  // Get Photographer Upcoming Bookings
+  async getPhotographerUpcomingBookings(req, res, next) {
+    try {
+      const { id } = req.user;
+      const { eventType } = req.query; // New Filter
+      const page = Math.max(1, parseInt(req.query.page) || 1);
+      const limit = Math.max(1, parseInt(req.query.limit) || 20);
+      const skip = (page - 1) * limit;
+
+      const todayMidnight = new Date();
+      todayMidnight.setUTCHours(0, 0, 0, 0);
+      const todayStr = todayMidnight.toISOString().split("T")[0];
+
+      const query = {
+        $and: [
+          {
+            $or: [
+              { photographer_id: id },
+              { photographerIds: { $in: [id] } }
+            ]
+          },
+          { status: { $nin: ["completed", "canceled"] } },
+          {
+            $or: [
+              { bookingDate: { $gte: todayMidnight } }, // Today or Future
+              { startDate: { $gte: todayStr } } // Today or Future (String)
+            ]
+          }
+        ]
+      };
+
+      // Add Event Type Filter if provided
+      if (eventType) {
+        // Find matching services first to get their IDs
+        const Service = mongoose.model("Service");
+        const matchingServices = await Service.find({
+          serviceName: { $regex: eventType, $options: "i" }
+        }).select("_id");
+        
+        const serviceIds = matchingServices.map(s => s._id);
+
+        query.$and.push({
+          $or: [
+            { shootType: { $regex: eventType, $options: "i" } },
+            { service_id: { $in: serviceIds } }
+          ]
+        });
+      }
+
+      const [bookings, total] = await Promise.all([
+        ServiceBooking.find(query)
+          .sort({ startDate: 1, bookingDate: 1, createdAt: 1 }) // Priority sorting
+          .populate("client_id", "username email mobileNumber avatar city")
+          .populate("service_id", "serviceName")
+          .skip(skip)
+          .limit(limit),
+        ServiceBooking.countDocuments(query)
+      ]);
+
+      const formattedBookings = bookings.map(booking => {
+        // Simple IST formatter implementation
+        let datePart = "N/A";
+        let timePart = "N/A";
+        const d = booking.bookingDate || (booking.startDate ? new Date(booking.startDate) : null);
+        
+        if (d) {
+           const formatted = new Intl.DateTimeFormat("en-IN", {
+                timeZone: "Asia/Kolkata",
+                day: "2-digit",
+                month: "2-digit",
+                year: "numeric",
+                hour: "2-digit",
+                minute: "2-digit",
+                hour12: true
+            }).format(new Date(d)).toLowerCase();
+            const parts = formatted.split(", ");
+            datePart = parts[0];
+            timePart = parts[1];
+        }
+
+        return {
+          _id: booking._id,
+          bookingId: booking.veroaBookingId,
+          clientName: booking.client_id?.username || "N/A",
+          clientAvatar: booking.client_id?.avatar || null,
+          eventType: booking.service_id?.serviceName || "N/A",
+          date: datePart,
+          time: timePart,
+          city: booking.city,
+          status: booking.status,
+          bookingStatus: booking.bookingStatus,
+          photographerAmount: booking.photographerAmount || 0
+        };
+      });
+
+      return res.json({
+        success: true,
+        data: formattedBookings,
+        meta: { total, page, limit }
+      });
     } catch (err) {
       return next(err);
     }
