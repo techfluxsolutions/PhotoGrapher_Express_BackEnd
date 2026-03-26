@@ -291,7 +291,10 @@ class MobileBookingController {
 
       const todayMidnight = new Date();
       todayMidnight.setUTCHours(0, 0, 0, 0);
-      const todayStr = todayMidnight.toISOString().split("T")[0];
+
+      const tomorrowMidnight = new Date(todayMidnight);
+      tomorrowMidnight.setUTCDate(tomorrowMidnight.getUTCDate() + 1);
+      const tomorrowStr = tomorrowMidnight.toISOString().split("T")[0];
 
       const query = {
         $and: [
@@ -304,8 +307,8 @@ class MobileBookingController {
           { status: { $nin: ["completed", "canceled"] } },
           {
             $or: [
-              { bookingDate: { $gte: todayMidnight } }, // Today or Future
-              { startDate: { $gte: todayStr } } // Today or Future (String)
+              { bookingDate: { $gte: tomorrowMidnight } }, // Tomorrow or Future
+              { startDate: { $gte: tomorrowStr } } // Tomorrow or Future (String)
             ]
           }
         ]

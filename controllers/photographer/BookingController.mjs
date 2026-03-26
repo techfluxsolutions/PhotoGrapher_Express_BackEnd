@@ -80,11 +80,19 @@ class BookingController {
                     ]
                 };
             } else if (statusToFilter === "accepted") {
-                // Shows bookings specifically assigned to me alone (direct assignment) OR explicitly accepted
+                // Shows bookings specifically assigned to me and explicitly accepted/confirmed
+                // ONLY for TODAY or FUTURE dates
+                const todayMidnight = new Date();
+                todayMidnight.setUTCHours(0, 0, 0, 0);
+                const todayStr = todayMidnight.toISOString().split("T")[0];
+
                 filter = {
+                    photographer_id: photographerId,
+                    bookingStatus: "accepted",
+                    status: { $nin: ["completed", "canceled"] },
                     $or: [
-                        { photographer_id: photographerId, photographerIds: { $size: 0 } },
-                        { photographer_id: photographerId, bookingStatus: "accepted" }
+                        { bookingDate: { $gte: todayMidnight } },
+                        { startDate: { $gte: todayStr } }
                     ]
                 };
             } else {
@@ -836,7 +844,7 @@ class BookingController {
         }
     }
 
-    // Get summary counts: todays bookings (today+upcoming), upcomming booking (accepted), completed
+    // Get summary counts: todays bookings (today+upcoming), upcoming bookings (future only), and completed
     async getSummaryCounts(req, res) {
         try {
             const myId = new mongoose.Types.ObjectId(req.user.id);
@@ -844,27 +852,35 @@ class BookingController {
             todayMidnight.setUTCHours(0, 0, 0, 0);
             const todayStr = todayMidnight.toISOString().split("T")[0];
 
-            const acceptedFilter = {
-                $or: [
-                    { photographer_id: myId, photographerIds: { $size: 0 } },
-                    { photographer_id: myId, bookingStatus: "accepted" }
-                ],
+            const tomorrowMidnight = new Date(todayMidnight);
+            tomorrowMidnight.setUTCDate(tomorrowMidnight.getUTCDate() + 1);
+            const tomorrowStr = tomorrowMidnight.toISOString().split("T")[0];
+
+            const acceptedBase = {
+                photographer_id: myId,
+                bookingStatus: "accepted",
                 status: { $nin: ["completed", "canceled"] }
             };
 
-            // 1. todaysBookings: Today and upcoming (Today + Future)
-            const todaysAndUpcomingCount = await ServiceBooking.countDocuments({
-                ...acceptedFilter,
+            // 1. todaysBookings: Total Active work (Today + Future)
+            const activeCount = await ServiceBooking.countDocuments({
+                ...acceptedBase,
                 $or: [
                     { bookingDate: { $gte: todayMidnight } },
                     { startDate: { $gte: todayStr } }
                 ]
             });
 
-            // 2. upcommingBooking: Total photographer accepted booking count
-            const totalAcceptedCount = await ServiceBooking.countDocuments(acceptedFilter);
+            // 2. upcommingBooking: Strictly Tomorrow onwards (Future only)
+            const futureOnlyCount = await ServiceBooking.countDocuments({
+                ...acceptedBase,
+                $or: [
+                    { bookingDate: { $gte: tomorrowMidnight } },
+                    { startDate: { $gte: tomorrowStr } }
+                ]
+            });
 
-            // 3. completed: Completed count (including past date bookings, excluding canceled)
+            // 3. completed: History count (including past date bookings, excluding canceled)
             const completedCount = await ServiceBooking.countDocuments({
                 photographer_id: myId,
                 status: { $ne: "canceled" },
@@ -876,8 +892,8 @@ class BookingController {
             });
 
             const data = {
-                todaysBookings: todaysAndUpcomingCount,
-                upcommingBooking: totalAcceptedCount,
+                todaysBookings: activeCount,
+                upcommingBooking: futureOnlyCount,
                 completed: completedCount
             };
 
@@ -900,10 +916,8 @@ class BookingController {
             const todayStr = todayMidnight.toISOString().split("T")[0];
 
             const acceptedFilter = {
-                $or: [
-                    { photographer_id: myId, photographerIds: { $size: 0 } }, // Assigned to me
-                    { photographer_id: myId, bookingStatus: "accepted" } // Explicitly accepted by me
-                ],
+                photographer_id: myId,
+                bookingStatus: "accepted",
                 status: { $nin: ["completed", "canceled"] }
             };
 
