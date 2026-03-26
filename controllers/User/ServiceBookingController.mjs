@@ -288,7 +288,23 @@ class ServiceBookingController {
   async getPreviousBookings(req, res, next) {
     try {
       const { id } = req.user;
-      const bookings = await ServiceBooking.find({ client_id: id, status: "completed" }).populate("service_id", "serviceName");
+      const todayMidnight = new Date();
+      todayMidnight.setUTCHours(0, 0, 0, 0);
+      const todayStr = todayMidnight.toISOString().split("T")[0];
+
+      // Previous bookings are those that are explicitly completed 
+      // OR those whose date has already passed.
+      const bookings = await ServiceBooking.find({
+        client_id: id,
+        $or: [
+          { status: "completed" },
+          { bookingDate: { $lt: todayMidnight } },
+          { startDate: { $lt: todayStr } }
+        ]
+      })
+        .sort({ bookingDate: -1, createdAt: -1 }) // Show most recent past bookings first
+        .populate("service_id", "serviceName");
+
       return res.json({ success: true, data: bookings });
     } catch (err) {
       return next(err);
