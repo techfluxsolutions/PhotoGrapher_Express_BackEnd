@@ -578,13 +578,29 @@ class BookingController {
     async updateBookingStatus(req, res) {
         try {
             const { id } = req.params;
+            const myId = new mongoose.Types.ObjectId(req.user.id);
 
             if (!mongoose.Types.ObjectId.isValid(id)) {
                 return sendErrorResponse(res, { message: "Invalid booking ID" }, 400);
             }
 
-            const { bookingStatus, galleryStatus } = req.body; // 'accepted', 'rejected' or gallery status updates
+            const { bookingStatus, galleryStatus } = req.body;
 
+            // Fetch the booking first to understand current state and avoid filter-only logic
+            const targetBooking = await ServiceBooking.findById(id);
+            if (!targetBooking) {
+                return sendErrorResponse(res, { message: "Booking not found" }, 404);
+            }
+
+            // Check if user has any relation to this booking
+            const isAssigned = targetBooking.photographer_id?.toString() === myId.toString();
+            const isInvited = targetBooking.photographerIds?.some(pid => pid.toString() === myId.toString());
+
+            if (!isAssigned && !isInvited) {
+                return sendErrorResponse(res, { message: "Unauthorized: You are not assigned or invited to this booking" }, 403);
+            }
+
+            const updateData = {};
             if (bookingStatus && !["accepted", "rejected", "pending"].includes(bookingStatus)) {
                 return sendErrorResponse(res, { message: "Invalid booking status" }, 400);
             }
@@ -593,22 +609,34 @@ class BookingController {
                 return sendErrorResponse(res, { message: "Invalid gallery status" }, 400);
             }
 
-            const updateData = {};
-            if (bookingStatus) updateData.bookingStatus = bookingStatus;
-            if (galleryStatus) updateData.galleryStatus = galleryStatus;
+            if (galleryStatus) {
+                if (!isAssigned) {
+                    return sendErrorResponse(res, { message: "Only the assigned photographer can update gallery status" }, 403);
+                }
+                updateData.galleryStatus = galleryStatus;
+            }
 
-            // If accepted, also update the main status to confirmed and assign to me
             if (bookingStatus === "accepted") {
-                updateData.acceptedAt = new Date(); // Track when it was accepted
+                // To claim: must be invited OR be formally assigned
+                if (targetBooking.photographer_id && !isAssigned) {
+                    return sendErrorResponse(res, {
+                        message: "This booking has already been accepted by another photographer."
+                    }, 409);
+                }
+
+                updateData.bookingStatus = "accepted";
+                updateData.status = "confirmed";
+                updateData.acceptedAt = new Date();
+                updateData.photographer_id = myId;
+                updateData.photographerIds = []; // Clear invitations once claimed
 
                 // Determine commission and net payout
-                const [targetBooking, photographer, settings] = await Promise.all([
-                    ServiceBooking.findById(id),
-                    Photographer.findById(req.user.id),
+                const [photographer, settings] = await Promise.all([
+                    Photographer.findById(myId),
                     PlatformSettings.findOne({ type: "commissions" })
                 ]);
 
-                if (targetBooking && photographer) {
+                if (photographer) {
                     const global = settings || { initio: 0, elite: 0, pro: 0 };
                     const level = photographer.professionalDetails?.expertiseLevel || "INITIO";
                     let commission = photographer.commissionPercentage;
@@ -621,60 +649,30 @@ class BookingController {
 
                     updateData.photographerAmount = Math.round(targetBooking.totalAmount * (1 - (commission || 0) / 100));
                 }
-
-                updateData.status = "confirmed";
-                updateData.photographer_id = new mongoose.Types.ObjectId(req.user.id);
-                updateData.photographerIds = []; // Clear invitations once claimed
             } else if (bookingStatus === "rejected") {
-                // Check for 48-hour rejection limit if it was already accepted
-                const existingBooking = await ServiceBooking.findById(id);
-
-                if (existingBooking && existingBooking.bookingStatus === "accepted" && existingBooking.acceptedAt) {
-                    const hoursSinceAcceptance = (new Date() - new Date(existingBooking.acceptedAt)) / (1000 * 60 * 60);
-                    if (hoursSinceAcceptance > 48) {
-                        return sendErrorResponse(res, {
-                            message: "You can't reject this booking Because 48 hours have passed since acceptance."
-                        }, 403);
+                if (isAssigned) {
+                    // Canceling an already accepted job
+                    if (targetBooking.acceptedAt) {
+                        const hoursSinceAcceptance = (new Date() - new Date(targetBooking.acceptedAt)) / (1000 * 60 * 60);
+                        if (hoursSinceAcceptance > 48) {
+                            return sendErrorResponse(res, {
+                                message: "You can't reject this booking because 48 hours have passed since acceptance."
+                            }, 403);
+                        }
                     }
+                    updateData.bookingStatus = "rejected";
+                    updateData.status = "canceled";
+                } else if (isInvited) {
+                    // Just rejecting an invitation - remove me from the list so it disappears from my pending list
+                    await ServiceBooking.findByIdAndUpdate(id, { $pull: { photographerIds: myId } });
+                    return sendSuccessResponse(res, null, "Invitation rejected successfully");
                 }
-
-                updateData.status = "canceled";
+            } else if (bookingStatus === "pending") {
+                updateData.bookingStatus = "pending";
             }
 
-            const myId = new mongoose.Types.ObjectId(req.user.id);
-            let filter = { _id: id };
-
-            if (bookingStatus === "accepted") {
-                // To claim: must be invited via photographerIds OR be formally assigned to me
-                filter = {
-                    _id: id,
-                    $or: [
-                        { photographer_id: myId },
-                        { photographerIds: { $in: [myId] } }
-                    ]
-                };
-            } else {
-                // Other statuses strictly require ownership
-                filter.photographer_id = myId;
-            }
-
-            const booking = await ServiceBooking.findOneAndUpdate(
-                filter,
-                updateData,
-                { new: true }
-            );
-
-            if (!booking) {
-                // If accepting, it might be already claimed by another photographer
-                if (bookingStatus === "accepted") {
-                    return sendErrorResponse(res, {
-                        message: "This booking has already been accepted by another photographer."
-                    }, 409);
-                }
-                return sendErrorResponse(res, { message: "Booking not found or unauthorized to update" }, 404);
-            }
-
-            return sendSuccessResponse(res, { booking }, `Booking ${bookingStatus} successfully`);
+            const updatedBooking = await ServiceBooking.findByIdAndUpdate(id, updateData, { new: true });
+            return sendSuccessResponse(res, { booking: updatedBooking }, `Booking updated successfully`);
         } catch (error) {
             return sendErrorResponse(res, error, 500);
         }
@@ -771,6 +769,121 @@ class BookingController {
             });
 
             return sendSuccessResponse(res, formattedBookings, "Todays bookings fetched successfully");
+        } catch (error) {
+            return sendErrorResponse(res, error, 500);
+        }
+    }
+
+    // Get summary counts: todays bookings (today+upcoming), upcomming booking (accepted), completed
+    async getSummaryCounts(req, res) {
+        try {
+            const myId = new mongoose.Types.ObjectId(req.user.id);
+            const todayMidnight = new Date();
+            todayMidnight.setUTCHours(0, 0, 0, 0);
+            const todayStr = todayMidnight.toISOString().split("T")[0];
+
+            const acceptedFilter = {
+                $or: [
+                    { photographer_id: myId, photographerIds: { $size: 0 } },
+                    { photographer_id: myId, bookingStatus: "accepted" }
+                ],
+                status: { $nin: ["completed", "canceled"] }
+            };
+
+            // 1. todaysBookings: Today and upcoming (Today + Future)
+            const todaysAndUpcomingCount = await ServiceBooking.countDocuments({
+                ...acceptedFilter,
+                $or: [
+                    { bookingDate: { $gte: todayMidnight } },
+                    { startDate: { $gte: todayStr } }
+                ]
+            });
+
+            // 2. upcommingBooking: Total photographer accepted booking count
+            const totalAcceptedCount = await ServiceBooking.countDocuments(acceptedFilter);
+
+            // 3. completed: Completed count
+            const completedCount = await ServiceBooking.countDocuments({
+                photographer_id: myId,
+                status: "completed"
+            });
+
+            const data = {
+                todaysBookings: todaysAndUpcomingCount,
+                upcommingBooking: totalAcceptedCount,
+                completed: completedCount
+            };
+
+            return sendSuccessResponse(res, data, "Booking summary counts fetched successfully");
+        } catch (error) {
+            return sendErrorResponse(res, error, 500);
+        }
+    }
+
+    // Get Today and Upcoming Bookings List: show today's on top and then upcoming
+    async getTodayAndUpcomingBookings(req, res) {
+        try {
+            const page = Math.max(1, parseInt(req.query.page) || 1);
+            const limit = Math.max(1, parseInt(req.query.limit) || 10);
+            const skip = (page - 1) * limit;
+
+            const myId = new mongoose.Types.ObjectId(req.user.id);
+            const todayMidnight = new Date();
+            todayMidnight.setUTCHours(0, 0, 0, 0);
+            const todayStr = todayMidnight.toISOString().split("T")[0];
+
+            const acceptedFilter = {
+                $or: [
+                    { photographer_id: myId, photographerIds: { $size: 0 } }, // Assigned to me
+                    { photographer_id: myId, bookingStatus: "accepted" } // Explicitly accepted by me
+                ],
+                status: { $nin: ["completed", "canceled"] }
+            };
+
+            const query = {
+                ...acceptedFilter,
+                $or: [
+                    { bookingDate: { $gte: todayMidnight } },
+                    { startDate: { $gte: todayStr } }
+                ]
+            };
+
+            const [bookings, total] = await Promise.all([
+                ServiceBooking.find(query)
+                    .sort({ bookingDate: 1, startDate: 1 }) // Sort by date ASC (Earliest [Today] first)
+                    .populate("client_id", "username email mobileNumber avatar")
+                    .populate("service_id", "serviceName")
+                    .skip(skip)
+                    .limit(limit),
+                ServiceBooking.countDocuments(query)
+            ]);
+
+            const formattedBookings = bookings.map(booking => {
+                const ist = this.formatIST(booking.bookingDate, booking.startDate || booking.eventDate);
+
+                return {
+                    _id: booking._id,
+                    bookingId: booking.veroaBookingId,
+                    client_id: booking.client_id,
+                    eventType: booking.service_id?.serviceName || "N/A",
+                    requirements: booking.notes || "No requirements",
+                    date: ist.date,
+                    time: ist.time,
+                    fromDate: this.formatDMY(booking.startDate || booking.eventDate || booking.bookingDate),
+                    toDate: this.formatDMY(booking.endDate || booking.startDate || booking.eventDate || booking.bookingDate),
+                    city: booking.city,
+                    status: booking.status,
+                    bookingStatus: booking.bookingStatus,
+                    galleryStatus: booking.galleryStatus || "Upload Pending",
+                    totalAmount: booking.totalAmount,
+                    photographerAmount: booking.photographerAmount || 0
+                };
+            });
+
+            return sendSuccessResponse(res, {
+                bookings: formattedBookings,
+                meta: { total, page, limit }
+            }, "Today and upcoming bookings fetched successfully");
         } catch (error) {
             return sendErrorResponse(res, error, 500);
         }
