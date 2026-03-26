@@ -758,9 +758,12 @@ class BookingController {
                     { startDate: today },
                     { endDate: today }
                 ]
-            }).skip(skip).limit(limit)
-            .populate("client_id", "username email mobileNumber avatar")
-            .populate("service_id", "serviceName");
+            })
+                           .sort({ startDate: 1, bookingDate: 1, createdAt: 1 }) // Primary sort: startDate ASC
+                .populate("client_id", "username email mobileNumber avatar")
+                .populate("service_id", "serviceName")
+                .skip(skip)
+                .limit(limit);
 
             const formattedBookings = bookings.map(booking => {
                 const ist = this.formatIST(booking.bookingDate, booking.startDate || booking.eventDate);
@@ -768,7 +771,7 @@ class BookingController {
                 return {
                     _id: booking._id,
                     bookingId: booking.veroaBookingId,
-                    client_id: booking.client_id,
+                    clientName: booking.client_id?.username || "N/A", // Use clientName as preferred by user
                     eventType: booking.service_id?.serviceName || "N/A",
                     requirements: booking.notes || "No requirements",
                     date: ist.date,
@@ -870,8 +873,8 @@ class BookingController {
 
             const [bookings, total] = await Promise.all([
                 ServiceBooking.find(query)
-                    .sort({ bookingDate: 1, startDate: 1 }) // Sort by date ASC (Earliest [Today] first)
-                    .populate("client_id", "username email mobileNumber avatar")
+                    .sort({ startDate: 1, bookingDate: 1, createdAt: 1 }) // Sort earliest first
+                    .populate("client_id", "username email mobileNumber avatar city")
                     .populate("service_id", "serviceName")
                     .skip(skip)
                     .limit(limit),

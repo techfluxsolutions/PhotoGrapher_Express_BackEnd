@@ -25,4 +25,9 @@ router.put("/bookings/:id/cancel", (req, res, next) => MobileBookingController.c
 // Apply the isPhotographer check specifically for revenue
 router.get("/photographer/revenue", isPhotographer, (req, res, next) => MobileRevenueController.getRevenueDashboard(req, res, next));
 
+// --- Photographer Bookings ---
+router.get("/photographer/bookings/upcoming", isPhotographer, (req, res, next) => MobileBookingController.getPhotographerUpcomingBookings(req, res, next));
+
+
+
 export default router;

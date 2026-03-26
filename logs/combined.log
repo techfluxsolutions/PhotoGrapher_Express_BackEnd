@@ -1,0 +1,6 @@
+{"level":"info","message":"::1 - - [26/Mar/2026:07:33:48 +0000] \"GET /api/mobile/photographer/bookings/upcoming HTTP/1.1\" 401 70 \"-\" \"PostmanRuntime/7.52.0\"","timestamp":"2026-03-26 13:03:48"}
+{"level":"info","message":"::1 - - [26/Mar/2026:07:34:04 +0000] \"GET /api/mobile/photographers/bookings/upcoming HTTP/1.1\" 404 - \"-\" \"PostmanRuntime/7.52.0\"","timestamp":"2026-03-26 13:04:04"}
+{"level":"info","message":"::1 - - [26/Mar/2026:07:34:29 +0000] \"GET /api/mobile/photographer/bookings/upcoming HTTP/1.1\" 401 70 \"-\" \"PostmanRuntime/7.52.0\"","timestamp":"2026-03-26 13:04:29"}
+{"level":"info","message":"::1 - - [26/Mar/2026:07:35:00 +0000] \"GET /api/mobile/photographer/bookings/upcoming HTTP/1.1\" 200 712 \"-\" \"PostmanRuntime/7.52.0\"","timestamp":"2026-03-26 13:05:00"}
+{"level":"info","message":"::1 - - [26/Mar/2026:07:35:32 +0000] \"GET /api/mobile/photographer/bookings/upcoming HTTP/1.1\" 200 712 \"-\" \"PostmanRuntime/7.52.0\"","timestamp":"2026-03-26 13:05:32"}
+{"level":"info","message":"::1 - - [26/Mar/2026:07:38:32 +0000] \"GET /api/photographers/bookings/today-upcoming HTTP/1.1\" 200 - \"-\" \"PostmanRuntime/7.52.0\"","timestamp":"2026-03-26 13:08:32"}

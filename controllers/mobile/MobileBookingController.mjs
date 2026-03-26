@@ -278,6 +278,92 @@ class MobileBookingController {
       return next(err);
     }
   }
+
+  // Get Photographer Upcoming Bookings
+  async getPhotographerUpcomingBookings(req, res, next) {
+    try {
+      const { id } = req.user;
+      const page = Math.max(1, parseInt(req.query.page) || 1);
+      const limit = Math.max(1, parseInt(req.query.limit) || 20);
+      const skip = (page - 1) * limit;
+
+      const todayMidnight = new Date();
+      todayMidnight.setUTCHours(0, 0, 0, 0);
+      const todayStr = todayMidnight.toISOString().split("T")[0];
+
+      const query = {
+        $and: [
+          {
+            $or: [
+              { photographer_id: id },
+              { photographerIds: { $in: [id] } }
+            ]
+          },
+          { status: { $nin: ["completed", "canceled"] } },
+          {
+            $or: [
+              { bookingDate: { $gte: todayMidnight } }, // Today or Future
+              { startDate: { $gte: todayStr } } // Today or Future (String)
+            ]
+          }
+        ]
+      };
+
+      const [bookings, total] = await Promise.all([
+        ServiceBooking.find(query)
+          .sort({ bookingDate: 1, startDate: 1 }) // Earliest [Today] first
+          .populate("client_id", "username email mobileNumber avatar city")
+          .populate("service_id", "serviceName")
+          .skip(skip)
+          .limit(limit),
+        ServiceBooking.countDocuments(query)
+      ]);
+
+      const formattedBookings = bookings.map(booking => {
+        // Simple IST formatter implementation
+        let datePart = "N/A";
+        let timePart = "N/A";
+        const d = booking.bookingDate || (booking.startDate ? new Date(booking.startDate) : null);
+        
+        if (d) {
+           const formatted = new Intl.DateTimeFormat("en-IN", {
+                timeZone: "Asia/Kolkata",
+                day: "2-digit",
+                month: "2-digit",
+                year: "numeric",
+                hour: "2-digit",
+                minute: "2-digit",
+                hour12: true
+            }).format(new Date(d)).toLowerCase();
+            const parts = formatted.split(", ");
+            datePart = parts[0];
+            timePart = parts[1];
+        }
+
+        return {
+          _id: booking._id,
+          bookingId: booking.veroaBookingId,
+          clientName: booking.client_id?.username || "N/A",
+          clientAvatar: booking.client_id?.avatar || null,
+          eventType: booking.service_id?.serviceName || "N/A",
+          date: datePart,
+          time: timePart,
+          city: booking.city,
+          status: booking.status,
+          bookingStatus: booking.bookingStatus,
+          photographerAmount: booking.photographerAmount || 0
+        };
+      });
+
+      return res.json({
+        success: true,
+        data: formattedBookings,
+        meta: { total, page, limit }
+      });
+    } catch (err) {
+      return next(err);
+    }
+  }
 }
 
 export default new MobileBookingController();
