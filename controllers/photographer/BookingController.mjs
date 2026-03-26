@@ -772,6 +772,7 @@ class BookingController {
                     _id: booking._id,
                     bookingId: booking.veroaBookingId,
                     clientName: booking.client_id?.username || "N/A", // Use clientName as preferred by user
+                    mobileNumber: booking.client_id?.mobileNumber || "N/A",
                     eventType: booking.service_id?.serviceName || "N/A",
                     requirements: booking.notes || "No requirements",
                     date: ist.date,
