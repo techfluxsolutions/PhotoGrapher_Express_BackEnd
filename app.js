@@ -187,7 +187,7 @@ if (process.env.MONGODB_URI) {
   console.error("⚠️ MONGODB_URI is not defined in environment variables!");
 }
 
-// Sample routeƒ
+// Sample route
 app.get("/", (req, res) => {
   res.send("Hello World!");
 });
