@@ -215,6 +215,9 @@ class BookingController {
                     fromDate: this.formatDMY(booking.startDate || booking.eventDate || booking.bookingDate),
                     toDate: this.formatDMY(booking.endDate || booking.startDate || booking.eventDate || booking.bookingDate),
                     city: booking.city,
+                    lat: booking.lat || null,
+                    lng: booking.lng || null,
+                    address: booking.address || "",
                     status: booking.status,
                     bookingStatus: booking.bookingStatus,
                     galleryStatus: booking.galleryStatus || "Upload Pending",
@@ -310,7 +313,7 @@ class BookingController {
             if (bookingObj.flatOrHouseNo) venueParts.push(bookingObj.flatOrHouseNo);
             if (bookingObj.streetName) venueParts.push(bookingObj.streetName);
             if (bookingObj.city) venueParts.push(bookingObj.city);
-            bookingObj.venue = venueParts.length > 0 ? venueParts.join(", ") : "N/A";
+            bookingObj.venue = bookingObj.address || (venueParts.length > 0 ? venueParts.join(", ") : "N/A");
 
             // Extract Quote Requirements
             const quoteReqs = booking.quoteId?.requirements;

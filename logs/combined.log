@@ -152,3 +152,4 @@
 {"level":"info","message":"::1 - - [27/Mar/2026:07:10:19 +0000] \"GET /api/admins/photographers/sorted?bookingId=69c4d8f5d31c173bddb2c1b9&limit=20 HTTP/1.1\" 200 - \"-\" \"PostmanRuntime/7.52.0\"","timestamp":"2026-03-27 12:40:19"}
 {"level":"info","message":"::1 - - [27/Mar/2026:07:10:48 +0000] \"GET /api/admins/photographers/sorted?bookingId=69c505d26f6a30f12da91291&limit=20 HTTP/1.1\" 200 312 \"-\" \"PostmanRuntime/7.52.0\"","timestamp":"2026-03-27 12:40:48"}
 {"level":"info","message":"::1 - - [27/Mar/2026:07:11:02 +0000] \"GET /api/admins/photographers/sorted?bookingId=69c610b989d34a8d4ac32036&limit=20 HTTP/1.1\" 200 313 \"-\" \"PostmanRuntime/7.52.0\"","timestamp":"2026-03-27 12:41:02"}
+{"level":"info","message":"::1 - - [27/Mar/2026:07:34:35 +0000] \"GET /api/admins/photographers/sort?rating=3&category=weddingPhotography&expertise=elite&bookingId=69c4de2d66639fd6758de5dd HTTP/1.1\" 200 696 \"-\" \"PostmanRuntime/7.52.0\"","timestamp":"2026-03-27 13:04:35"}
