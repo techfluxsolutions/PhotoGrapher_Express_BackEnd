@@ -1,7 +1,10 @@
 import ServiceBooking from "../../models/ServiceBookings.mjs";
 import Gallery from "../../models/Gallery.mjs";
 import Photographer from "../../models/Photographer.mjs";
+import User from "../../models/User.mjs";
 import PlatformSettings from "../../models/PlatformSettings.mjs";
+import { sendBookingSMS, sendMessageCentral, retryMessageCentral } from "../../utils/messageCentral.mjs";
+import mongoose from "mongoose";
 import Message from "../../models/Message.mjs";
 
 
@@ -313,8 +316,8 @@ class ServiceBookingController {
           veroaBookingId: booking.veroaBookingId,
           client_id: booking.client_id?._id || null,
           client_name: booking.client_id?.username || "",
-          assigned_photographer: booking.photographer_id?.basicInfo?.fullName || "",
-          team_studio: booking.photographer_id?.professionalDetails?.team_studio || booking.team || "",
+          assigned_photographer: (booking.status === "canceled") ? "" : (booking.photographer_id?.basicInfo?.fullName || ""),
+          team_studio: (booking.status === "canceled") ? "" : (booking.photographer_id?.professionalDetails?.team_studio || booking.team || ""),
           eventType: booking.service_id?.serviceName || "",
           eventDate: booking.bookingDate,
           location: `${booking.flatOrHouseNo}, ${booking.streetName}, ${booking.landMark ? booking.landMark + ', ' : ''}${booking.city}, ${booking.state} - ${booking.postalCode}`,
@@ -328,7 +331,7 @@ class ServiceBookingController {
           photographerAmount: booking.photographerAmount || 0,
           paymentMode: booking.paymentMode,
           paymentStatus: booking.paymentStatus,
-          bookingStatus: booking.status,
+          bookingStatus: booking.bookingStatus || booking.status,
         };
       });
 
@@ -458,8 +461,8 @@ class ServiceBookingController {
           veroaBookingId: booking.veroaBookingId,
           client_id: booking.client_id?._id || null,
           client_name: booking.client_id?.username || "",
-          assigned_photographer: booking.photographer_id?.basicInfo?.fullName || "",
-          team_studio: booking.photographer_id?.professionalDetails?.team_studio || booking.team || "",
+          assigned_photographer: (booking.status === "canceled") ? "" : (booking.photographer_id?.basicInfo?.fullName || ""),
+          team_studio: (booking.status === "canceled") ? "" : (booking.photographer_id?.professionalDetails?.team_studio || booking.team || ""),
           eventType: booking.service_id?.serviceName || "",
           eventDate: booking.bookingDate,
           location: `${booking.flatOrHouseNo}, ${booking.streetName}, ${booking.landMark ? booking.landMark + ', ' : ''}${booking.city}, ${booking.state} - ${booking.postalCode}`,
@@ -473,7 +476,7 @@ class ServiceBookingController {
           photographerAmount: booking.photographerAmount || 0,
           paymentMode: booking.paymentMode,
           paymentStatus: booking.paymentStatus,
-          bookingStatus: booking.status,
+          bookingStatus: booking.bookingStatus || booking.status,
         };
       });
 
@@ -551,6 +554,14 @@ class ServiceBookingController {
         payload.full_Payment = false;
       }
 
+      // 🚫 If canceling, clear assignment
+      if (payload.status === "canceled") {
+          payload.photographer_id = null;
+          payload.bookingStatus = "rejected";
+          payload.photographerIds = [];
+          payload.bookingOtp = null;
+      }
+
       const booking = await ServiceBooking.findByIdAndUpdate(id, payload, {
         new: true,
         runValidators: true,
@@ -582,7 +593,13 @@ class ServiceBookingController {
 
       const booking = await ServiceBooking.findByIdAndUpdate(
         id,
-        { status: "canceled" },
+        { 
+          status: "canceled",
+          bookingStatus: "rejected", // Mark as rejected/canceled for the photographer
+          photographer_id: null,      // Clear assignment
+          photographerIds: [],        // Clear any pending invitations
+          bookingOtp: null            // Clear OTP
+        },
         { new: true }
       );
 
@@ -699,7 +716,9 @@ class ServiceBookingController {
    */
   async assignPhotographer(req, res, next) {
     try {
-      const { photographerId, bookingId, photographerIds } = req.body;
+      const { photographerId, bookingId, photographerIds, _id } = req.body;
+      const finalBookingId = bookingId || _id || req.params.id;
+      const finalPhotographerId = photographerId !== undefined ? photographerId : req.body.photographer_id;
 
       const updateData = {};
 
@@ -714,10 +733,10 @@ class ServiceBookingController {
       }
 
       // Handle direct assignment
-      if (photographerId !== undefined) {
-        updateData.photographer_id = photographerId;
+      if (finalPhotographerId !== undefined) {
+        updateData.photographer_id = finalPhotographerId;
 
-        if (photographerId) {
+        if (finalPhotographerId) {
           // If assigning a specific person, clear other invitations
           updateData.photographerIds = [];
           // Direct assignment counts as already accepted
@@ -726,8 +745,8 @@ class ServiceBookingController {
           updateData.acceptedAt = new Date(); // To enforce the 48hr rule later
 
           const [booking, photographer, settings] = await Promise.all([
-            ServiceBooking.findById(bookingId),
-            Photographer.findById(photographerId),
+            ServiceBooking.findById(finalBookingId),
+            Photographer.findById(finalPhotographerId),
             PlatformSettings.findOne({ type: "commissions" })
           ]);
 
@@ -742,6 +761,41 @@ class ServiceBookingController {
               else if (level === "PRO") commission = global.pro;
             }
             updateData.photographerAmount = Math.round(booking.totalAmount * (1 - (commission || 0) / 100));
+
+            // ✅ SELF-HEALING OTP FLOW: Try re-delivery first, then fresh session.
+            const client = await User.findById(booking.client_id);
+            if (client && client.mobileNumber) {
+              // Option A: If we already have a token in DB (from a previous attempt), try to force re-delivery
+              if (booking.bookingOtp && booking.bookingOtp.length > 5) {
+                try {
+                  console.log(`[SMS] Admin: Forcing re-delivery for existing session: ${booking.bookingOtp}`);
+                  await retryMessageCentral(booking.bookingOtp);
+                  updateData.bookingOtp = booking.bookingOtp; // Keep existing
+                } catch (retryErr) {
+                   console.log("[SMS] Admin: Re-delivery check failed, trying fresh start...");
+                   // Fall through to Option B
+                }
+              }
+
+              // Option B: Initial or Fresh request
+              if (!updateData.bookingOtp) {
+                try {
+                  const response = await sendMessageCentral(client.mobileNumber, 4); 
+                  const vId = response.data?.verificationId || response.data?.data?.verificationId || response.data?.id || null;
+                  if (vId) updateData.bookingOtp = vId;
+                } catch (smsErr) {
+                  // Catch existing session (506) and extract ID
+                  const errData = smsErr.response?.data;
+                  const vId = errData?.verificationId || errData?.data?.verificationId || errData?.id || null;
+                  if (vId) {
+                    updateData.bookingOtp = vId;
+                    console.log("[LOG] Admin Assign using existing session (506):", vId);
+                  }
+                }
+              }
+            } else {
+              console.error("[LOG] Client or client.mobileNumber not found for booking assignment notification.");
+            }
           }
         } else {
           // If clearing assignment, also clear the amount and reset statuses
@@ -752,7 +806,7 @@ class ServiceBookingController {
       }
 
       const booking = await ServiceBooking.findByIdAndUpdate(
-        bookingId,
+        finalBookingId,
         updateData,
         { new: true }
       ).populate("photographer_id");

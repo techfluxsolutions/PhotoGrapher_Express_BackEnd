@@ -3,6 +3,7 @@ import mongoose from "mongoose";
 import ServiceBooking from "../../models/ServiceBookings.mjs";
 import Gallery from "../../models/Gallery.mjs";
 import Photographer from "../../models/Photographer.mjs";
+import User from "../../models/User.mjs";
 import PlatformSettings from "../../models/PlatformSettings.mjs";
 import {
     sendErrorResponse,
@@ -10,6 +11,7 @@ import {
 } from "../../utils/handleResponce.mjs";
 import fs from 'fs';
 import path from 'path';
+import { sendBookingSMS, sendMessageCentral, retryMessageCentral, verifyMessageCentral } from "../../utils/messageCentral.mjs";
 import { downloadInvoice } from "../../controllers/Admin/InvoiceController.mjs";
 
 class BookingController {
@@ -78,11 +80,19 @@ class BookingController {
                     ]
                 };
             } else if (statusToFilter === "accepted") {
-                // Shows bookings specifically assigned to me alone (direct assignment) OR explicitly accepted
+                // Shows bookings specifically assigned to me and explicitly accepted/confirmed
+                // ONLY for TODAY or FUTURE dates
+                const todayMidnight = new Date();
+                todayMidnight.setUTCHours(0, 0, 0, 0);
+                const todayStr = todayMidnight.toISOString().split("T")[0];
+
                 filter = {
+                    photographer_id: photographerId,
+                    bookingStatus: "accepted",
+                    status: { $nin: ["completed", "canceled"] },
                     $or: [
-                        { photographer_id: photographerId, photographerIds: { $size: 0 } },
-                        { photographer_id: photographerId, bookingStatus: "accepted" }
+                        { bookingDate: { $gte: todayMidnight } },
+                        { startDate: { $gte: todayStr } }
                     ]
                 };
             } else {
@@ -95,7 +105,8 @@ class BookingController {
                         todayMidnight.setUTCHours(0, 0, 0, 0);
                         const todayStr = todayMidnight.toISOString().split("T")[0];
 
-                        // Match completed OR past dates
+                        // Match completed OR past dates, but never canceled
+                        filter.status = { $ne: "canceled" };
                         filter.$or = [
                             { status: "completed" },
                             { bookingDate: { $lt: todayMidnight } },
@@ -103,9 +114,6 @@ class BookingController {
                         ];
                         const otherStatuses = statuses.filter(s => s !== "completed");
                         if (otherStatuses.length > 0) {
-                            // If they asked for completed + others? (Unusual but handleable)
-                            // We already set filter.$or, merging other statuses might be complex
-                            // For simplicity in this common case:
                             filter.bookingStatus = { $in: otherStatuses };
                         }
                     } else {
@@ -645,6 +653,7 @@ class BookingController {
                 updateData.acceptedAt = new Date();
                 updateData.photographer_id = myId;
                 updateData.photographerIds = []; // Clear invitations once claimed
+                console.log("Photographer accepting booking:", { id, updateData });
 
                 // Determine commission and net payout
                 const [photographer, settings] = await Promise.all([
@@ -664,6 +673,45 @@ class BookingController {
                     }
 
                     updateData.photographerAmount = Math.round(targetBooking.totalAmount * (1 - (commission || 0) / 100));
+
+                    updateData.photographerAmount = Math.round(targetBooking.totalAmount * (1 - (commission || 0) / 100));
+
+                    // ✅ SELF-HEALING OTP FLOW: Try re-delivery first, then fresh session.
+                    const client = await User.findById(targetBooking.client_id);
+                    if (client && client.mobileNumber) {
+                        // Option A: If we already have a token in DB (from a previous assign/invite), try to force re-delivery
+                        if (targetBooking.bookingOtp && targetBooking.bookingOtp.length > 5) {
+                            try {
+                                console.log(`[SMS] Accept: Forcing re-delivery for ID: ${targetBooking.bookingOtp}`);
+                                await retryMessageCentral(targetBooking.bookingOtp);
+                                updateData.bookingOtp = targetBooking.bookingOtp; // Keep existing
+                            } catch (retryErr) {
+                                console.log("[SMS] Accept: Re-delivery check failed, trying fresh start...");
+                                // Fall through to Option B
+                            }
+                        }
+
+                        // Option B: Initial or Fresh request
+                        if (!updateData.bookingOtp) {
+                            try {
+                                const response = await sendMessageCentral(client.mobileNumber, 4); 
+                                const vId = response.data?.verificationId || response.data?.data?.verificationId || response.data?.id || null;
+                                if (vId) updateData.bookingOtp = vId;
+                            } catch (smsErr) {
+                                // Catch existing session (506) and extract ID
+                                const errData = smsErr.response?.data;
+                                const vId = errData?.verificationId || errData?.data?.verificationId || errData?.id || null;
+                                if (vId) {
+                                    updateData.bookingOtp = vId;
+                                    console.log("[LOG] Accept using existing session (506):", vId);
+                                } else {
+                                    console.error("[CRITICAL] v3 API failed for client accept:", errData || smsErr.message);
+                                }
+                            }
+                        }
+                    } else {
+                        console.error("[LOG] Client not found for booking notification.");
+                    }
                 }
             } else if (bookingStatus === "rejected") {
                 if (isAssigned) {
@@ -678,6 +726,8 @@ class BookingController {
                     }
                     updateData.bookingStatus = "rejected";
                     updateData.status = "canceled";
+                    updateData.photographer_id = null; // Remove as assigned photographer
+                    updateData.bookingOtp = null;      // Clear OTP
                 } else if (isInvited) {
                     // Just rejecting an invitation - remove me from the list so it disappears from my pending list
                     await ServiceBooking.findByIdAndUpdate(id, { $pull: { photographerIds: myId } });
@@ -772,6 +822,7 @@ class BookingController {
                     _id: booking._id,
                     bookingId: booking.veroaBookingId,
                     clientName: booking.client_id?.username || "N/A", // Use clientName as preferred by user
+                    mobileNumber: booking.client_id?.mobileNumber || "N/A",
                     eventType: booking.service_id?.serviceName || "N/A",
                     requirements: booking.notes || "No requirements",
                     date: ist.date,
@@ -793,7 +844,7 @@ class BookingController {
         }
     }
 
-    // Get summary counts: todays bookings (today+upcoming), upcomming booking (accepted), completed
+    // Get summary counts: todays bookings (today+upcoming), upcoming bookings (future only), and completed
     async getSummaryCounts(req, res) {
         try {
             const myId = new mongoose.Types.ObjectId(req.user.id);
@@ -801,29 +852,38 @@ class BookingController {
             todayMidnight.setUTCHours(0, 0, 0, 0);
             const todayStr = todayMidnight.toISOString().split("T")[0];
 
-            const acceptedFilter = {
-                $or: [
-                    { photographer_id: myId, photographerIds: { $size: 0 } },
-                    { photographer_id: myId, bookingStatus: "accepted" }
-                ],
+            const tomorrowMidnight = new Date(todayMidnight);
+            tomorrowMidnight.setUTCDate(tomorrowMidnight.getUTCDate() + 1);
+            const tomorrowStr = tomorrowMidnight.toISOString().split("T")[0];
+
+            const acceptedBase = {
+                photographer_id: myId,
+                bookingStatus: "accepted",
                 status: { $nin: ["completed", "canceled"] }
             };
 
-            // 1. todaysBookings: Today and upcoming (Today + Future)
-            const todaysAndUpcomingCount = await ServiceBooking.countDocuments({
-                ...acceptedFilter,
+            // 1. todaysBookings: Total Active work (Today + Future)
+            const activeCount = await ServiceBooking.countDocuments({
+                ...acceptedBase,
                 $or: [
                     { bookingDate: { $gte: todayMidnight } },
                     { startDate: { $gte: todayStr } }
                 ]
             });
 
-            // 2. upcommingBooking: Total photographer accepted booking count
-            const totalAcceptedCount = await ServiceBooking.countDocuments(acceptedFilter);
+            // 2. upcommingBooking: Strictly Tomorrow onwards (Future only)
+            const futureOnlyCount = await ServiceBooking.countDocuments({
+                ...acceptedBase,
+                $or: [
+                    { bookingDate: { $gte: tomorrowMidnight } },
+                    { startDate: { $gte: tomorrowStr } }
+                ]
+            });
 
-            // 3. completed: Completed count (including past date bookings)
+            // 3. completed: History count (including past date bookings, excluding canceled)
             const completedCount = await ServiceBooking.countDocuments({
                 photographer_id: myId,
+                status: { $ne: "canceled" },
                 $or: [
                     { status: "completed" },
                     { bookingDate: { $lt: todayMidnight } },
@@ -832,8 +892,8 @@ class BookingController {
             });
 
             const data = {
-                todaysBookings: todaysAndUpcomingCount,
-                upcommingBooking: totalAcceptedCount,
+                todaysBookings: activeCount,
+                upcommingBooking: futureOnlyCount,
                 completed: completedCount
             };
 
@@ -856,10 +916,8 @@ class BookingController {
             const todayStr = todayMidnight.toISOString().split("T")[0];
 
             const acceptedFilter = {
-                $or: [
-                    { photographer_id: myId, photographerIds: { $size: 0 } }, // Assigned to me
-                    { photographer_id: myId, bookingStatus: "accepted" } // Explicitly accepted by me
-                ],
+                photographer_id: myId,
+                bookingStatus: "accepted",
                 status: { $nin: ["completed", "canceled"] }
             };
 
@@ -902,6 +960,136 @@ class BookingController {
                 meta: { total, page, limit }
             }, "Today and upcoming bookings fetched successfully");
         } catch (error) {
+            return sendErrorResponse(res, error, 500);
+        }
+    }
+
+    // Resend Booking OTP for photographer
+    async resendBookingOtp(req, res) {
+        try {
+            const { id } = req.params;
+            const { mobile: mobileOverride } = req.body;
+            const myId = req.user._id;
+
+            const booking = await ServiceBooking.findById(id).populate("photographer_id");
+            if (!booking) {
+                return sendErrorResponse(res, { message: "Booking not found" }, 404);
+            }
+
+            // Verify the photographer requesting the OTP is the one assigned
+            const requesterId = req.user?.id || req.user?._id;
+            const assignedId = booking.photographer_id?._id || booking.photographer_id;
+
+            if (String(requesterId) !== String(assignedId)) {
+                return sendErrorResponse(res, { message: "Unauthorized: You are not the assigned photographer for this booking" }, 403);
+            }
+
+            // ✅ RESEND LOGIC: Self-healing flow (Try retry, if it fails, try fresh)
+            const client = await User.findById(booking.client_id);
+            const targetMobile = (mobileOverride || client?.mobileNumber)?.toString().replace(/\D/g, "");
+
+            if (!targetMobile) {
+                return sendErrorResponse(res, { message: "Client phone number not found. Please provide it in the body." }, 400);
+            }
+                
+                if (booking.bookingOtp && booking.bookingOtp.length > 5) {
+                    try {
+                        console.log(`[SMS] Attempting re-delivery for ID: ${booking.bookingOtp}`);
+                        await retryMessageCentral(booking.bookingOtp);
+                        return sendSuccessResponse(res, { bookingId: id, client_mobile: targetMobile }, "OTP re-delivered to client successfully");
+                    } catch (retryErr) {
+                        console.warn("[LOG] Re-delivery endpoint failed, pivoting to fresh request...");
+                        // No return here, fall through to Attempt 2
+                    }
+                }
+                
+                // Attempt 2: Fresh OTP request (Starts a new session or links to existing)
+                try {
+                    const response = await sendMessageCentral(targetMobile, 4);
+                    const vId = response.data?.verificationId || response.data?.data?.verificationId || response.data?.id || null;
+
+                    if (vId) {
+                        booking.bookingOtp = vId;
+                        await booking.save();
+                        return sendSuccessResponse(res, { bookingId: id, client_mobile: targetMobile }, "Fresh OTP sent to client successfully");
+                    } else {
+                        return sendErrorResponse(res, { message: "OTP service reached but no ID returned" }, 502);
+                    }
+                } catch (smsErr) {
+                    const errorData = smsErr.response?.data;
+                    const vIdFromError = errorData?.verificationId || errorData?.data?.verificationId || errorData?.id || null;
+                    
+                    // If the provider says it already exists (506), capture the NEW id if it changed
+                    if (vIdFromError) {
+                        booking.bookingOtp = vIdFromError;
+                        await booking.save();
+                        return sendSuccessResponse(res, { bookingId: id, client_mobile: targetMobile }, "Existing session confirmed, client should check their mobile.");
+                    }
+
+                console.error("[CRITICAL] Resend failed for Client (v3):", errorData || smsErr.message);
+                return sendErrorResponse(res, { message: "The SMS service is busy, please wait 30 seconds." }, 503);
+            }
+        } catch (error) {
+            console.error("Error resending booking OTP:", error);
+            return sendErrorResponse(res, error, 500);
+        }
+    }
+
+    /**
+     * Verify the 4-digit OTP provided by the client
+     * POST /api/photographers/bookings/:id/verify-otp
+     */
+    async verifyBookingOtp(req, res) {
+        try {
+            const { id } = req.params;
+            const { otp } = req.body;
+            const myId = req.user._id;
+
+            if (!otp) {
+                return sendErrorResponse(res, { message: "OTP is required" }, 400);
+            }
+
+            const booking = await ServiceBooking.findById(id).populate("photographer_id");
+
+            if (!booking) {
+                return sendErrorResponse(res, { message: "Booking not found" }, 404);
+            }
+
+            // Verify the photographer doing the verification is the one assigned
+            const requesterId = req.user?.id || req.user?._id;
+            const assignedId = booking.photographer_id?._id || booking.photographer_id;
+
+            if (String(requesterId) !== String(assignedId)) {
+                return sendErrorResponse(res, { message: "Unauthorized: You are not assigned to this booking" }, 403);
+            }
+
+            if (!booking.bookingOtp) {
+                return sendErrorResponse(res, { message: "No active OTP found for this booking" }, 400);
+            }
+
+            // Call Message Central to verify the 4-digit code against the stored token
+            try {
+                const response = await verifyMessageCentral(booking.bookingOtp, otp);
+                
+                // If we are here, it means the provider returned 200/Success
+                // Mark the booking as verified/confirmed
+                booking.bookingOtp = null; // Clear OTP after success
+                booking.status = "confirmed";
+                
+                await booking.save();
+
+                return sendSuccessResponse(res, { bookingId: id }, "OTP verified successfully. Job confirmed.");
+            } catch (err) {
+                const errorData = err.response?.data || {};
+                console.error("OTP Verification failed for booking:", id, errorData);
+                
+                return sendErrorResponse(res, { 
+                    message: "Invalid or expired OTP", 
+                    provider: errorData.message || errorData.errorMessage
+                }, 400);
+            }
+        } catch (error) {
+            console.error("Error verifying booking OTP:", error);
             return sendErrorResponse(res, error, 500);
         }
     }

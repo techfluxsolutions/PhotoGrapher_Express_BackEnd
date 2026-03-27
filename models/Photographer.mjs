@@ -119,6 +119,10 @@ const photographerSchema = new mongoose.Schema(
       enum: ["Savings", "Current"],
       // default: "Savings"
     },
+    razorpayAccountId: {
+      type: String,
+      default: null,
+    },
     status: {
       type: String,
       enum: ["active", "inactive", "pending"],
