@@ -27,6 +27,18 @@ const personalizedQuoteSchema = new mongoose.Schema(
       type: Number,
       required: true
     },
+    lat: {
+      type: Number,
+      default: null,
+    },
+    lng: {
+      type: Number,
+      default: null,
+    },
+    address: {
+      type: String,
+      default: "",
+    },
   },
   { timestamps: true }
 );

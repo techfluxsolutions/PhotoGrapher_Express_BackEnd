@@ -833,6 +833,9 @@ class BookingController {
                     fromDate: this.formatDMY(booking.startDate || booking.eventDate || booking.bookingDate),
                     toDate: this.formatDMY(booking.endDate || booking.startDate || booking.eventDate || booking.bookingDate),
                     city: booking.city,
+                    lat: booking.lat || null,
+                    lng: booking.lng || null,
+                    address: booking.address || "",
                     status: booking.status,
                     bookingStatus: booking.bookingStatus,
                     galleryStatus: booking.galleryStatus || "Upload Pending",
@@ -954,7 +957,10 @@ class BookingController {
                     time: ist.time,
                     fromDate: this.formatDMY(booking.startDate || booking.eventDate || booking.bookingDate),
                     toDate: this.formatDMY(booking.endDate || booking.startDate || booking.eventDate || booking.bookingDate),
-                    city: booking.city                    
+                    city: booking.city,
+                    lat: booking.lat || null,
+                    lng: booking.lng || null,
+                    address: booking.address || ""
                 };
             });
 

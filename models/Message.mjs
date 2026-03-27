@@ -37,6 +37,18 @@ const messageSchema = new mongoose.Schema(
             type: String,
             sparse: true,
         },
+        lat: {
+            type: Number,
+            sparse: true,
+        },
+        lng: {
+            type: Number,
+            sparse: true,
+        },
+        address: {
+            type: String,
+            sparse: true,
+        },
         budget: {
             type: String,
             sparse: true,

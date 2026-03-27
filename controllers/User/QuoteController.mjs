@@ -224,6 +224,9 @@ class QuoteController {
         city,
         state,
         postalCode,
+        lat,
+        lng,
+        address,
         totalAmount
       } = req.body;
 
@@ -281,11 +284,14 @@ class QuoteController {
         endDate: formatDateStr(leanedData.endDate),
 
         // Address mapping
-        flatOrHouseNo,
-        streetName,
-        city,
-        state,
-        postalCode,
+        flatOrHouseNo: flatOrHouseNo || quote.flatOrHouseNo,
+        streetName: streetName || quote.streetName,
+        city: city || quote.city,
+        state: state || quote.state,
+        postalCode: postalCode || quote.postalCode,
+        lat: lat || quote.lat || null,
+        lng: lng || quote.lng || null,
+        address: address || quote.address || "",
         totalAmount: isNaN(Number(totalAmount)) ? 0 : Number(totalAmount),
         quoteId: quote._id,
         bookingSource: "quote",
