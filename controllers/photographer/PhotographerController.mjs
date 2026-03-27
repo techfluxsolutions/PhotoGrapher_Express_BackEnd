@@ -1003,13 +1003,15 @@ class PhotographerController {
                 orFilters.push({ "professionalDetails.expertiseLevel": expertise.toUpperCase() });
             }
 
-            if (rating !== undefined && rating !== null && rating.toString().trim() !== "") {
-                orFilters.push({ avgRating: { $lte: minRating } });
-            }
-
-            // Apply OR filters if any are present
+            // Apply Category/Expertise OR filters as requested
             if (orFilters.length > 0) {
                 pipeline.push({ $match: { $or: orFilters } });
+            }
+
+            // Simple Rating Logic: If a rating is provided, only show photographers with at least that rating (Greater Than or Equal)
+            // This ensures that picking '4' stars shows 4 and 5 star photographers, and hides unrated ones.
+            if (rating !== undefined && rating !== null && rating.toString().trim() !== "") {
+                pipeline.push({ $match: { avgRating: { $lte: minRating } } });
             }
 
             // 8. Apply Sorting

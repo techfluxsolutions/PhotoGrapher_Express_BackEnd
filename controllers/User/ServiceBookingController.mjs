@@ -1,6 +1,7 @@
 import ServiceBooking from "../../models/ServiceBookings.mjs";
 import Quote from "../../models/Quote.mjs";
 import Payment from "../../models/Payment.mjs";
+import Photographer from "../../models/Photographer.mjs";
 const parseDDMMYYYY = (dateStr) => {
   if (!dateStr) return dateStr;
   const [day, month, year] = dateStr.split("-");
@@ -107,12 +108,15 @@ class ServiceBookingController {
       const booking = await ServiceBooking.findById(id).populate(
         "service_id client_id"
       );
+
+      const photographer = await Photographer.findById(booking.photographer_id).select("basicInfo");
+
       if (!booking) {
         return res
           .status(404)
           .json({ success: false, message: "ServiceBooking not found" });
       }
-      return res.json({ success: true, data: booking });
+      return res.json({ success: true, data: booking, photographer });
     } catch (err) {
       return next(err);
     }
