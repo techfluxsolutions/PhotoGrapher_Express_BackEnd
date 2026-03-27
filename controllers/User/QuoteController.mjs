@@ -289,6 +289,7 @@ class QuoteController {
         totalAmount: isNaN(Number(totalAmount)) ? 0 : Number(totalAmount),
         quoteId: quote._id,
         bookingSource: "quote",
+        outStandingAmount: isNaN(Number(totalAmount)) ? 0 : Number(totalAmount),
       });
 
       // 🔄 Step 3: Update quote status

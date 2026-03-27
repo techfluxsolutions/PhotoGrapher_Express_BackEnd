@@ -178,7 +178,7 @@ const serviceBookingSchema = new mongoose.Schema(
     bookingOtp: {
       type: String,
       default: null
-    }
+    },
   },
   { timestamps: true }
 );

@@ -24,3 +24,6 @@
 {"level":"info","message":"::1 - - [26/Mar/2026:10:13:41 +0000] \"GET /api/admins/bookings/upcoming?fromDate=&toDate=&page=1&limit=10 HTTP/1.1\" 200 - \"-\" \"PostmanRuntime/7.52.0\"","timestamp":"2026-03-26 15:43:41"}
 {"level":"info","message":"::1 - - [26/Mar/2026:10:16:01 +0000] \"GET /api/admins/bookings/upcoming?fromDate=&toDate=&page=1&limit=10 HTTP/1.1\" 200 - \"-\" \"PostmanRuntime/7.52.0\"","timestamp":"2026-03-26 15:46:01"}
 {"level":"info","message":"::1 - - [26/Mar/2026:10:36:27 +0000] \"GET /api/photographers/gettodaysbookings HTTP/1.1\" 200 486 \"-\" \"PostmanRuntime/7.52.0\"","timestamp":"2026-03-26 16:06:27"}
+{"level":"info","message":"::1 - - [26/Mar/2026:12:41:59 +0000] \"GET /api/chat/messages/69a94c59f3738c5b53e3d6be HTTP/1.1\" 403 54 \"-\" \"PostmanRuntime/7.51.1\"","timestamp":"2026-03-26 18:11:59"}
+{"level":"info","message":"::1 - - [26/Mar/2026:12:42:56 +0000] \"GET /api/chat/messages/69a94c59f3738c5b53e3d6be HTTP/1.1\" 403 43 \"-\" \"PostmanRuntime/7.51.1\"","timestamp":"2026-03-26 18:12:56"}
+{"level":"info","message":"::1 - - [26/Mar/2026:12:44:35 +0000] \"GET /api/chat/messages/69c505396f6a30f12da9122d HTTP/1.1\" 200 - \"-\" \"PostmanRuntime/7.51.1\"","timestamp":"2026-03-26 18:14:35"}
