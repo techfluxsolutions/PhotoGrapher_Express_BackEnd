@@ -858,10 +858,13 @@ class PhotographerController {
             let bookingStatus = null;
             if (bookingId) {
                 const booking = await ServiceBooking.findById(bookingId)
-                    .select("photographer_id bookingStatus");
+                    .select("photographer_id bookingStatus status");
                 if (booking) {
-                    assignedPhotographerId = booking.photographer_id?.toString();
-                    bookingStatus = booking.bookingStatus;
+                    // Only treat as assigned if booking is NOT canceled
+                    if (booking.status !== "canceled") {
+                        assignedPhotographerId = booking.photographer_id?.toString();
+                        bookingStatus = booking.bookingStatus;
+                    }
                 }
             }
 
@@ -917,11 +920,20 @@ class PhotographerController {
                 };
             });
 
+            const isLock = assignedPhotographerId !== null && bookingStatus === "accepted";
+            let finalData = result;
+            let finalTotal = total;
+
+            if (isLock) {
+                finalData = result.filter(p => p.isAssigned);
+                finalTotal = finalData.length;
+            }
+
             res.status(200).json({
                 success: true,
-                isLock: assignedPhotographerId !== null && bookingStatus === "accepted",
-                data: result,
-                meta: { total, page, limit }
+                isLock: isLock,
+                data: finalData,
+                meta: { total: finalTotal, page, limit }
             });
         } catch (error) {
             console.error("Error fetching sorted photographers:", error);
@@ -1015,8 +1027,8 @@ class PhotographerController {
 
             // --- Priority Priority Sorting for Assigned Photographer ---
             if (bookingId) {
-                const booking = await ServiceBooking.findById(bookingId).select("photographer_id bookingStatus");
-                if (booking && booking.bookingStatus === "accepted") {
+                const booking = await ServiceBooking.findById(bookingId).select("photographer_id bookingStatus status");
+                if (booking && booking.bookingStatus === "accepted" && booking.status !== "canceled") {
                     pipeline.push({
                         $addFields: {
                             assignedPriority: { $eq: ["$_id", booking.photographer_id] }
@@ -1042,8 +1054,8 @@ class PhotographerController {
             let assignedPhotographerId = null;
             let bookingStatus = null;
             if (bookingId) {
-                const booking = await ServiceBooking.findById(bookingId).select("photographer_id bookingStatus");
-                if (booking) {
+                const booking = await ServiceBooking.findById(bookingId).select("photographer_id bookingStatus status");
+                if (booking && booking.status !== "canceled") {
                     assignedPhotographerId = booking.photographer_id?.toString();
                     bookingStatus = booking.bookingStatus;
                 }
@@ -1061,16 +1073,25 @@ class PhotographerController {
                 };
             });
 
+            const isLock = assignedPhotographerId !== null && bookingStatus === "accepted";
+            let finalPhotographers = photographers;
+            let finalTotal = total;
+
+            if (isLock) {
+                finalPhotographers = photographers.filter(p => p.isAssigned);
+                finalTotal = finalPhotographers.length;
+            }
+
             res.status(200).json({
                 success: true,
-                isLock: assignedPhotographerId !== null && bookingStatus === "accepted",
+                isLock: isLock,
                 message: "Photographers filtered and sorted successfully",
-                data: photographers,
+                data: finalPhotographers,
                 meta: {
-                    total,
+                    total: finalTotal,
                     page,
                     limit,
-                    totalPages: Math.ceil(total / limit)
+                    totalPages: Math.ceil(finalTotal / limit)
                 }
             });
 

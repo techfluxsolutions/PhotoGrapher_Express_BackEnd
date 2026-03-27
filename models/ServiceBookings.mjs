@@ -27,11 +27,11 @@ const serviceBookingSchema = new mongoose.Schema(
     },
     flatOrHouseNo: {
       type: String,
-      required: true,
+      required: false,
     },
     streetName: {
       type: String,
-      required: true,
+      required: false,
     },
     landMark: {
       type: String,
@@ -39,15 +39,27 @@ const serviceBookingSchema = new mongoose.Schema(
     },
     city: {
       type: String,
-      required: true,
+      required: false,
     },
     state: {
       type: String,
-      required: true,
+      required: false,
     },
     postalCode: {
       type: String,
-      required: true,
+      required: false,
+    },
+    lat: {
+      type: Number,
+      default: null,
+    },
+    lng: {
+      type: Number,
+      default: null,
+    },
+    address: {
+      type: String,
+      default: "",
     },
     team: {
       type: String,

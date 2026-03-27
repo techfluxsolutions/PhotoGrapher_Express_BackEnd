@@ -220,7 +220,9 @@ class ChatController {
                 phoneNumber,
                 email,
                 clientName,
-                eventDate
+                eventDate,
+                lat,
+                lng
             } = req.body;
             const userId = req.user.id;
 
@@ -260,6 +262,10 @@ class ChatController {
             let finalState = req.body.state;
             let finalPostalCode = req.body.postalCode;
             let finalClientId = req.body.clientId;
+            
+            let finalLat = lat !== undefined ? lat : req.body.lat;
+            let finalLng = lng !== undefined ? lng : req.body.lng;
+            let finalAddress = (typeof address === "string") ? address : req.body.address;
 
             if (typeof message === "object" && message !== null) {
                 finalMessage = message.message || finalMessage;
@@ -290,6 +296,9 @@ class ChatController {
                 finalEmail = message.email || finalEmail;
                 finalClientName = message.clientName || finalClientName;
                 finalEventDate = message.eventDate || finalEventDate;
+                finalLat = message.lat !== undefined ? message.lat : finalLat;
+                finalLng = message.lng !== undefined ? message.lng : finalLng;
+                finalAddress = (typeof message.address === "string") ? message.address : finalAddress;
             }
 
             if (typeof address === "object" && address !== null) {
@@ -410,6 +419,9 @@ class ChatController {
                         if (finalCity !== undefined) quoteUpdateData.city = finalCity;
                         if (finalState !== undefined) quoteUpdateData.state = finalState;
                         if (finalPostalCode !== undefined) quoteUpdateData.postalCode = finalPostalCode;
+                        if (finalLat !== undefined) quoteUpdateData.lat = finalLat;
+                        if (finalLng !== undefined) quoteUpdateData.lng = finalLng;
+                        if (finalAddress !== undefined) quoteUpdateData.address = finalAddress;
                         if (finalRequirements !== undefined) quoteUpdateData.requirements = finalRequirements;
                         if (finalEditingPreferences !== undefined) quoteUpdateData.editingPreferences = finalEditingPreferences;
                         if (finalEventDuration !== undefined) quoteUpdateData.eventDuration = finalEventDuration;
@@ -439,6 +451,9 @@ class ChatController {
                 location: finalLocation,
                 quoteId: targetQuoteId || null,
                 eventType: finalEventType,
+                lat: finalLat,
+                lng: finalLng,
+                address: finalAddress,
                 flatOrHouseNo: finalFlatOrHouseNo,
                 streetName: finalStreetName,
                 city: finalCity,

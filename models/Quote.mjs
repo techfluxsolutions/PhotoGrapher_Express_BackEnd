@@ -12,11 +12,11 @@ const quoteSchema = new mongoose.Schema(
     },
     startDate: {
       type: Date,
-      required: true,
+      required: false,
     },
     endDate: {
       type: Date,
-      required: true,
+      required: false,
     },
     eventDate: {
       type: Date,
@@ -24,7 +24,19 @@ const quoteSchema = new mongoose.Schema(
     },
     location: {
       type: String,
-      required: true,
+      required: false,
+    },
+    lat: {
+      type: Number,
+      default: null,
+    },
+    lng: {
+      type: Number,
+      default: null,
+    },
+    address: {
+      type: String,
+      default: "",
     },
     eventDuration: {
       type: Number,
