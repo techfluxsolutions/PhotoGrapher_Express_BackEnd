@@ -88,10 +88,11 @@ class PaymentController {
 
 
       // updating payment table
-      const isPaymentExisted = await Payment.findOne({ job_id: bookingId }).lean();
+      let payment;
+      const isPaymentExisted = await Payment.findOne({ job_id: bookingId });
 
       if (!isPaymentExisted) {
-        const payment = await Payment.create({
+        payment = await Payment.create({
           user_id: req.user.id,
           job_id: bookingId,
           upfront_amount: paidAmount,
@@ -99,11 +100,11 @@ class PaymentController {
           outstanding_amount: booking.totalAmount - paidAmount,
           paid_type: `${paymentType === "partial" ? "partial paid" : "full paid"}`
         });
-      } else if (isPaymentExisted) {
-        isPaymentExisted.payment_status = "paid",
-          isPaymentExisted.outstanding_amount = 0,
-
-          await isPaymentExisted.save();
+      } else {
+        isPaymentExisted.payment_status = "paid";
+        isPaymentExisted.outstanding_amount = 0;
+        await isPaymentExisted.save();
+        payment = isPaymentExisted;
       }
       // Update booking based on what was paid
       if (booking.paymentStatus === "pending") {
