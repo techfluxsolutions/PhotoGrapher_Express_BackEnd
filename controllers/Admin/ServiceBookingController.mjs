@@ -768,40 +768,7 @@ class ServiceBookingController {
             }
             updateData.photographerAmount = Math.round(booking.totalAmount * (1 - (commission || 0) / 100));
 
-            // ✅ SELF-HEALING OTP FLOW: Try re-delivery first, then fresh session.
-            const client = await User.findById(booking.client_id);
-            if (client && client.mobileNumber) {
-              // Option A: If we already have a token in DB (from a previous attempt), try to force re-delivery
-              if (booking.bookingOtp && booking.bookingOtp.length > 5) {
-                try {
-                  console.log(`[SMS] Admin: Forcing re-delivery for existing session: ${booking.bookingOtp}`);
-                  await retryMessageCentral(booking.bookingOtp);
-                  updateData.bookingOtp = booking.bookingOtp; // Keep existing
-                } catch (retryErr) {
-                   console.log("[SMS] Admin: Re-delivery check failed, trying fresh start...");
-                   // Fall through to Option B
-                }
-              }
-
-              // Option B: Initial or Fresh request
-              if (!updateData.bookingOtp) {
-                try {
-                  const response = await sendMessageCentral(client.mobileNumber, 4); 
-                  const vId = response.data?.verificationId || response.data?.data?.verificationId || response.data?.id || null;
-                  if (vId) updateData.bookingOtp = vId;
-                } catch (smsErr) {
-                  // Catch existing session (506) and extract ID
-                  const errData = smsErr.response?.data;
-                  const vId = errData?.verificationId || errData?.data?.verificationId || errData?.id || null;
-                  if (vId) {
-                    updateData.bookingOtp = vId;
-                    console.log("[LOG] Admin Assign using existing session (506):", vId);
-                  }
-                }
-              }
-            } else {
-              console.error("[LOG] Client or client.mobileNumber not found for booking assignment notification.");
-            }
+            updateData.photographerAmount = Math.round(booking.totalAmount * (1 - (commission || 0) / 100));
           }
         } else {
           // If clearing assignment, also clear the amount and reset statuses

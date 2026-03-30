@@ -676,45 +676,6 @@ class BookingController {
                     }
 
                     updateData.photographerAmount = Math.round(targetBooking.totalAmount * (1 - (commission || 0) / 100));
-
-                    updateData.photographerAmount = Math.round(targetBooking.totalAmount * (1 - (commission || 0) / 100));
-
-                    // ✅ SELF-HEALING OTP FLOW: Try re-delivery first, then fresh session.
-                    const client = await User.findById(targetBooking.client_id);
-                    if (client && client.mobileNumber) {
-                        // Option A: If we already have a token in DB (from a previous assign/invite), try to force re-delivery
-                        if (targetBooking.bookingOtp && targetBooking.bookingOtp.length > 5) {
-                            try {
-                                console.log(`[SMS] Accept: Forcing re-delivery for ID: ${targetBooking.bookingOtp}`);
-                                await retryMessageCentral(targetBooking.bookingOtp);
-                                updateData.bookingOtp = targetBooking.bookingOtp; // Keep existing
-                            } catch (retryErr) {
-                                console.log("[SMS] Accept: Re-delivery check failed, trying fresh start...");
-                                // Fall through to Option B
-                            }
-                        }
-
-                        // Option B: Initial or Fresh request
-                        if (!updateData.bookingOtp) {
-                            try {
-                                const response = await sendMessageCentral(client.mobileNumber, 4); 
-                                const vId = response.data?.verificationId || response.data?.data?.verificationId || response.data?.id || null;
-                                if (vId) updateData.bookingOtp = vId;
-                            } catch (smsErr) {
-                                // Catch existing session (506) and extract ID
-                                const errData = smsErr.response?.data;
-                                const vId = errData?.verificationId || errData?.data?.verificationId || errData?.id || null;
-                                if (vId) {
-                                    updateData.bookingOtp = vId;
-                                    console.log("[LOG] Accept using existing session (506):", vId);
-                                } else {
-                                    console.error("[CRITICAL] v3 API failed for client accept:", errData || smsErr.message);
-                                }
-                            }
-                        }
-                    } else {
-                        console.error("[LOG] Client not found for booking notification.");
-                    }
                 }
             } else if (bookingStatus === "rejected") {
                 if (isAssigned) {
