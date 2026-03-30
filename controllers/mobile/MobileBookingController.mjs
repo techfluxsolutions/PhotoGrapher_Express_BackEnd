@@ -2,6 +2,7 @@ import mongoose from "mongoose";
 import ServiceBooking from "../../models/ServiceBookings.mjs";
 import Quote from "../../models/Quote.mjs";
 import Payment from "../../models/Payment.mjs";
+import Service from "../../models/Service.mjs";
 const parseDDMMYYYY = (dateStr) => {
   if (!dateStr) return dateStr;
   const [day, month, year] = dateStr.split("-");
@@ -283,7 +284,7 @@ class MobileBookingController {
   // Get Photographer Upcoming Bookings
   async getPhotographerUpcomingBookings(req, res, next) {
     try {
-      const { id } = req.user;
+      const id = new mongoose.Types.ObjectId(req.user.id);
       const { eventType } = req.query; // New Filter
       const page = Math.max(1, parseInt(req.query.page) || 1);
       const limit = Math.max(1, parseInt(req.query.limit) || 20);
@@ -314,10 +315,24 @@ class MobileBookingController {
         ]
       };
 
-      // Add Event Type Filter if provided
+      // Get counts for each service type based on photographer tasks (before applying filters)
+      const allServices = await Service.find().select("serviceName");
+      const serviceCounts = {};
+      
+      // Calculate counts for each service using countDocuments for consistency with the main query
+      await Promise.all(allServices.map(async (service) => {
+        const count = await ServiceBooking.countDocuments({
+          $and: [
+            ...query.$and,
+            { service_id: service._id }
+          ]
+        });
+        const key = service.serviceName.toLowerCase().replace(/\s/g, "");
+        serviceCounts[key] = count;
+      }));
+
+      // Add Event Type Filter if provided (must happen AFTER counts used 'query')
       if (eventType) {
-        // Find matching services first to get their IDs
-        const Service = mongoose.model("Service");
         const matchingServices = await Service.find({
           serviceName: { $regex: eventType, $options: "i" }
         }).select("_id");
@@ -380,6 +395,7 @@ class MobileBookingController {
 
       return res.json({
         success: true,
+        serviceCounts,
         data: formattedBookings,
         meta: { total, page, limit }
       });
