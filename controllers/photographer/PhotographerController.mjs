@@ -340,7 +340,7 @@ class PhotographerController {
 
             res.status(200).json({
                 success: true,
-                message: "Unverified photographer updated successfully",
+                message: "Photographer updated successfully",
                 photographer: {
                     _id: photographer._id,
                     name: photographer.basicInfo.fullName,
@@ -356,7 +356,7 @@ class PhotographerController {
             });
 
         } catch (error) {
-            res.status(500).json({ message: "Failed to update unverified photographer", error: error.message });
+            res.status(500).json({ message: "Failed to update photographer", error: error.message });
         }
     }
 
