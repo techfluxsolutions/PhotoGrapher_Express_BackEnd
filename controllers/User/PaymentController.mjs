@@ -96,7 +96,7 @@ class PaymentController {
           user_id: req.user.id,
           job_id: bookingId,
           upfront_amount: paidAmount,
-          payment_status: `${paymentType === "partial" ? "partial" : "full"}`,
+          payment_status: "paid",
           outstanding_amount: booking.totalAmount - paidAmount,
           paid_type: `${paymentType === "partial" ? "partial paid" : "full paid"}`
         });
