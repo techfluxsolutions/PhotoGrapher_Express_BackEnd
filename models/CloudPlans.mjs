@@ -8,7 +8,7 @@ const cloudPlansSchema = new mongoose.Schema({
     days: {
         type: Number,
     },
-    is_paid: {
+    isPaid: {
         type: Boolean,
         default: false
     },

@@ -378,6 +378,13 @@ class MobileBookingController {
             timePart = parts[1];
         }
 
+        // Construct Venue if address is missing
+        const venueParts = [];
+        if (booking.flatOrHouseNo) venueParts.push(booking.flatOrHouseNo);
+        if (booking.streetName) venueParts.push(booking.streetName);
+        if (booking.city) venueParts.push(booking.city);
+        const displayAddress = booking.address || (venueParts.length > 0 ? venueParts.join(", ") : null);
+
         return {
           _id: booking._id,
           bookingId: booking.veroaBookingId,
@@ -391,7 +398,7 @@ class MobileBookingController {
           bookingStatus: booking.bookingStatus,
           lat: booking.lat || null,
           lng: booking.lng || null,
-          address: booking.address || null,
+          address: displayAddress,
           photographerAmount: booking.photographerAmount || 0
         };
       });

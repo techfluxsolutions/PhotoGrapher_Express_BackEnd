@@ -122,9 +122,48 @@ class ServiceBookingController {
         ServiceBooking.countDocuments(filter),
       ]);
 
+      const formattedItems = items.map(booking => {
+        const ist = booking.ist_bookingDate || "N/A";
+        const [d, t] = ist.includes(", ") ? ist.split(", ") : [ist, "N/A"];
+        const dateVal = (d && d !== "N/A") ? d : (booking.startDate || (booking.bookingDate ? booking.bookingDate.toISOString().split("T")[0] : "N/A"));
+        
+        // Construct Venue if address is missing
+        const venueParts = [];
+        if (booking.flatOrHouseNo) venueParts.push(booking.flatOrHouseNo);
+        if (booking.streetName) venueParts.push(booking.streetName);
+        if (booking.city) venueParts.push(booking.city);
+        const displayAddress = booking.address || (venueParts.length > 0 ? venueParts.join(", ") : null);
+
+        return {
+          bookingId: booking._id,
+          veroaBookingId: booking.veroaBookingId,
+          client_id: booking.client_id?._id || null,
+          client_name: booking.client_id?.username || "",
+          assigned_photographer: (booking.status === "canceled") ? "" : (booking.photographer_id?.basicInfo?.fullName || ""),
+          team_studio: (booking.status === "canceled") ? "" : (booking.photographer_id?.professionalDetails?.team_studio || booking.team || ""),
+          eventType: booking.service_id?.serviceName || "",
+          eventDate: booking.bookingDate,
+          location: displayAddress || booking.city || "",
+          lat: booking.lat || null,
+          lng: booking.lng || null,
+          address: displayAddress,
+          note: booking.notes || "",
+          status: booking.status,
+          date: dateVal,
+          time: t || "N/A",
+          startDate: booking.startDate || (booking.bookingDate ? booking.bookingDate.toISOString().split("T")[0] : null),
+          endDate: booking.endDate || (booking.bookingDate ? booking.bookingDate.toISOString().split("T")[0] : null),
+          bookingAmount: booking.totalAmount,
+          photographerAmount: booking.photographerAmount || 0,
+          paymentMode: booking.paymentMode,
+          paymentStatus: booking.paymentStatus,
+          bookingStatus: booking.bookingStatus || booking.status,
+        };
+      });
+
       return res.json({
         success: true,
-        data: items,
+        data: formattedItems,
         meta: { total, page, limit },
       });
     } catch (err) {
@@ -311,6 +350,13 @@ class ServiceBookingController {
         const [d, t] = ist.includes(", ") ? ist.split(", ") : [ist, "N/A"];
         const dateVal = (d && d !== "N/A") ? d : (booking.startDate || (booking.bookingDate ? booking.bookingDate.toISOString().split("T")[0] : "N/A"));
         
+        // Construct Venue if address is missing
+        const venueParts = [];
+        if (booking.flatOrHouseNo) venueParts.push(booking.flatOrHouseNo);
+        if (booking.streetName) venueParts.push(booking.streetName);
+        if (booking.city) venueParts.push(booking.city);
+        const displayAddress = booking.address || (venueParts.length > 0 ? venueParts.join(", ") : null);
+
         return {
           bookingId: booking._id,
           veroaBookingId: booking.veroaBookingId,
@@ -320,10 +366,10 @@ class ServiceBookingController {
           team_studio: (booking.status === "canceled") ? "" : (booking.photographer_id?.professionalDetails?.team_studio || booking.team || ""),
           eventType: booking.service_id?.serviceName || "",
           eventDate: booking.bookingDate,
-          location: booking.address || `${booking.flatOrHouseNo}, ${booking.streetName}, ${booking.landMark ? booking.landMark + ', ' : ''}${booking.city}, ${booking.state} - ${booking.postalCode}`,
+          location: displayAddress || booking.city || "",
           lat: booking.lat || null,
           lng: booking.lng || null,
-          address: booking.address || "",
+          address: displayAddress,
           note: booking.notes || "",
           status: booking.status,
           date: dateVal,
@@ -459,6 +505,13 @@ class ServiceBookingController {
         const [d, t] = ist.includes(", ") ? ist.split(", ") : [ist, "N/A"];
         const dateVal = (d && d !== "N/A") ? d : (booking.startDate || (booking.bookingDate ? booking.bookingDate.toISOString().split("T")[0] : "N/A"));
 
+        // Construct Venue if address is missing
+        const venueParts = [];
+        if (booking.flatOrHouseNo) venueParts.push(booking.flatOrHouseNo);
+        if (booking.streetName) venueParts.push(booking.streetName);
+        if (booking.city) venueParts.push(booking.city);
+        const displayAddress = booking.address || (venueParts.length > 0 ? venueParts.join(", ") : null);
+
         return {
           bookingId: booking._id,
           veroaBookingId: booking.veroaBookingId,
@@ -468,10 +521,10 @@ class ServiceBookingController {
           team_studio: (booking.status === "canceled") ? "" : (booking.photographer_id?.professionalDetails?.team_studio || booking.team || ""),
           eventType: booking.service_id?.serviceName || "",
           eventDate: booking.bookingDate,
-          location: booking.address || `${booking.flatOrHouseNo}, ${booking.streetName}, ${booking.landMark ? booking.landMark + ', ' : ''}${booking.city}, ${booking.state} - ${booking.postalCode}`,
+          location: displayAddress || booking.city || "",
           lat: booking.lat || null,
           lng: booking.lng || null,
-          address: booking.address || "",
+          address: displayAddress,
           note: booking.notes || "",
           status: booking.status,
           date: dateVal,
