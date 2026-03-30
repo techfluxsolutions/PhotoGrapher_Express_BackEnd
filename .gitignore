@@ -6,3 +6,4 @@ project_trash
 *ignore
 *.log
 logs/
+combined.log
