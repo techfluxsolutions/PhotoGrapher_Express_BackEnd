@@ -242,3 +242,4 @@
 {"level":"info","message":"::1 - - [30/Mar/2026:08:53:59 +0000] \"GET /api/mobile/photographer/bookings/upcoming HTTP/1.1\" 200 672 \"-\" \"PostmanRuntime/7.52.0\"","timestamp":"2026-03-30 14:23:59"}
 {"level":"info","message":"::1 - - [30/Mar/2026:08:54:57 +0000] \"GET /api/mobile/photographer/bookings/upcoming HTTP/1.1\" 200 672 \"-\" \"PostmanRuntime/7.52.0\"","timestamp":"2026-03-30 14:24:57"}
 {"level":"info","message":"::1 - - [30/Mar/2026:08:56:24 +0000] \"GET /api/mobile/photographer/bookings/upcoming HTTP/1.1\" 200 672 \"-\" \"PostmanRuntime/7.52.0\"","timestamp":"2026-03-30 14:26:24"}
+{"level":"info","message":"::1 - - [30/Mar/2026:13:13:59 +0000] \"GET /api/mobile/photographer/bookings/upcoming HTTP/1.1\" 200 686 \"-\" \"PostmanRuntime/7.52.0\"","timestamp":"2026-03-30 18:43:59"}
