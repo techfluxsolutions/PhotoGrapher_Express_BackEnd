@@ -389,9 +389,9 @@ class MobileBookingController {
           city: booking.city,
           status: booking.status,
           bookingStatus: booking.bookingStatus,
-          lat: booking.client_id?.lat || null,
-          lng: booking.client_id?.lng || null,
-          address: booking.client_id?.address || null,
+          lat: booking.lat || null,
+          lng: booking.lng || null,
+          address: booking.address || null,
           photographerAmount: booking.photographerAmount || 0
         };
       });
