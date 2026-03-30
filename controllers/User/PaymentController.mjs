@@ -127,7 +127,6 @@ class PaymentController {
       booking.paymentMode = "online";
       booking.paymentDate = new Date().toISOString();
       await booking.save();
-
       return res.status(200).json({ success: true, message: "Payment verified successfully", payment });
     } catch (error) {
       console.error("Error verifying payment:", error);
