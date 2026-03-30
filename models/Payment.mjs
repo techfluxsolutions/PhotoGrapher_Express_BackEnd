@@ -41,6 +41,11 @@ const paymentSchema = new mongoose.Schema(
       unique: true,
       sparse: true, // Allow null/undefined values
     },
+    paid_type: {
+      type: String,
+      enum: ["partial paid", "full paid"],
+      default: "",
+    },
     invoice_file: {
       type: String, // URL or file path to invoice PDF
     },

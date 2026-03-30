@@ -396,7 +396,7 @@ class PhotographerController {
     }
     async verifyPhotographer(req, res) {
         try {
-            const { id } = req.params;
+            // const { id } = req.params;
             const { mobileNumber, OTP } = req.body;
 
             if (!mobileNumber || !OTP) {
@@ -405,12 +405,12 @@ class PhotographerController {
 
             // 2. Find Photographer
             let photographer;
-            if (id) {
-                photographer = await Photographer.findById(id);
-            } else {
-                const cleanedMobile = mobileNumber.toString().replace(/\D/g, "");
-                photographer = await Photographer.findOne({ mobileNumber: cleanedMobile });
-            }
+            // if (id) {
+            //     photographer = await Photographer.findById(id);
+            // } else {
+            const cleanedMobile = mobileNumber.toString().replace(/\D/g, "");
+            photographer = await Photographer.findOne({ mobileNumber: cleanedMobile });
+            // }
             console.log(photographer);
             if (!photographer) {
                 return res.status(404).json({ message: "Photographer not found" });
@@ -439,24 +439,25 @@ class PhotographerController {
             photographer.status = "active";
             // Create Razorpay account if not exists
 
-            if (!photographer.razorpayAccountId) {
-                const accountData = {
-                    type: 'route',
-                    email: photographer.email,
-                    phone: photographer.mobileNumber || photographer.basicInfo?.phone,
-                    legal_business_name: photographer.bank_account_holder || photographer.basicInfo?.fullName || photographer.username || "Photographer",
-                    business_type: "individual", // Default to individual
-                    contact_name: photographer.basicInfo?.fullName || photographer.username || "Photographer",
-                    profile: {
-                        category: "ecommerce",
-                        subcategory: "digital_goods"
-                    }
-                };
-                const account = await razorpayInstance.accounts.create(accountData);
-                photographer.razorpayAccountId = account.id;
-                // await photographer.save();
-            }
-
+            // commenting this due to no route feature is enabled till yet 
+            // if (!photographer.razorpayAccountId) {
+            //     const accountData = {
+            //         type: 'route',
+            //         email: photographer.email,
+            //         phone: photographer.mobileNumber || photographer.basicInfo?.phone,
+            //         legal_business_name: photographer.bank_account_holder || photographer.basicInfo?.fullName || photographer.username || "Photographer",
+            //         business_type: "individual", // Default to individual
+            //         contact_name: photographer.basicInfo?.fullName || photographer.username || "Photographer",
+            //         profile: {
+            //             category: "ecommerce",
+            //             subcategory: "digital_goods"
+            //         }
+            //     };
+            //     const account = await razorpayInstance.accounts.create(accountData);
+            //     photographer.razorpayAccountId = account.id;
+            //     // await photographer.save();
+            // }
+            // END  commenting this due to no route feature is enabled till yet 
             await photographer.save();
 
             // Send welcome email with login credentials
