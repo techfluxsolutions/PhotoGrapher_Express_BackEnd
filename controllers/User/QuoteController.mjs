@@ -1,5 +1,6 @@
 import Quote from "../../models/Quote.mjs";
 import ServiceBooking from "../../models/ServiceBookings.mjs";
+import Counter from "../../models/Counter.mjs";
 class QuoteController {
   async create(req, res, next) {
     try {
@@ -244,22 +245,13 @@ class QuoteController {
       }
 
       const leanedData = quote.toObject();
-      // 🆔 Generate VEROA Booking ID
-      const lastBooking = await ServiceBooking
-        .findOne({ veroaBookingId: { $exists: true } })
-        .sort({ createdAt: -1 })
-        .select("veroaBookingId");
-
-      let nextNumber = 1;
-
-      if (lastBooking?.veroaBookingId) {
-        const lastNumber = parseInt(
-          lastBooking.veroaBookingId.split("-").pop(),
-          10
-        );
-        nextNumber = lastNumber + 1;
-      }
-
+      // 🆔 Generate VEROA Booking ID using atomic Counter
+      const counter = await Counter.findByIdAndUpdate(
+        "veroaBookingId",
+        { $inc: { seq: 1 } },
+        { new: true, upsert: true }
+      );
+      const nextNumber = counter.seq;
       const formattedNumber = String(nextNumber).padStart(6, "0");
       const veroaBookingId = `VEROA-BK-${formattedNumber}`;
 

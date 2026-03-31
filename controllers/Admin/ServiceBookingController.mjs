@@ -6,7 +6,7 @@ import PlatformSettings from "../../models/PlatformSettings.mjs";
 import { sendBookingSMS, sendMessageCentral, retryMessageCentral } from "../../utils/messageCentral.mjs";
 import mongoose from "mongoose";
 import Message from "../../models/Message.mjs";
-
+import Counter from "../../models/Counter.mjs";
 
 const parseDDMMYYYY = (dateStr) => {
   if (!dateStr || dateStr instanceof Date) return dateStr;
@@ -33,22 +33,13 @@ class ServiceBookingController {
       const payload = req.body;
       payload.bookingDate = parseDDMMYYYY(payload.bookingDate);
 
-      // Get last booking
-      const lastBooking = await ServiceBooking
-        .findOne({ veroaBookingId: { $exists: true } })
-        .sort({ createdAt: -1 })
-        .select("veroaBookingId");
-
-      let nextNumber = 1;
-
-      if (lastBooking?.veroaBookingId) {
-        // Example: VEROA-BK-000001 → extract 000001
-        const lastNumber = parseInt(
-          lastBooking.veroaBookingId.split("-").pop(),
-          10
-        );
-        nextNumber = lastNumber + 1;
-      }
+      // Get next booking sequence atomically
+      const counter = await Counter.findByIdAndUpdate(
+        "veroaBookingId",
+        { $inc: { seq: 1 } },
+        { new: true, upsert: true }
+      );
+      const nextNumber = counter.seq;
 
       // Pad number to 6 digits
       const formattedNumber = String(nextNumber).padStart(6, "0");

@@ -49,6 +49,9 @@ class PaymentController {
 
       const order = await razorpayInstance.orders.create(options);
 
+      booking.razorpayOrderId = order.id;
+      await booking.save();
+
       return res.status(200).json({ success: true, order });
     } catch (error) {
       console.error("Error creating Razorpay order:", error);
@@ -132,6 +135,88 @@ class PaymentController {
     } catch (error) {
       console.error("Error verifying payment:", error);
       res.status(500).json({ success: false, message: "Payment verification failed", error: error.message });
+    }
+  }
+
+
+
+  async handlePaymentSuccess(payload) {
+    const payment = payload.payment.entity;
+    const order = payload.order ? payload.order.entity : null;
+
+    const razorpayOrderId = payment.order_id || (order ? order.id : null);
+    const razorpayPaymentId = payment.id;
+    const paidAmount = payment.amount / 100;
+
+    // Find booking using notes or order_id (you can store bookingId in notes while creating order)
+    const booking = await ServiceBooking.findOne({
+      // Add a field like razorpayOrderId in your Booking model for easy lookup
+      razorpayOrderId: razorpayOrderId
+    });
+
+    if (!booking) return;
+
+    // Prevent duplicate processing
+    if (booking.paymentStatus === "fully paid") return;
+
+    // Update Payment collection (similar to your verify function)
+    let paymentRecord = await Payment.findOne({ job_id: booking._id });
+
+    if (!paymentRecord) {
+      paymentRecord = await Payment.create({
+        user_id: booking.client_id, // adjust as per your schema
+        job_id: booking._id,
+        upfront_amount: paidAmount,
+        payment_status: "paid",
+        outstanding_amount: booking.totalAmount - paidAmount,
+        paid_type: booking.paymentStatus === "pending" ? "partial paid" : "full paid",
+        razorpayPaymentId,
+        razorpayOrderId
+      });
+    } else {
+      paymentRecord.payment_status = "paid";
+      paymentRecord.outstanding_amount = 0;
+      await paymentRecord.save();
+    }
+
+    // Update Booking
+    if (booking.paymentStatus === "pending") {
+      if (paidAmount < booking.totalAmount) {
+        booking.paymentStatus = "partially paid";
+        booking.partial_Payment = true;
+        booking.outStandingAmount = booking.totalAmount - paidAmount;
+      } else {
+        booking.paymentStatus = "fully paid";
+        booking.full_Payment = true;
+        booking.outStandingAmount = 0;
+        booking.fullyPaidAt = new Date();
+      }
+    } else if (booking.paymentStatus === "partially paid") {
+      booking.paymentStatus = "fully paid";
+      booking.full_Payment = true;
+      booking.outStandingAmount = 0;
+      booking.fullyPaidAt = new Date();
+    }
+
+    booking.paymentMode = "online";
+    booking.paymentDate = new Date();
+    booking.razorpayOrderId = razorpayOrderId; // Store for future reference
+    await booking.save();
+  }
+
+  async handlePaymentAuthorized(payload) {
+    // Optional: Auto-capture if you use manual capture
+    // Or just mark as "authorized" for now
+    console.log("Payment authorized:", payload.payment.entity.id);
+  }
+
+  async handlePaymentFailed(payload) {
+    const payment = payload.payment.entity;
+    const booking = await ServiceBooking.findOne({ razorpayOrderId: payment.order_id });
+
+    if (booking) {
+      booking.paymentStatus = "pending"; // or add failed status
+      await booking.save();
     }
   }
   async create(req, res, next) {

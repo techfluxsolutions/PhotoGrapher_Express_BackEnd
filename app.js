@@ -22,6 +22,7 @@ import {
   mobileRoutes,
 } from "./routes/index.js";
 import uploadRoutes from "./routes/uploadRoutes.js";
+import webHookRoutes from "./routes/WebHookRoutes/webHookRoutes.mjs";
 
 // Production required utilities and middlewares
 import helmet from "helmet";
@@ -67,6 +68,9 @@ app.use("/api", limiter);
 // ==========================================
 // 3) BODY PARSERS & SANITIZATION
 // ==========================================
+// Webhook Route (Must be parsed as raw body before express.json)
+app.use(webHookRoutes);
+
 // Middleware to parse JSON bodies with size limit for security
 app.use(express.json({ limit: "200kb" }));
 

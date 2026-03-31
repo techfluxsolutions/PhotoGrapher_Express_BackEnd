@@ -2,6 +2,7 @@ import ServiceBooking from "../../models/ServiceBookings.mjs";
 import Quote from "../../models/Quote.mjs";
 import Payment from "../../models/Payment.mjs";
 import Photographer from "../../models/Photographer.mjs";
+import Counter from "../../models/Counter.mjs";
 const parseDDMMYYYY = (dateStr) => {
   if (!dateStr) return dateStr;
   const [day, month, year] = dateStr.split("-");
@@ -33,22 +34,13 @@ class ServiceBookingController {
       const payload = req.body;
       payload.bookingDate = parseDDMMYYYY(payload.bookingDate);
 
-      // Get last booking
-      const lastBooking = await ServiceBooking
-        .findOne({ veroaBookingId: { $exists: true } })
-        .sort({ createdAt: -1 })
-        .select("veroaBookingId");
-
-      let nextNumber = 1;
-
-      if (lastBooking?.veroaBookingId) {
-        // Example: VEROA-BK-000001 → extract 000001
-        const lastNumber = parseInt(
-          lastBooking.veroaBookingId.split("-").pop(),
-          10
-        );
-        nextNumber = lastNumber + 1;
-      }
+      // Get next booking sequence atomically
+      const counter = await Counter.findByIdAndUpdate(
+        "veroaBookingId",
+        { $inc: { seq: 1 } },
+        { new: true, upsert: true }
+      );
+      const nextNumber = counter.seq;
 
       // Pad number to 6 digits
       const formattedNumber = String(nextNumber).padStart(6, "0");
