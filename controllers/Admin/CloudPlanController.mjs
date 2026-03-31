@@ -3,10 +3,8 @@ import CloudPlans from "../../models/CloudPlans.mjs";
 class CloudPlanController {
     async create(req, res, next) {
         try {
-            const { charges, days, isPaid, booking_id, client_id } = req.body;
-            const current_date = new Date();
-            const expiry_date = new Date(current_date.getTime() + days * 24 * 60 * 60 * 1000);
-            const cloudPlan = new CloudPlans({ charges, days, isPaid, booking_id, client_id, expiry_date });
+            const { charges, days } = req.body;
+            const cloudPlan = new CloudPlans({ charges, days });
             await cloudPlan.save();
             res.status(201).json({ success: true, data: cloudPlan });
         } catch (error) {
@@ -33,8 +31,8 @@ class CloudPlanController {
     async update(req, res, next) {
         try {
             const { id } = req.params;
-            const { charges, days, isPaid } = req.body;
-            const cloudPlan = await CloudPlans.findByIdAndUpdate(id, { charges, days, isPaid }, { new: true });
+            const { charges, days } = req.body;
+            const cloudPlan = await CloudPlans.findByIdAndUpdate(id, { charges, days }, { new: true });
             res.status(200).json({ success: true, data: cloudPlan });
         } catch (error) {
             next(error);

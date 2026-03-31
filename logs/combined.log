@@ -274,3 +274,17 @@
 {"level":"info","message":"::1 - - [31/Mar/2026:10:47:21 +0000] \"GET /api/mobile/photographer/bookings/upcoming HTTP/1.1\" 200 680 \"-\" \"PostmanRuntime/7.52.0\"","timestamp":"2026-03-31 16:17:21"}
 {"level":"info","message":"::1 - - [31/Mar/2026:10:47:56 +0000] \"GET /api/mobile/photographer/bookings/upcoming HTTP/1.1\" 200 680 \"-\" \"PostmanRuntime/7.52.0\"","timestamp":"2026-03-31 16:17:56"}
 {"level":"info","message":"::1 - - [31/Mar/2026:10:48:17 +0000] \"GET /api/mobile/photographer/bookings/upcoming HTTP/1.1\" 200 693 \"-\" \"PostmanRuntime/7.52.0\"","timestamp":"2026-03-31 16:18:17"}
+{"level":"info","message":"::1 - - [31/Mar/2026:10:49:25 +0000] \"GET /api/mobile/photographer/bookings/upcoming HTTP/1.1\" 200 693 \"-\" \"PostmanRuntime/7.52.0\"","timestamp":"2026-03-31 16:19:25"}
+{"level":"info","message":"::1 - - [31/Mar/2026:10:52:15 +0000] \"GET /api/mobile/photographer/bookings/upcoming HTTP/1.1\" 200 - \"-\" \"PostmanRuntime/7.52.0\"","timestamp":"2026-03-31 16:22:15"}
+{"level":"info","message":"::1 - - [31/Mar/2026:10:52:26 +0000] \"GET /api/photographers/gettodaysbookings HTTP/1.1\" 200 75 \"-\" \"PostmanRuntime/7.52.0\"","timestamp":"2026-03-31 16:22:26"}
+{"level":"info","message":"::1 - - [31/Mar/2026:10:53:17 +0000] \"GET /api/photographers/gettodaysbookings HTTP/1.1\" 200 75 \"-\" \"PostmanRuntime/7.52.0\"","timestamp":"2026-03-31 16:23:17"}
+{"level":"info","message":"::1 - - [31/Mar/2026:10:53:19 +0000] \"GET /api/photographers/gettodaysbookings HTTP/1.1\" 200 75 \"-\" \"PostmanRuntime/7.52.0\"","timestamp":"2026-03-31 16:23:19"}
+{"level":"info","message":"::1 - - [31/Mar/2026:10:53:38 +0000] \"GET /api/photographers/gettodaysbookings HTTP/1.1\" 200 - \"-\" \"PostmanRuntime/7.52.0\"","timestamp":"2026-03-31 16:23:38"}
+{"level":"info","message":"::1 - - [31/Mar/2026:11:06:49 +0000] \"GET /api/photographers/bookings/summary-counts HTTP/1.1\" 200 135 \"-\" \"PostmanRuntime/7.52.0\"","timestamp":"2026-03-31 16:36:49"}
+{"level":"info","message":"::1 - - [31/Mar/2026:11:07:45 +0000] \"GET /api/photographers/bookings HTTP/1.1\" 401 70 \"-\" \"PostmanRuntime/7.52.0\"","timestamp":"2026-03-31 16:37:45"}
+{"level":"info","message":"::1 - - [31/Mar/2026:12:42:45 +0000] \"POST /api/admins/cloud-plans HTTP/1.1\" 201 146 \"-\" \"PostmanRuntime/7.52.0\"","timestamp":"2026-03-31 18:12:45"}
+{"level":"info","message":"::1 - - [31/Mar/2026:12:43:05 +0000] \"GET /api/admins/cloud-plans HTTP/1.1\" 200 148 \"-\" \"PostmanRuntime/7.52.0\"","timestamp":"2026-03-31 18:13:05"}
+{"level":"info","message":"::1 - - [31/Mar/2026:12:45:20 +0000] \"DELETE /api/admins/cloud-plans/69cbc1455d1d090e33dbce7e HTTP/1.1\" 401 59 \"-\" \"PostmanRuntime/7.52.0\"","timestamp":"2026-03-31 18:15:20"}
+{"level":"info","message":"::1 - - [31/Mar/2026:12:45:28 +0000] \"DELETE /api/admins/cloud-plans/69cbc1455d1d090e33dbce7e HTTP/1.1\" 200 146 \"-\" \"PostmanRuntime/7.52.0\"","timestamp":"2026-03-31 18:15:28"}
+{"level":"info","message":"::1 - - [31/Mar/2026:12:45:44 +0000] \"POST /api/admins/cloud-plans HTTP/1.1\" 201 105 \"-\" \"PostmanRuntime/7.52.0\"","timestamp":"2026-03-31 18:15:44"}
+{"level":"info","message":"::1 - - [31/Mar/2026:12:45:58 +0000] \"GET /api/admins/cloud-plans HTTP/1.1\" 200 107 \"-\" \"PostmanRuntime/7.52.0\"","timestamp":"2026-03-31 18:15:58"}
