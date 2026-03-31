@@ -122,7 +122,9 @@ const serviceBookingSchema = new mongoose.Schema(
       default: ""
     },
     veroaBookingId: {
-      type: String
+      type: String,
+      unique: [true, 'Booking ID already exists'],
+      sparse: true
     },
     cancellationReason: {
       type: String,
@@ -191,8 +193,11 @@ const serviceBookingSchema = new mongoose.Schema(
       type: String,
       default: null
     },
-  },
-  { timestamps: true }
+    razorpayOrderId: {
+      type: String,
+      default: null
+    }
+  }, { timestamps: true }
 );
 
 // Virtual: IST Booking Date
