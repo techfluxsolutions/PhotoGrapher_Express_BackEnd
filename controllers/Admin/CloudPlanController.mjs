@@ -13,7 +13,34 @@ class CloudPlanController {
     }
     async getAll(req, res, next) {
         try {
-            const cloudPlans = await CloudPlans.find();
+            const query = {};
+            // If not an admin, we show generic plans OR plans specifically for this client
+            if (req.user && req.user.role !== "admin") {
+                if (req.user.role === "user" || !req.user.role) {
+                    query.$or = [
+                        { client_id: req.user.id },
+                        { client_id: { $exists: false } },
+                        { client_id: null }
+                    ];
+                }
+            }
+
+            let cloudPlans = await CloudPlans.find(query).populate("booking_id");
+
+            // Further filter for photographers (they see all generic plans + their assigned booking plans)
+            if (req.user && req.user.role === "photographer") {
+                cloudPlans = cloudPlans.filter(cp => {
+                    // Generic plan: no booking_id or client_id
+                    if (!cp.booking_id && !cp.client_id) return true;
+                    
+                    // Assigned to them:
+                    return cp.booking_id && (
+                        String(cp.booking_id.photographer_id) === String(req.user.id) ||
+                        (Array.isArray(cp.booking_id.photographerIds) && cp.booking_id.photographerIds.some(id => String(id) === String(req.user.id)))
+                    );
+                });
+            }
+
             res.status(200).json({ success: true, data: cloudPlans });
         } catch (error) {
             next(error);

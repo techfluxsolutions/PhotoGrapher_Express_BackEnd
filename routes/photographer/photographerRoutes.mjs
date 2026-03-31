@@ -16,6 +16,7 @@ import { uploadController } from "../../controllers/uploadController.js";
 import DataLinksController from "../../controllers/DataLinksController.js";
 import ReviewAndRatingController from "../../controllers/User/ReviewAndRating.mjs";
 import RazorpayController from "../../controllers/photographer/RazorpayController.mjs";
+import CloudPlanController from "../../controllers/Admin/CloudPlanController.mjs";
 const router = express.Router();
 
 // --- Auth Routes ---
@@ -111,6 +112,10 @@ router.patch("/notifications/:id/read", (req, res, next) => NotificationControll
 // --- Services ---
 router.get("/servicename", (req, res, next) => ServiceController.getServiceNameOnly(req, res, next));
 router.get("/services/:id", (req, res, next) => ServiceController.getById(req, res, next));
+
+// --- Cloud Plans ---
+router.get("/cloud-plans", (req, res, next) => CloudPlanController.getAll(req, res, next));
+router.get("/cloud-plans/:id", (req, res, next) => CloudPlanController.getOne(req, res, next));
 
 // --- Uploads ---
 router.post("/uploads/start", (req, res, next) => UploadController.startUpload(req, res, next));
