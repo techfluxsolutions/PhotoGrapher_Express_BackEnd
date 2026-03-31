@@ -128,11 +128,7 @@ class ServiceBookingController {
         const dateVal = (d && d !== "N/A") ? d : (booking.startDate || (booking.bookingDate ? booking.bookingDate.toISOString().split("T")[0] : "N/A"));
         
         // Construct Venue if address is missing
-        const venueParts = [];
-        if (booking.flatOrHouseNo) venueParts.push(booking.flatOrHouseNo);
-        if (booking.streetName) venueParts.push(booking.streetName);
-        if (booking.city) venueParts.push(booking.city);
-        const displayAddress = booking.address || (venueParts.length > 0 ? venueParts.join(", ") : null);
+        const displayAddress = booking.address || booking.location || ""
 
         return {
           bookingId: booking._id,
@@ -351,11 +347,7 @@ class ServiceBookingController {
         const dateVal = (d && d !== "N/A") ? d : (booking.startDate || (booking.bookingDate ? booking.bookingDate.toISOString().split("T")[0] : "N/A"));
         
         // Construct Venue if address is missing
-        const venueParts = [];
-        if (booking.flatOrHouseNo) venueParts.push(booking.flatOrHouseNo);
-        if (booking.streetName) venueParts.push(booking.streetName);
-        if (booking.city) venueParts.push(booking.city);
-        const displayAddress = booking.address || (venueParts.length > 0 ? venueParts.join(", ") : null);
+        const displayAddress = booking.address || booking.location || ""
 
         return {
           bookingId: booking._id,
@@ -506,11 +498,7 @@ class ServiceBookingController {
         const dateVal = (d && d !== "N/A") ? d : (booking.startDate || (booking.bookingDate ? booking.bookingDate.toISOString().split("T")[0] : "N/A"));
 
         // Construct Venue if address is missing
-        const venueParts = [];
-        if (booking.flatOrHouseNo) venueParts.push(booking.flatOrHouseNo);
-        if (booking.streetName) venueParts.push(booking.streetName);
-        if (booking.city) venueParts.push(booking.city);
-        const displayAddress = booking.address || (venueParts.length > 0 ? venueParts.join(", ") : null);
+        const displayAddress = booking.address || booking.location || ""
 
         return {
           bookingId: booking._id,

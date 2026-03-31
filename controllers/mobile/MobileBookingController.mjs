@@ -379,11 +379,7 @@ class MobileBookingController {
         }
 
         // Construct Venue if address is missing
-        const venueParts = [];
-        if (booking.flatOrHouseNo) venueParts.push(booking.flatOrHouseNo);
-        if (booking.streetName) venueParts.push(booking.streetName);
-        if (booking.city) venueParts.push(booking.city);
-        const displayAddress = booking.address || (venueParts.length > 0 ? venueParts.join(", ") : null);
+        const displayAddress = booking.address || booking.location || ""
 
         return {
           _id: booking._id,
