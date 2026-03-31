@@ -183,11 +183,11 @@ class MobileBookingController {
       if (payload.bookingDate) {
         payload.bookingDate = parseDDMMYYYY(payload.bookingDate);
       }
-      
+
       // Ensure paymentStatus, full_Payment, partial_Payment are synchronized
       if (
-        payload.paymentStatus === "paid" || 
-        payload.paymentStatus === "fully paid" || 
+        payload.paymentStatus === "paid" ||
+        payload.paymentStatus === "fully paid" ||
         payload.full_Payment === true ||
         (payload.outStandingAmount !== undefined && Number(payload.outStandingAmount) === 0 && payload.totalAmount)
       ) {
@@ -197,8 +197,8 @@ class MobileBookingController {
         payload.partial_Payment = false;
         payload.outStandingAmount = 0;
       } else if (
-        payload.paymentStatus === "partially paid" || 
-        payload.partial_Payment === true || 
+        payload.paymentStatus === "partially paid" ||
+        payload.partial_Payment === true ||
         (payload.outStandingAmount && Number(payload.outStandingAmount) > 0)
       ) {
         payload.paymentStatus = "partially paid";
@@ -275,7 +275,7 @@ class MobileBookingController {
   // Get Photographer Upcoming Bookings
   async getPhotographerUpcomingBookings(req, res, next) {
     try {
-      const { id } = req.user;
+      const id = new mongoose.Types.ObjectId(req.user.id);
       const { eventType } = req.query; // New Filter
       const page = Math.max(1, parseInt(req.query.page) || 1);
       const limit = Math.max(1, parseInt(req.query.limit) || 20);
@@ -306,14 +306,28 @@ class MobileBookingController {
         ]
       };
 
-      // Add Event Type Filter if provided
+      // Get counts for each service type based on photographer tasks (before applying filters)
+      const allServices = await Service.find().select("serviceName");
+      const serviceCounts = {};
+
+      // Calculate counts for each service using countDocuments for consistency with the main query
+      await Promise.all(allServices.map(async (service) => {
+        const count = await ServiceBooking.countDocuments({
+          $and: [
+            ...query.$and,
+            { service_id: service._id }
+          ]
+        });
+        const key = service.serviceName.toLowerCase().replace(/\s/g, "");
+        serviceCounts[key] = count;
+      }));
+
+      // Add Event Type Filter if provided (must happen AFTER counts used 'query')
       if (eventType) {
-        // Find matching services first to get their IDs
-        const Service = mongoose.model("Service");
         const matchingServices = await Service.find({
           serviceName: { $regex: eventType, $options: "i" }
         }).select("_id");
-        
+
         const serviceIds = matchingServices.map(s => s._id);
 
         query.$and.push({
@@ -339,21 +353,28 @@ class MobileBookingController {
         let datePart = "N/A";
         let timePart = "N/A";
         const d = booking.bookingDate || (booking.startDate ? new Date(booking.startDate) : null);
-        
+
         if (d) {
-           const formatted = new Intl.DateTimeFormat("en-IN", {
-                timeZone: "Asia/Kolkata",
-                day: "2-digit",
-                month: "2-digit",
-                year: "numeric",
-                hour: "2-digit",
-                minute: "2-digit",
-                hour12: true
-            }).format(new Date(d)).toLowerCase();
-            const parts = formatted.split(", ");
-            datePart = parts[0];
-            timePart = parts[1];
+          const formatted = new Intl.DateTimeFormat("en-IN", {
+            timeZone: "Asia/Kolkata",
+            day: "2-digit",
+            month: "2-digit",
+            year: "numeric",
+            hour: "2-digit",
+            minute: "2-digit",
+            hour12: true
+          }).format(new Date(d)).toLowerCase();
+          const parts = formatted.split(", ");
+          datePart = parts[0];
+          timePart = parts[1];
         }
+
+        // Construct Venue if address is missing
+        const venueParts = [];
+        if (booking.flatOrHouseNo) venueParts.push(booking.flatOrHouseNo);
+        if (booking.streetName) venueParts.push(booking.streetName);
+        if (booking.city) venueParts.push(booking.city);
+        const displayAddress = booking.address || (venueParts.length > 0 ? venueParts.join(", ") : null);
 
         return {
           _id: booking._id,
@@ -366,12 +387,16 @@ class MobileBookingController {
           city: booking.city,
           status: booking.status,
           bookingStatus: booking.bookingStatus,
+          lat: booking.lat || null,
+          lng: booking.lng || null,
+          address: displayAddress,
           photographerAmount: booking.photographerAmount || 0
         };
       });
 
       return res.json({
         success: true,
+        serviceCounts,
         data: formattedBookings,
         meta: { total, page, limit }
       });

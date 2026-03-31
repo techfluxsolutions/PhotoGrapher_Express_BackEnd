@@ -23,6 +23,7 @@ import CustomerController from "../../controllers/Admin/CustomerController.mjs";
 import DataLinksController from "../../controllers/DataLinksController.js";
 import ReviewAndRatingController from "../../controllers/User/ReviewAndRating.mjs";
 import authMiddleware from "../../middleware/authmiddleware.mjs";
+import CloudPlanController from "../../controllers/Admin/CloudPlanController.mjs";
 const router = express.Router();
 import { uploadController } from "../../controllers/uploadController.js";
 // --- Debug ---
@@ -46,6 +47,13 @@ router.post("/uploadNineServices", (req, res, next) => ServiceController.uploadN
 
 // Apply Auth and Admin check to all routes below
 router.use(authMiddleware);
+
+// --- Cloud Plans Management ---
+router.post("/cloud-plans", (req, res, next) => CloudPlanController.create(req, res, next));
+router.get("/cloud-plans", (req, res, next) => CloudPlanController.getAll(req, res, next));
+router.get("/cloud-plans/:id", (req, res, next) => CloudPlanController.getOne(req, res, next));
+router.put("/cloud-plans/:id", (req, res, next) => CloudPlanController.update(req, res, next));
+router.delete("/cloud-plans/:id", (req, res, next) => CloudPlanController.delete(req, res, next));
 
 // --- Package Management ---
 router.post("/packages", (req, res, next) => PackageController.create(req, res, next));

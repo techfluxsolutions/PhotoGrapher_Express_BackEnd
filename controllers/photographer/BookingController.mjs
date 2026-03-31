@@ -204,10 +204,19 @@ class BookingController {
                     displayAmount = Math.round(booking.totalAmount * (1 - (myComm || 0) / 100));
                 }
 
+                // Construct Venue if address is missing
+                const venueParts = [];
+                if (booking.flatOrHouseNo) venueParts.push(booking.flatOrHouseNo);
+                if (booking.streetName) venueParts.push(booking.streetName);
+                if (booking.city) venueParts.push(booking.city);
+                const displayAddress = booking.address || (venueParts.length > 0 ? venueParts.join(", ") : null);
+
                 return {
                     _id: booking._id,
                     bookingId: booking.veroaBookingId,
-                    client_id: booking.client_id,
+                    clientName: booking.client_id?.username || "N/A",
+                    clientAvatar: booking.client_id?.avatar || null,
+                    client_id: booking.client_id, // Keep original client_id nested too for compatibility
                     eventType: booking.service_id?.serviceName || "N/A",
                     requirements: booking.notes || "No requirements",
                     date: ist.date,
@@ -217,7 +226,7 @@ class BookingController {
                     city: booking.city,
                     lat: booking.lat || null,
                     lng: booking.lng || null,
-                    address: booking.address || "",
+                    address: displayAddress,
                     status: booking.status,
                     bookingStatus: booking.bookingStatus,
                     galleryStatus: booking.galleryStatus || "Upload Pending",
@@ -313,7 +322,10 @@ class BookingController {
             if (bookingObj.flatOrHouseNo) venueParts.push(bookingObj.flatOrHouseNo);
             if (bookingObj.streetName) venueParts.push(bookingObj.streetName);
             if (bookingObj.city) venueParts.push(bookingObj.city);
-            bookingObj.venue = bookingObj.address || (venueParts.length > 0 ? venueParts.join(", ") : "N/A");
+            bookingObj.address = bookingObj.address || (venueParts.length > 0 ? venueParts.join(", ") : null);
+            bookingObj.venue = bookingObj.address || "N/A";
+            bookingObj.lat = booking.lat || null;
+            bookingObj.lng = booking.lng || null;
 
             // Extract Quote Requirements
             const quoteReqs = booking.quoteId?.requirements;
@@ -782,10 +794,18 @@ class BookingController {
             const formattedBookings = bookings.map(booking => {
                 const ist = this.formatIST(booking.bookingDate, booking.startDate || booking.eventDate);
 
+                // Construct Venue if address is missing
+                const venueParts = [];
+                if (booking.flatOrHouseNo) venueParts.push(booking.flatOrHouseNo);
+                if (booking.streetName) venueParts.push(booking.streetName);
+                if (booking.city) venueParts.push(booking.city);
+                const displayAddress = booking.address || (venueParts.length > 0 ? venueParts.join(", ") : null);
+
                 return {
                     _id: booking._id,
                     bookingId: booking.veroaBookingId,
-                    clientName: booking.client_id?.username || "N/A", // Use clientName as preferred by user
+                    clientName: booking.client_id?.username || "N/A",
+                    clientAvatar: booking.client_id?.avatar || null,
                     mobileNumber: booking.client_id?.mobileNumber || "N/A",
                     eventType: booking.service_id?.serviceName || "N/A",
                     requirements: booking.notes || "No requirements",
@@ -796,7 +816,7 @@ class BookingController {
                     city: booking.city,
                     lat: booking.lat || null,
                     lng: booking.lng || null,
-                    address: booking.address || "",
+                    address: displayAddress,
                     status: booking.status,
                     bookingStatus: booking.bookingStatus,
                     galleryStatus: booking.galleryStatus || "Upload Pending",
@@ -909,10 +929,18 @@ class BookingController {
             const formattedBookings = bookings.map(booking => {
                 const ist = this.formatIST(booking.bookingDate, booking.startDate || booking.eventDate);
 
+                // Construct Venue if address is missing
+                const venueParts = [];
+                if (booking.flatOrHouseNo) venueParts.push(booking.flatOrHouseNo);
+                if (booking.streetName) venueParts.push(booking.streetName);
+                if (booking.city) venueParts.push(booking.city);
+                const displayAddress = booking.address || (venueParts.length > 0 ? venueParts.join(", ") : null);
+
                 return {
                     _id: booking._id,
                     bookingId: booking.veroaBookingId,
-                    clientName: booking.client_id?.username,
+                    clientName: booking.client_id?.username || "N/A",
+                    clientAvatar: booking.client_id?.avatar || null,
                     eventType: booking.service_id?.serviceName || "N/A",
                     date: ist.date,
                     time: ist.time,
@@ -921,7 +949,7 @@ class BookingController {
                     city: booking.city,
                     lat: booking.lat || null,
                     lng: booking.lng || null,
-                    address: booking.address || ""
+                    address: displayAddress
                 };
             });
 

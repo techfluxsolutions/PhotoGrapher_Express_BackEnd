@@ -49,24 +49,41 @@ class PayoutController {
             const payouts = await Payout.find(filter)
                 .populate({
                     path: "booking_id",
-                    select: "veroaBookingId bookingDate eventType totalAmount status",
+                    select: "veroaBookingId bookingDate eventDate eventType totalAmount status",
                     populate: {
                         path: "client_id",
-                        select: "username email" // Getting client name (username as fallback)
+                        select: "username email" 
                     }
                 })
                 .sort({ createdAt: -1 });
 
-            // Add invoice download URL
-            const payoutsWithInvoice = payouts.map(payout => {
+            // Return only specific fields for a cleaner response
+            const cleanedPayouts = payouts.map(payout => {
                 const p = payout.toObject();
-                if (p.booking_id && p.booking_id._id) {
-                    p.invoice_download_url = `/api/photographers/invoices/${p.booking_id._id}`;
-                }
-                return p;
+                // Format event date (DD/MM/YYYY)
+                const rawDate = p.booking_id?.eventDate || p.booking_id?.bookingDate;
+                const formattedEventDate = rawDate ? new Date(rawDate).toLocaleDateString("en-IN", {
+                    day: "2-digit",
+                    month: "2-digit",
+                    year: "numeric"
+                }) : "N/A";
+
+                return {
+                    _id: p._id,
+                    client_name: p.booking_id?.client_id?.username || "N/A",
+                    veroa_id: p.booking_id?.veroaBookingId || "N/A",
+                    event_date: formattedEventDate,
+                    total_amount: p.total_amount,
+                    paid_amount: p.paid_amount,
+                    pending_amount: p.pending_amount,
+                    status: p.status,
+                    payout_status: p.payout_status || "",
+                    payout_date: p.payout_date,
+                    invoice_download_url: p.booking_id?._id ? `/api/photographers/invoices/${p.booking_id._id}` : null
+                };
             });
 
-            res.status(200).json({ success: true, data: payoutsWithInvoice });
+            res.status(200).json({ success: true, data: cleanedPayouts });
         } catch (error) {
             next(error);
         }
@@ -85,7 +102,7 @@ class PayoutController {
             const payout = await Payout.findOne({ _id: id, photographer_id: photographerId })
                 .populate({
                     path: "booking_id",
-                    select: "veroaBookingId bookingDate eventType totalAmount status",
+                    select: "veroaBookingId bookingDate eventDate eventType totalAmount status",
                     populate: {
                         path: "client_id",
                         select: "username email"
@@ -96,12 +113,31 @@ class PayoutController {
                 return res.status(404).json({ success: false, message: "Payout not found" });
             }
 
-            const payoutObj = payout.toObject();
-            if (payoutObj.booking_id && payoutObj.booking_id._id) {
-                payoutObj.invoice_download_url = `/api/photographers/invoices/${payoutObj.booking_id._id}`;
-            }
+            const p = payout.toObject();
+            
+            // Format event date (DD/MM/YYYY)
+            const rawDate = p.booking_id?.eventDate || p.booking_id?.bookingDate;
+            const formattedEventDate = rawDate ? new Date(rawDate).toLocaleDateString("en-IN", {
+                day: "2-digit",
+                month: "2-digit",
+                year: "numeric"
+            }) : "N/A";
 
-            res.status(200).json({ success: true, data: payoutObj });
+            const cleanedPayout = {
+                _id: p._id,
+                client_name: p.booking_id?.client_id?.username || "N/A",
+                veroa_id: p.booking_id?.veroaBookingId || "N/A",
+                event_date: formattedEventDate,
+                total_amount: p.total_amount,
+                paid_amount: p.paid_amount,
+                pending_amount: p.pending_amount,
+                status: p.status,
+                payout_status: p.payout_status || "", 
+                payout_date: p.payout_date,
+                invoice_download_url: p.booking_id?._id ? `/api/photographers/invoices/${p.booking_id._id}` : null
+            };
+
+            res.status(200).json({ success: true, data: cleanedPayout });
         } catch (error) {
             next(error);
         }
