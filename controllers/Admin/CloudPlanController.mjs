@@ -93,7 +93,7 @@ class CloudPlanController {
             const options = {
                 amount: Math.round(planTemplate.charges * 100),
                 currency: "INR",
-                receipt: `cloudplan_${bookingId}_${Date.now()}`,
+                receipt: `cp_${bookingId}_${Math.floor(Date.now() / 1000)}`,
             };
 
             const order = await razorpayInstance.orders.create(options);
@@ -109,7 +109,7 @@ class CloudPlanController {
             });
             await cloudPlan.save();
 
-            res.status(200).json({ success: true, order, cloudPlanId: cloudPlan._id });
+            res.status(200).json({ success: true, order, cloudPlanId: cloudPlan._id, amountINR: planTemplate.charges });
         } catch (error) {
             next(error);
         }
@@ -191,7 +191,9 @@ class CloudPlanController {
             res.status(200).json({ 
                 success: true, 
                 message: "Cloud plan activated successfully", 
-                expiry_date: newExpiry 
+                expiry_date: newExpiry,
+                amount: cloudPlan.charges,
+                planId: cloudPlanId
             });
         } catch (error) {
             next(error);

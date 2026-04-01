@@ -300,3 +300,10 @@
 {"level":"info","message":"::1 - - [01/Apr/2026:06:58:03 +0000] \"GET /api/photographers/cloud-plans HTTP/1.1\" 200 155 \"-\" \"PostmanRuntime/7.52.0\"","timestamp":"2026-04-01 12:28:03"}
 {"level":"info","message":"::1 - - [01/Apr/2026:07:01:13 +0000] \"GET /api/photographers/bookings/pending HTTP/1.1\" 200 120 \"-\" \"PostmanRuntime/7.52.0\"","timestamp":"2026-04-01 12:31:13"}
 {"level":"info","message":"::1 - - [01/Apr/2026:07:01:25 +0000] \"GET /api/photographers/bookings/accepted HTTP/1.1\" 200 - \"-\" \"PostmanRuntime/7.52.0\"","timestamp":"2026-04-01 12:31:25"}
+{"level":"info","message":"::1 - - [01/Apr/2026:08:52:41 +0000] \"POST /api/users/cloud-plans/create-order HTTP/1.1\" 400 273 \"-\" \"PostmanRuntime/7.52.0\"","timestamp":"2026-04-01 14:22:41"}
+{"level":"info","message":"::1 - - [01/Apr/2026:08:53:42 +0000] \"POST /api/users/cloud-plans/create-order HTTP/1.1\" - - \"-\" \"PostmanRuntime/7.52.0\"","timestamp":"2026-04-01 14:23:42"}
+{"level":"info","message":"::1 - - [01/Apr/2026:09:12:28 +0000] \"POST /api/users/cloud-plans/create-order HTTP/1.1\" 400 273 \"-\" \"PostmanRuntime/7.53.0\"","timestamp":"2026-04-01 14:42:28"}
+{"level":"info","message":"::1 - - [01/Apr/2026:09:16:27 +0000] \"POST /api/users/cloud-plans/create-order HTTP/1.1\" 200 313 \"-\" \"PostmanRuntime/7.53.0\"","timestamp":"2026-04-01 14:46:27"}
+{"level":"info","message":"::1 - - [01/Apr/2026:09:16:52 +0000] \"GET /api/photographers/cloud-plans HTTP/1.1\" 200 155 \"-\" \"PostmanRuntime/7.53.0\"","timestamp":"2026-04-01 14:46:52"}
+{"level":"info","message":"::1 - - [01/Apr/2026:09:25:54 +0000] \"POST /api/users/cloud-plans/create-order HTTP/1.1\" 500 533 \"-\" \"PostmanRuntime/7.53.0\"","timestamp":"2026-04-01 14:55:54"}
+{"level":"info","message":"::1 - - [01/Apr/2026:09:26:40 +0000] \"POST /api/users/cloud-plans/create-order HTTP/1.1\" 500 533 \"-\" \"PostmanRuntime/7.53.0\"","timestamp":"2026-04-01 14:56:40"}
