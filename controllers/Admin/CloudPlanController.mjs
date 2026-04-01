@@ -3,6 +3,7 @@ import ServiceBooking from "../../models/ServiceBookings.mjs";
 import razorpayInstance from "../../Config/razorpay.mjs";
 import crypto from "crypto";
 import Payment from "../../models/Payment.mjs";
+import CloudPayment from "../../models/CloudPayment.mjs";
 
 class CloudPlanController {
     async create(req, res, next) {
@@ -174,14 +175,16 @@ class CloudPlanController {
             cloudPlan.razorpayPaymentId = razorpay_payment_id;
             await cloudPlan.save();
 
-            // Create Payment record for tracking
-            await Payment.create({
+            // Create CloudPayment record for tracking
+            await CloudPayment.create({
                 user_id: req.user.id,
-                job_id: booking._id,
-                upfront_amount: cloudPlan.charges,
+                booking_id: booking._id,
+                cloud_plan_id: cloudPlan._id,
+                amount: cloudPlan.charges,
                 payment_status: "paid",
-                outstanding_amount: 0,
-                paid_type: "full paid",
+                razorpay_order_id: razorpay_order_id,
+                razorpay_payment_id: razorpay_payment_id,
+                razorpay_signature: razorpay_signature,
                 payment_date: new Date()
             });
 
