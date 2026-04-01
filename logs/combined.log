@@ -307,3 +307,12 @@
 {"level":"info","message":"::1 - - [01/Apr/2026:09:16:52 +0000] \"GET /api/photographers/cloud-plans HTTP/1.1\" 200 155 \"-\" \"PostmanRuntime/7.53.0\"","timestamp":"2026-04-01 14:46:52"}
 {"level":"info","message":"::1 - - [01/Apr/2026:09:25:54 +0000] \"POST /api/users/cloud-plans/create-order HTTP/1.1\" 500 533 \"-\" \"PostmanRuntime/7.53.0\"","timestamp":"2026-04-01 14:55:54"}
 {"level":"info","message":"::1 - - [01/Apr/2026:09:26:40 +0000] \"POST /api/users/cloud-plans/create-order HTTP/1.1\" 500 533 \"-\" \"PostmanRuntime/7.53.0\"","timestamp":"2026-04-01 14:56:40"}
+{"level":"info","message":"::1 - - [01/Apr/2026:09:27:25 +0000] \"POST /api/users/cloud-plans/create-order HTTP/1.1\" 200 329 \"-\" \"PostmanRuntime/7.53.0\"","timestamp":"2026-04-01 14:57:25"}
+{"level":"info","message":"::1 - - [01/Apr/2026:09:37:46 +0000] \"GET /api/photographers/bookings/69afdd3832cf3f299056a170 HTTP/1.1\" 404 31 \"-\" \"PostmanRuntime/7.53.0\"","timestamp":"2026-04-01 15:07:46"}
+{"level":"info","message":"::1 - - [01/Apr/2026:09:38:02 +0000] \"GET /api/photographers/bookings/pending HTTP/1.1\" 200 120 \"-\" \"PostmanRuntime/7.53.0\"","timestamp":"2026-04-01 15:08:02"}
+{"level":"info","message":"::1 - - [01/Apr/2026:09:38:08 +0000] \"GET /api/photographers/bookings/accepted HTTP/1.1\" 200 - \"-\" \"PostmanRuntime/7.53.0\"","timestamp":"2026-04-01 15:08:08"}
+{"level":"info","message":"::1 - - [01/Apr/2026:09:38:29 +0000] \"GET /api/photographers/bookings/69cccbb9a0a152db5f858761 HTTP/1.1\" 200 - \"-\" \"PostmanRuntime/7.53.0\"","timestamp":"2026-04-01 15:08:29"}
+{"level":"info","message":"::1 - - [01/Apr/2026:10:06:21 +0000] \"GET /api/users/cloud-plans HTTP/1.1\" 500 527 \"-\" \"PostmanRuntime/7.53.0\"","timestamp":"2026-04-01 15:36:21"}
+{"level":"info","message":"::1 - - [01/Apr/2026:10:06:32 +0000] \"GET /api/users/cloud-plans HTTP/1.1\" 403 54 \"-\" \"PostmanRuntime/7.53.0\"","timestamp":"2026-04-01 15:36:32"}
+{"level":"info","message":"::1 - - [01/Apr/2026:11:13:13 +0000] \"GET /api/photographers/bookings/today-upcoming HTTP/1.1\" 500 82 \"-\" \"PostmanRuntime/7.53.0\"","timestamp":"2026-04-01 16:43:13"}
+{"level":"info","message":"::1 - - [01/Apr/2026:11:14:08 +0000] \"GET /api/photographers/bookings/today-upcoming HTTP/1.1\" 500 82 \"-\" \"PostmanRuntime/7.53.0\"","timestamp":"2026-04-01 16:44:08"}

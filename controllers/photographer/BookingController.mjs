@@ -924,7 +924,10 @@ class BookingController {
                 // Construct Venue if address is missing
                 const displayAddress = booking.address || booking.location || ""
 
-                return {
+                const bStartDate = booking.startDate || (booking.bookingDate ? booking.bookingDate.toISOString().split("T")[0] : null);
+                const isToday = bStartDate === todayStr;
+
+                const result = {
                     _id: booking._id,
                     bookingId: booking.veroaBookingId,
                     clientName: booking.client_id?.username || "N/A",
@@ -939,6 +942,13 @@ class BookingController {
                     lng: booking.lng || null,
                     address: displayAddress
                 };
+
+                // Only include client number for today's bookings
+                if (isToday) {
+                    result.clientnumber = booking.client_id?.mobileNumber || "N/A";
+                }
+
+                return result;
             });
 
             return sendSuccessResponse(res, {
