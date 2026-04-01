@@ -1,6 +1,7 @@
 import { s3Service } from "../lib/s3Service.js";
 import DataLinks from "../models/DataLinks.js";
 import ServiceBooking from "../models/ServiceBookings.mjs";
+import CloudPlans from "../models/CloudPlans.mjs";
 import archiver from "archiver";
 import mongoose from "mongoose";
 export const uploadController = {
@@ -377,27 +378,35 @@ export const uploadController = {
             const total = await DataLinks.countDocuments({ bookingid: bookingId });
             // Fetch booking status to determine isblur
             const booking = await ServiceBooking.findById(bookingId).select("paymentStatus full_Payment firstPhotoUploadedAt fullyPaidAt");
-            let isblur = true; // Default to true (blurred)
-            let remainingDays = 0; 
-            
+            // Check if any active cloud plans exist for this booking
+            const activeCloudPlan = await CloudPlans.findOne({
+                booking_id: bookingId,
+                isPaid: true
+            }).sort({ expiry_date: -1 });
+
             if (booking) {
                 const isFullyPaid = booking.paymentStatus === "fully paid" || booking.full_Payment === true;
 
                 if (isFullyPaid) {
-                    const effectiveUploadDate = booking.firstPhotoUploadedAt || (total > 0 ? booking.createdAt : null);
+                    let expiryDate = null;
 
-                    if (effectiveUploadDate) {
-                        // Countdown starts strictly from when photos are first present
-                        const referenceDate = effectiveUploadDate;
+                    if (activeCloudPlan && activeCloudPlan.expiry_date) {
+                        expiryDate = new Date(activeCloudPlan.expiry_date);
+                    } else {
+                        const effectiveUploadDate = booking.firstPhotoUploadedAt || (total > 0 ? booking.createdAt : null);
+                        if (effectiveUploadDate) {
+                            expiryDate = new Date(effectiveUploadDate);
+                            expiryDate.setDate(expiryDate.getDate() + 14); // Default 14-day window
+                        }
+                    }
 
+                    if (expiryDate) {
                         const now = new Date();
-                        const refDate = new Date(referenceDate);
-                        const diffTime = now - refDate;
-                        const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+                        const diffTime = expiryDate - now;
                         
-                        remainingDays = Math.max(0, 14 - diffDays);
-                        isblur = (diffDays > 14);
-
+                        // Calculate remaining days (rounded up)
+                        remainingDays = Math.max(0, Math.ceil(diffTime / (1000 * 60 * 60 * 24)));
+                        isblur = (now > expiryDate);
                     } else {
                         // Fully paid but no photos yet: Unblurred by default
                         isblur = false;

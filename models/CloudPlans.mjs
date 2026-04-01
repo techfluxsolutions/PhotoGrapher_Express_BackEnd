@@ -22,7 +22,15 @@ const cloudPlansSchema = new mongoose.Schema({
     },
     expiry_date: {
         type: Date,
-    } 
+    },
+    razorpayOrderId: {
+        type: String,
+        default: null
+    },
+    razorpayPaymentId: {
+        type: String,
+        default: null
+    }
 })
 
 export default mongoose.model("CloudPlans", cloudPlansSchema);

@@ -114,6 +114,8 @@ router.get("/services", (req, res, next) => ServiceController.list(req, res, nex
 // --- Cloud Plans ---
 router.get("/cloud-plans", (req, res, next) => CloudPlanController.getAll(req, res, next));
 router.get("/cloud-plans/:id", (req, res, next) => CloudPlanController.getOne(req, res, next));
+router.post("/cloud-plans/create-order", (req, res, next) => CloudPlanController.createCloudPlanOrder(req, res, next));
+router.post("/cloud-plans/verify", (req, res, next) => CloudPlanController.verifyCloudPlanPayment(req, res, next));
 
 
 

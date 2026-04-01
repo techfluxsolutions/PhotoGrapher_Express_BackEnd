@@ -65,34 +65,40 @@ const data = [
         order: 10
     },
     {
+        name: "Gallery Plan",
+        activeIcon: "/assests/sidebar/galleryPlan-active.png",
+        inactiveIcon: "/assests/sidebar/galleryPlan-inactive.png",
+        order: 11
+    },
+    {
         name: "Photographers",
         activeIcon: "/assests/sidebar/photographer-active.png",
         inactiveIcon: "/assests/sidebar/photographer-inactive.png",
-        order: 11
+        order: 12
     },
     {
         name: "Commission",
         activeIcon: "/assests/sidebar/commission-active.png",
         inactiveIcon: "/assests/sidebar/commission-inactive.png",
-        order: 12
+        order: 13
     },
     {
         name: "Roles",
         activeIcon: "/assests/sidebar/role-active.png",
         inactiveIcon: "/assests/sidebar/role-inactive.png",
-        order: 13
+        order: 14
     },
     {
         name: "Staff",
         activeIcon: "/assests/sidebar/staff-active.png",
         inactiveIcon: "/assests/sidebar/staff-inactive.png",
-        order: 14
+        order: 15
     },
     {
         name: "Subscribers",
         activeIcon: "/assests/sidebar/subscribers-active.png",
         inactiveIcon: "/assests/sidebar/subscribers-inactive.png",
-        order: 15
+        order: 16
     }
 ];
 

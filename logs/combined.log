@@ -293,3 +293,7 @@
 {"level":"info","message":"::1 - - [31/Mar/2026:13:04:40 +0000] \"POST /api/admins/cloud-plans HTTP/1.1\" 201 105 \"-\" \"PostmanRuntime/7.52.0\"","timestamp":"2026-03-31 18:34:40"}
 {"level":"info","message":"::1 - - [31/Mar/2026:13:04:45 +0000] \"GET /api/admins/cloud-plans HTTP/1.1\" 200 26 \"-\" \"PostmanRuntime/7.52.0\"","timestamp":"2026-03-31 18:34:45"}
 {"level":"info","message":"::1 - - [31/Mar/2026:13:04:48 +0000] \"GET /api/admins/cloud-plans HTTP/1.1\" 200 26 \"-\" \"PostmanRuntime/7.52.0\"","timestamp":"2026-03-31 18:34:48"}
+{"level":"info","message":"::1 - - [31/Mar/2026:13:05:25 +0000] \"GET /api/admins/cloud-plans HTTP/1.1\" 200 189 \"-\" \"PostmanRuntime/7.52.0\"","timestamp":"2026-03-31 18:35:25"}
+{"level":"info","message":"::1 - - [31/Mar/2026:13:05:40 +0000] \"DELETE /api/admins/cloud-plans/69cbc1f83ae5333ae73011fa HTTP/1.1\" 200 105 \"-\" \"PostmanRuntime/7.52.0\"","timestamp":"2026-03-31 18:35:40"}
+{"level":"info","message":"::1 - - [31/Mar/2026:13:05:46 +0000] \"GET /api/admins/cloud-plans HTTP/1.1\" 200 107 \"-\" \"PostmanRuntime/7.52.0\"","timestamp":"2026-03-31 18:35:46"}
+{"level":"info","message":"::1 - - [31/Mar/2026:13:05:54 +0000] \"GET /api/photographers/cloud-plans HTTP/1.1\" 200 107 \"-\" \"PostmanRuntime/7.52.0\"","timestamp":"2026-03-31 18:35:54"}
