@@ -384,6 +384,9 @@ export const uploadController = {
                 isPaid: true
             }).sort({ expiry_date: -1 });
 
+            let isblur = false;
+            let remainingDays = 0;
+
             if (booking) {
                 const isFullyPaid = booking.paymentStatus === "fully paid" || booking.full_Payment === true;
 
