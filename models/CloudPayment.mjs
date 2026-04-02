@@ -51,6 +51,10 @@ const cloudPaymentSchema = new mongoose.Schema(
       type: String,
       default: null,
     },
+    expiry_date: {
+      type: Date,
+      default: null,
+    },
     invoice_number: {
       type: String,
       unique: true,

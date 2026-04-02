@@ -18,34 +18,7 @@ class CloudPlanController {
     }
     async getAll(req, res, next) {
         try {
-            const query = {};
-            // If not an admin, we show generic plans OR plans specifically for this client
-            if (req.user && req.user.role !== "admin") {
-                if (req.user.role === "user" || !req.user.role) {
-                    query.$or = [
-                        { client_id: req.user.id },
-                        { client_id: { $exists: false } },
-                        { client_id: null }
-                    ];
-                }
-            }
-
-            let cloudPlans = await CloudPlans.find(query).populate("booking_id");
-
-            // Further filter for photographers (they see all generic plans + their assigned booking plans)
-            if (req.user && req.user.role === "photographer") {
-                cloudPlans = cloudPlans.filter(cp => {
-                    // Generic plan: no booking_id or client_id
-                    if (!cp.booking_id && !cp.client_id) return true;
-                    
-                    // Assigned to them:
-                    return cp.booking_id && (
-                        String(cp.booking_id.photographer_id) === String(req.user.id) ||
-                        (Array.isArray(cp.booking_id.photographerIds) && cp.booking_id.photographerIds.some(id => String(id) === String(req.user.id)))
-                    );
-                });
-            }
-
+            const cloudPlans = await CloudPlans.find({});
             res.status(200).json({ success: true, data: cloudPlans });
         } catch (error) {
             next(error);
@@ -90,26 +63,29 @@ class CloudPlanController {
                 return res.status(404).json({ success: false, message: "Plan or Booking not found" });
             }
 
+            const receipt = `cp_${bookingId}_${Math.floor(Date.now() / 1000)}`.substring(0, 40);
+
             const options = {
                 amount: Math.round(planTemplate.charges * 100),
                 currency: "INR",
-                receipt: `cp_${bookingId}_${Math.floor(Date.now() / 1000)}`,
+                receipt: receipt,
             };
 
             const order = await razorpayInstance.orders.create(options);
 
-            // Create a pending CloudPlan record for this booking 
-            const cloudPlan = new CloudPlans({
-                charges: planTemplate.charges,
-                days: planTemplate.days,
+            // Create a pending CloudPayment record for this booking instead of using CloudPlans model for tracking
+            const paymentRecord = new CloudPayment({
+                amount: planTemplate.charges,
                 booking_id: bookingId,
-                client_id: req.user.id,
-                razorpayOrderId: order.id,
-                isPaid: false
+                user_id: req.user.id,
+                cloud_plan_id: planId,
+                razorpay_order_id: order.id,
+                payment_status: "pending",
+                receipt: receipt
             });
-            await cloudPlan.save();
+            await paymentRecord.save();
 
-            res.status(200).json({ success: true, order, cloudPlanId: cloudPlan._id, amountINR: planTemplate.charges });
+            res.status(200).json({ success: true, order, cloudPlanId: paymentRecord._id, amountINR: planTemplate.charges });
         } catch (error) {
             next(error);
         }
@@ -118,6 +94,10 @@ class CloudPlanController {
     async verifyCloudPlanPayment(req, res, next) {
         try {
             const { razorpay_order_id, razorpay_payment_id, razorpay_signature, cloudPlanId } = req.body;
+
+            if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature || !cloudPlanId) {
+                return res.status(400).json({ success: false, message: "Missing required payment verification fields" });
+            }
 
             const body = razorpay_order_id + "|" + razorpay_payment_id;
             const expectedSignature = crypto
@@ -129,14 +109,19 @@ class CloudPlanController {
                 return res.status(400).json({ success: false, message: "Invalid payment signature" });
             }
 
-            const cloudPlan = await CloudPlans.findById(cloudPlanId);
-            if (!cloudPlan) {
-                return res.status(404).json({ success: false, message: "Cloud Plan record not found" });
+            // cloudPlanId in the request now refers to the CloudPayment record ID
+            const paymentRecord = await CloudPayment.findById(cloudPlanId).populate("cloud_plan_id");
+            if (!paymentRecord) {
+                return res.status(404).json({ success: false, message: `Cloud Payment record not found for ID: ${cloudPlanId}` });
             }
 
-            const booking = await ServiceBooking.findById(cloudPlan.booking_id);
+            if (!paymentRecord.booking_id) {
+                return res.status(400).json({ success: false, message: "This payment record is not linked to any booking." });
+            }
+
+            const booking = await ServiceBooking.findById(paymentRecord.booking_id);
             if (!booking) {
-                return res.status(404).json({ success: false, message: "Booking not found" });
+                return res.status(404).json({ success: false, message: "Associated booking not found" });
             }
 
             // Calculate current expiry
@@ -146,10 +131,10 @@ class CloudPlanController {
             const initialExpiry = new Date(baseDate);
             initialExpiry.setDate(initialExpiry.getDate() + 14);
 
-            // Check if there is an ALREADY PAID plan for this booking to extend from
-            const lastPaidPlan = await CloudPlans.findOne({
+            // Check if there is an ALREADY PAID plan in CloudPayment for this booking to extend from
+            const lastPaidPlan = await CloudPayment.findOne({
                 booking_id: booking._id,
-                isPaid: true,
+                payment_status: "paid",
                 _id: { $ne: cloudPlanId }
             }).sort({ expiry_date: -1 });
 
@@ -168,31 +153,23 @@ class CloudPlanController {
                 // Not expired, extend from existing expiry date
                 newExpiry = new Date(currentExpiry);
             }
-            newExpiry.setDate(newExpiry.getDate() + cloudPlan.days);
+            
+            const daysToExtend = paymentRecord.cloud_plan_id ? paymentRecord.cloud_plan_id.days : 0;
+            newExpiry.setDate(newExpiry.getDate() + daysToExtend);
 
-            cloudPlan.isPaid = true;
-            cloudPlan.expiry_date = newExpiry;
-            cloudPlan.razorpayPaymentId = razorpay_payment_id;
-            await cloudPlan.save();
-
-            // Create CloudPayment record for tracking
-            await CloudPayment.create({
-                user_id: req.user.id,
-                booking_id: booking._id,
-                cloud_plan_id: cloudPlan._id,
-                amount: cloudPlan.charges,
-                payment_status: "paid",
-                razorpay_order_id: razorpay_order_id,
-                razorpay_payment_id: razorpay_payment_id,
-                razorpay_signature: razorpay_signature,
-                payment_date: new Date()
-            });
+            // Update the CloudPayment record
+            paymentRecord.payment_status = "paid";
+            paymentRecord.expiry_date = newExpiry;
+            paymentRecord.razorpay_payment_id = razorpay_payment_id;
+            paymentRecord.razorpay_signature = razorpay_signature;
+            paymentRecord.payment_date = new Date();
+            await paymentRecord.save();
 
             res.status(200).json({ 
                 success: true, 
                 message: "Cloud plan activated successfully", 
                 expiry_date: newExpiry,
-                amount: cloudPlan.charges,
+                amount: paymentRecord.amount,
                 planId: cloudPlanId
             });
         } catch (error) {

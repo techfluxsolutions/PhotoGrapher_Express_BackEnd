@@ -2,6 +2,7 @@ import { s3Service } from "../lib/s3Service.js";
 import DataLinks from "../models/DataLinks.js";
 import ServiceBooking from "../models/ServiceBookings.mjs";
 import CloudPlans from "../models/CloudPlans.mjs";
+import CloudPayment from "../models/CloudPayment.mjs";
 import archiver from "archiver";
 import mongoose from "mongoose";
 export const uploadController = {
@@ -378,10 +379,10 @@ export const uploadController = {
             const total = await DataLinks.countDocuments({ bookingid: bookingId });
             // Fetch booking status to determine isblur
             const booking = await ServiceBooking.findById(bookingId).select("paymentStatus full_Payment firstPhotoUploadedAt fullyPaidAt");
-            // Check if any active cloud plans exist for this booking
-            const activeCloudPlan = await CloudPlans.findOne({
+            // Check if any active cloud plans exist for this booking in CloudPayment
+            const activeCloudPlan = await CloudPayment.findOne({
                 booking_id: bookingId,
-                isPaid: true
+                payment_status: "paid"
             }).sort({ expiry_date: -1 });
 
             let isblur = false;
