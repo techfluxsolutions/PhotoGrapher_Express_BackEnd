@@ -12,7 +12,7 @@ import {
 import fs from 'fs';
 import path from 'path';
 import { sendBookingSMS, sendMessageCentral, retryMessageCentral, verifyMessageCentral } from "../../utils/messageCentral.mjs";
-import { downloadInvoice } from "../../controllers/Admin/InvoiceController.mjs";
+import { downloadInvoice, downloadPartnerInvoice } from "../../controllers/Admin/InvoiceController.mjs";
 
 class BookingController {
     // Helper to format date to IST (Separate Date and Time)
@@ -731,8 +731,8 @@ class BookingController {
 
     // Download Invoice
     async downloadInvoice(req, res, next) {
-        // Delegate to InvoiceController logic
-        return downloadInvoice(req, res, next);
+        // Delegate to InvoiceController logic for Partner Receipts
+        return downloadPartnerInvoice(req, res, next);
     }
     async getBookingCount(req, res, next) {
         try {

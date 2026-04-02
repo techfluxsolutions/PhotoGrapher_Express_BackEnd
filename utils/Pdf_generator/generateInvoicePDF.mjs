@@ -1,129 +1,243 @@
 import PDFDocument from "pdfkit";
 import fs from "fs";
 import path from "path";
+import { fileURLToPath } from "url";
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+
 
 /**
- * Generate Tax Invoice PDF
- * @param {Object} invoice
- * @param {string} outputPath
+ * Convert number to words (Simple Indian numbering system version)
+ * @param {number} num 
  */
-export const generateInvoicePDF = async (invoice, outputPath) => {
+function numberToWords(num) {
+    const ones = ['', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine'];
+    const tens = ['', '', 'twenty', 'thirty', 'forty', 'fifty', 'sixty', 'seventy', 'eighty', 'ninety'];
+    const teens = ['ten', 'eleven', 'twelve', 'thirteen', 'fourteen', 'fifteen', 'sixteen', 'seventeen', 'eighteen', 'nineteen'];
+
+    if (num === 0) return 'zero';
+    if (num < 0) return 'minus ' + numberToWords(Math.abs(num));
+
+    let words = '';
+
+    if (Math.floor(num / 100000) > 0) {
+        words += numberToWords(Math.floor(num / 100000)) + ' lakh ';
+        num %= 100000;
+    }
+
+    if (Math.floor(num / 1000) > 0) {
+        words += numberToWords(Math.floor(num / 1000)) + ' thousand ';
+        num %= 1000;
+    }
+
+    if (Math.floor(num / 100) > 0) {
+        words += numberToWords(Math.floor(num / 100)) + ' hundred ';
+        num %= 100;
+    }
+
+    if (num > 0) {
+        if (words !== '') words += 'and ';
+        if (num < 10) words += ones[num];
+        else if (num < 20) words += teens[num - 10];
+        else {
+            words += tens[Math.floor(num / 10)];
+            if (num % 10 > 0) words += ' ' + ones[num % 10];
+        }
+    }
+
+    return words.trim();
+}
+
+/**
+ * Format decimal amount in words
+ * @param {number} amount 
+ */
+function amountToWords(amount) {
+    const wholePart = Math.floor(amount);
+    const decimalPart = Math.round((amount - wholePart) * 100);
+
+    let result = numberToWords(wholePart) + " only";
+    if (decimalPart > 0) {
+        result = numberToWords(wholePart) + " point " + numberToWords(decimalPart) + " only";
+    }
+    return result;
+}
+
+/**
+ * Generate Tax Invoice PDF in Urban Company Style
+ * @param {Object} invoice
+ * @param {Stream} stream - The writable stream to pipe the PDF to (e.g., res or fs.createWriteStream)
+ */
+export const generateInvoicePDF = async (invoice, stream) => {
     const doc = new PDFDocument({ margin: 40, size: "A4" });
 
-    const stream = fs.createWriteStream(outputPath);
     doc.pipe(stream);
 
+    const LOGO_WIDTH = 60;
+    const LEFT_COL_X = 40;
+    const RIGHT_COL_X = 350;
+    const PAGE_WIDTH = 550;
+
     /* ---------------- HEADER ---------------- */
-    doc
-        .fontSize(14)
-        .font("Helvetica-Bold")
-        .text("TAX INVOICE", { align: "center" })
-        .moveDown(1);
+    // Logo
+    const logoPath = path.join(__dirname, "../../assests/Logo/logo.png");
 
-    doc
-        .fontSize(10)
-        .font("Helvetica-Bold")
-        .text(invoice.seller.name)
-        .font("Helvetica")
-        .text(invoice.seller.address)
-        .text(`GSTIN: ${invoice.seller.gstin}`)
-        .text(`Contact: ${invoice.seller.phone}`)
-        .moveDown(0.5);
+    if (fs.existsSync(logoPath)) {
+        doc.image(logoPath, LEFT_COL_X, 30, { width: 60 });
+        doc.fontSize(16).font("Helvetica-Bold").text("Veroa Photography", LEFT_COL_X + 55, 38);
+    } else {
+        doc.fontSize(18).font("Helvetica-Bold").text("UC ", LEFT_COL_X, 40, { continued: true })
+            .fontSize(14).text("Urban Company", { continued: false });
+    }
 
-    doc
-        .font("Helvetica-Bold")
-        .text(`Invoice No: ${invoice.invoiceNo}`, { continued: true })
-        .font("Helvetica")
-        .text(`        Date: ${invoice.date}`)
-        .moveDown(1);
+    doc.fontSize(16).font("Helvetica-Bold").text("TAX INVOICE", RIGHT_COL_X + 50, 40, { align: "right" });
 
-    /* ---------------- BUYER ---------------- */
-    doc
-        .font("Helvetica-Bold")
-        .text("Bill To:")
-        .font("Helvetica")
-        .text(invoice.buyer.name)
-        .text(invoice.buyer.address)
-        .text(`GSTIN: ${invoice.buyer.gstin}`)
-        .text(`State: ${invoice.buyer.state}`)
-        .moveDown(1);
+    doc.moveDown(0.5);
 
-    /* ---------------- TABLE HEADER ---------------- */
-    const tableTop = doc.y;
-    const col = {
-        sn: 40,
-        desc: 70,
-        hsn: 260,
-        qty: 320,
-        rate: 380,
-        amount: 460,
-    };
-
-    doc
-        .font("Helvetica-Bold")
-        .fontSize(9)
-        .text("SI", col.sn, tableTop)
-        .text("Description", col.desc, tableTop)
-        .text("HSN", col.hsn, tableTop)
-        .text("Qty", col.qty, tableTop)
-        .text("Rate", col.rate, tableTop)
-        .text("Amount", col.amount, tableTop);
-
-    doc.moveTo(40, tableTop + 15).lineTo(550, tableTop + 15).stroke();
-
-    /* ---------------- TABLE ROWS ---------------- */
-    let y = tableTop + 25;
-
-    invoice.items.forEach((item, index) => {
-        doc
-            .font("Helvetica")
-            .fontSize(9)
-            .text(index + 1, col.sn, y)
-            .text(item.description, col.desc, y)
-            .text(item.hsn, col.hsn, y)
-            .text(item.quantity, col.qty, y)
-            .text(item.rate.toFixed(2), col.rate, y)
-            .text(item.amount.toFixed(2), col.amount, y);
-
-        y += 20;
-    });
-
-    /* ---------------- TOTALS ---------------- */
-    doc.moveDown(2);
-
-    doc
-        .font("Helvetica")
-        .text(`Freight Charges: ₹ ${invoice.freight.toFixed(2)}`, { align: "right" })
-        .text(`CGST: ₹ ${invoice.cgst.toFixed(2)}`, { align: "right" })
-        .text(`SGST: ₹ ${invoice.sgst.toFixed(2)}`, { align: "right" })
-        .font("Helvetica-Bold")
-        .text(`Grand Total: ₹ ${invoice.total.toFixed(2)}`, { align: "right" })
-        .moveDown(1);
-
-    /* ---------------- AMOUNT IN WORDS ---------------- */
-    doc
-        .font("Helvetica")
-        .text(`Amount Chargeable (in words):`)
-        .font("Helvetica-Bold")
-        .text(invoice.amountInWords)
-        .moveDown(1);
-
-    /* ---------------- BANK DETAILS ---------------- */
-    doc
-        .font("Helvetica-Bold")
-        .text("Company Bank Details")
-        .font("Helvetica")
-        .text(`Account Name: ${invoice.bank.accountName}`)
-        .text(`Bank: ${invoice.bank.bankName}`)
-        .text(`A/C No: ${invoice.bank.accountNumber}`)
-        .text(`IFSC: ${invoice.bank.ifsc}`)
+    // Company Information (Left Side under Logo)
+    doc.fontSize(8).font("Helvetica")
+        .text(invoice.seller.fullName || "Urban Company Limited (Formerly known as Urbanclap Technologies India Limited)", LEFT_COL_X, 75, { width: 250 })
+        .text("Registered Office")
+        .text(invoice.seller.address, { width: 250 })
+        .text(`Email: ${invoice.seller.email}`)
+        .text(`Telephone: ${invoice.seller.phone}`)
+        .text(`CIN ${invoice.seller.cin}`)
+        .text(invoice.seller.website)
         .moveDown(2);
 
-    /* ---------------- FOOTER ---------------- */
-    doc
-        .fontSize(8)
-        .text("This is a Computer Generated Invoice", { align: "center" });
+    const currentY = doc.y;
 
+    /* ---------------- DETAILS COLUMNS ---------------- */
+
+    // Left Column
+    doc.fontSize(9).font("Helvetica-Bold").text("Customer Name", LEFT_COL_X, currentY);
+    doc.font("Helvetica").text(invoice.buyer.name);
+    doc.moveTo(LEFT_COL_X, doc.y + 2).lineTo(320, doc.y + 2).lineWidth(0.5).strokeColor("#cccccc").stroke();
+    doc.moveDown(0.8);
+
+    doc.font("Helvetica-Bold").text("Invoice no.");
+    doc.font("Helvetica").text(invoice.invoiceNo);
+    doc.moveTo(LEFT_COL_X, doc.y + 2).lineTo(320, doc.y + 2).stroke();
+    doc.moveDown(0.8);
+
+    doc.font("Helvetica-Bold").text("Delivery Address");
+    doc.font("Helvetica").text(invoice.buyer.address, { width: 280 });
+    doc.moveTo(LEFT_COL_X, doc.y + 2).lineTo(320, doc.y + 2).stroke();
+    doc.moveDown(0.8);
+
+    doc.font("Helvetica-Bold").text("Invoice Date");
+    doc.font("Helvetica").text(invoice.date);
+    doc.moveTo(LEFT_COL_X, doc.y + 2).lineTo(320, doc.y + 2).stroke();
+    doc.moveDown(0.8);
+
+    doc.font("Helvetica-Bold").text("State Name & Code");
+    doc.font("Helvetica").text(`${invoice.buyer.state} ${invoice.buyer.stateCode || ""}`);
+    doc.moveTo(LEFT_COL_X, doc.y + 2).lineTo(320, doc.y + 2).stroke();
+    doc.moveDown(0.8);
+
+    doc.font("Helvetica-Bold").text("Place of Supply");
+    doc.font("Helvetica").text(`${invoice.buyer.placeOfSupply || invoice.buyer.state}`);
+    doc.moveTo(LEFT_COL_X, doc.y + 2).lineTo(320, doc.y + 2).stroke();
+
+    // Right Column
+    doc.fontSize(9).font("Helvetica-Bold").text("DELIVERY SERVICE PROVIDER", RIGHT_COL_X, currentY);
+    doc.moveDown(0.5);
+
+    doc.font("Helvetica-Bold").text("Business GSTIN");
+    doc.font("Helvetica").text(invoice.seller.gstin);
+    doc.moveTo(RIGHT_COL_X, doc.y + 2).lineTo(PAGE_WIDTH, doc.y + 2).stroke();
+    doc.moveDown(0.8);
+
+    doc.font("Helvetica-Bold").text("Business Name");
+    doc.font("Helvetica").text(invoice.seller.name, { width: 200 });
+    doc.moveTo(RIGHT_COL_X, doc.y + 2).lineTo(PAGE_WIDTH, doc.y + 2).stroke();
+    doc.moveDown(0.8);
+
+    doc.font("Helvetica-Bold").text("Address");
+    doc.font("Helvetica").text(invoice.seller.serviceProviderAddress || invoice.seller.address, { width: 200 });
+    doc.moveTo(RIGHT_COL_X, doc.y + 2).lineTo(PAGE_WIDTH, doc.y + 2).stroke();
+    doc.moveDown(0.8);
+
+    doc.font("Helvetica-Bold").text("State Name & Code");
+    doc.font("Helvetica").text(`${invoice.seller.state || ""} ${invoice.seller.stateCode || ""}`);
+    doc.moveTo(RIGHT_COL_X, doc.y + 2).lineTo(PAGE_WIDTH, doc.y + 2).stroke();
+
+    doc.moveDown(3);
+
+    /* ---------------- ITEMS TABLE HEADER ---------------- */
+    const tableTop = doc.y;
+    doc.rect(LEFT_COL_X, tableTop, PAGE_WIDTH - LEFT_COL_X, 20).fill("#f7f7f7");
+    doc.fillColor("black").font("Helvetica-Bold").fontSize(10);
+    doc.text("Items", LEFT_COL_X + 5, tableTop + 5);
+    doc.text("Taxable Value", PAGE_WIDTH - 100, tableTop + 5, { align: "right" });
+
+    let yPos = tableTop + 30;
+
+    /* ---------------- ITEMS ---------------- */
+    invoice.items.forEach(item => {
+        doc.font("Helvetica-Bold").fontSize(10).text(item.description, LEFT_COL_X + 5, yPos);
+        doc.font("Helvetica").fontSize(8).text(`SAC: ${item.sac || "N/A"}`, LEFT_COL_X + 5, doc.y);
+
+        const valueX = PAGE_WIDTH - 150;
+        const amountX = PAGE_WIDTH - 10;
+
+        doc.fontSize(9).text("Gross Amount", valueX, yPos, { align: "left" });
+        doc.text(`Rs. ${item.amount.toFixed(2)}`, amountX - 40, yPos, { align: "right" });
+        yPos += 40;
+
+        doc.text("Discount", valueX, yPos);
+        doc.text(`- Rs. ${(item.discount || 0).toFixed(2)}`, amountX - 40, yPos, { align: "right" });
+        yPos += 40;
+
+        doc.text("Taxable Value", valueX, yPos);
+        doc.text(`Rs. ${item.taxableValue.toFixed(2)}`, amountX - 40, yPos, { align: "right" });
+        doc.font("Helvetica").fontSize(7).text(`(${invoice.taxableValueInWords || amountToWords(item.taxableValue)})`, valueX, doc.y + 2, { width: 150 });
+        yPos += 40;
+
+        if (invoice.igst) {
+            doc.fontSize(9).text(`IGST @${invoice.igst.rate}%`, valueX, yPos);
+            doc.text(`Rs. ${invoice.igst.amount.toFixed(2)}`, amountX - 40, yPos, { align: "right" });
+            doc.font("Helvetica").fontSize(7).text(`(${invoice.igstValueInWords || amountToWords(invoice.igst.amount)})`, valueX, doc.y + 2, { width: 150 });
+            yPos += 40;
+        }
+
+        if (invoice.cgst) {
+            doc.fontSize(9).text(`CGST @${invoice.cgst.rate}%`, valueX, yPos);
+            doc.text(`Rs. ${invoice.cgst.amount.toFixed(2)}`, amountX - 40, yPos, { align: "right" });
+            yPos += 15;
+            doc.fontSize(9).text(`SGST @${invoice.sgst.rate}%`, valueX, yPos);
+            doc.text(`Rs. ${invoice.sgst.amount.toFixed(2)}`, amountX - 40, yPos, { align: "right" });
+            yPos += 40;
+        }
+    });
+
+    /* ---------------- TOTAL SECTION ---------------- */
+    doc.rect(LEFT_COL_X, yPos, PAGE_WIDTH - LEFT_COL_X, 20).fill("#f7f7f7");
+    doc.fillColor("black").font("Helvetica-Bold").fontSize(10);
+    doc.text("TOTAL AMOUNT", LEFT_COL_X + 5, yPos + 5);
+    doc.text(`Rs. ${invoice.total.toFixed(0)}`, PAGE_WIDTH - 100, yPos + 5, { align: "right" });
+
+    yPos += 60;
+
+    /* ---------------- FOOTER ---------------- */
+    doc.fontSize(8).font("Helvetica").text("*Reverse Charge mechanism not applicable", LEFT_COL_X, yPos);
+
+    const signaturePath = path.join(__dirname, "../../assests/signature/Adobe_page-0001.jpg");
+    let signatureY = yPos + 10;
+    
+    if (fs.existsSync(signaturePath)) {
+        doc.image(signaturePath, PAGE_WIDTH - 150, signatureY, { width: 120 });
+        signatureY += 60;
+    } else if (invoice.signatureImage && fs.existsSync(invoice.signatureImage)) {
+        doc.image(invoice.signatureImage, PAGE_WIDTH - 150, signatureY, { width: 120 });
+        signatureY += 60;
+    }
+
+    doc.fontSize(9).font("Helvetica-Bold").text("Signature of supplier/authorized representative", PAGE_WIDTH - 250, signatureY, { align: "right" });
+
+    doc.moveDown(6); // Final bottom margin
+    
     doc.end();
 
     return new Promise((resolve) => {
@@ -132,49 +246,207 @@ export const generateInvoicePDF = async (invoice, outputPath) => {
 };
 
 
-//function calling 
+// Function calling with demo data matching the new format
+/*
 await generateInvoicePDF(
     {
-        invoiceNo: "INV-1023",
-        date: "15-Jul-2024",
+        invoiceNo: "UCIC250004176344",
+        date: "23 May, 2025",
 
         seller: {
-            name: "R.B.T. TEXTILES",
-            address: "Upper Ground Floor, WZ-27, Vishnu Garden, Delhi - 110018",
-            gstin: "07AAGPJ6614H1ZS",
-            phone: "+91-9313563580",
+            name: "Urban Company Limited (Formerly known as Urbanclap Technologies India Limited and Urbanclap Technologies India Private Limited)",
+            fullName: "Urban Company Limited (Formerly known as Urbanclap Technologies India Limited and Urbanclap Technologies India Private Limited)",
+            address: "Unit No. 08, Ground Floor, Rectangle 1, D4, Saket District Centre, New Delhi, Delhi, India - 110017",
+            serviceProviderAddress: "7TH and 8TH Floor, Plot No 183, Udyog Vihar, Sector 20, Rajiv Nagar, Gurugram, Haryana - 122016",
+            gstin: "06AABCU7755Q1ZK",
+            phone: "+911244570250",
+            email: "help@urbancompany.com",
+            cin: "U74140DL2014PLC274413",
+            website: "www.urbancompany.com",
+            state: "Haryana",
+            stateCode: "06"
         },
 
         buyer: {
-            name: "ARPIT FASHIONS PRIVATE LIMITED",
-            address: "B-28, Lawrence Road, Industrial Area, Delhi - 110035",
-            gstin: "07AAKCA6484B1ZO",
-            state: "Delhi",
+            name: "Kanishka Gupta",
+            address: "C2 Anita colony Bajaj nagar, Anita Colony, Bajaj Nagar, Jaipur, Rajasthan 302015, India, Bajaj nagar post office",
+            gstin: "N/A",
+            state: "Rajasthan",
+            stateCode: "08",
+            placeOfSupply: "Rajasthan 08"
         },
 
         items: [
             {
-                description: "FABRICS",
-                hsn: "52114200",
-                quantity: 1754,
-                rate: 204.73,
-                amount: 359096.42,
+                description: "Convenience and Platform Fee - AC Service and Repair",
+                sac: "999799",
+                amount: 126.27,
+                discount: 0,
+                taxableValue: 126.27,
             },
         ],
 
-        freight: 1200,
-        cgst: 9007.41,
-        sgst: 9007.41,
-        total: 378310,
-        amountInWords:
-            "INR Three Lakh Seventy Eight Thousand Three Hundred Ten Only",
-
-        bank: {
-            accountName: "R.B.T. TEXTILES",
-            bankName: "IDFC Bank Ltd",
-            accountNumber: "10075573210",
-            ifsc: "IDFB0020143",
+        igst: {
+            rate: 18,
+            amount: 22.73
         },
+        
+        total: 149,
+        taxableValueInWords: "one hundred and twenty six point two seven only",
+        igstValueInWords: "twenty two point seven three only",
+        
+        // signatureImage: path.join(process.cwd(), "signature.png")
     },
     path.join(process.cwd(), "invoice.pdf")
 );
+*/
+
+/**
+ * Generate Partner (Photographer) Invoice PDF in Urban Company Style
+ * @param {Object} invoice
+ * @param {Stream} stream - The writable stream to pipe the PDF to
+ */
+export const generatePartnerInvoicePDF = async (invoice, stream) => {
+    const doc = new PDFDocument({ margin: 40, size: "A4" });
+
+    doc.pipe(stream);
+
+    const LEFT_COL_X = 40;
+    const RIGHT_COL_X = 350;
+    const PAGE_WIDTH = 550;
+
+    /* ---------------- HEADER ---------------- */
+    // Logo
+    const logoPath = path.join(__dirname, "../../assests/Logo/logo.png");
+    if (fs.existsSync(logoPath)) {
+        doc.image(logoPath, LEFT_COL_X, 30, { width: 45 });
+        doc.fontSize(16).font("Helvetica-Bold").text("Veroa Photography", LEFT_COL_X + 55, 38);
+    } else {
+        doc.fontSize(18).font("Helvetica-Bold").text("UC ", LEFT_COL_X, 40, { continued: true })
+            .fontSize(14).text("Urban Company", { continued: false });
+    }
+
+    doc.fontSize(11).font("Helvetica-Bold").text("TAX INVOICE/RECEIPT (UC PARTNER RECEIPT)", RIGHT_COL_X - 10, 40, { align: "right" });
+
+    doc.moveDown(0.5);
+
+    // Address under logo
+    doc.fontSize(8).font("Helvetica")
+        .text(invoice.headerAddress || "1st Floor, C-123, Janpath, Lal Kothi, Jaipur", LEFT_COL_X, 75, { width: 250 })
+        .text(invoice.headerCityState || "Jaipur, Rajasthan, 302015")
+        .text(`GSTIN: ${invoice.headerGstin || "08AABCU7755Q1ZG"}`)
+        .moveDown(2);
+
+    const currentY = doc.y;
+
+    /* ---------------- DETAILS COLUMNS ---------------- */
+
+    // Left Column
+    doc.fontSize(9).font("Helvetica-Bold").text("Customer Name", LEFT_COL_X, currentY);
+    doc.font("Helvetica").text(invoice.buyer.name);
+    doc.moveTo(LEFT_COL_X, doc.y + 2).lineTo(320, doc.y + 2).lineWidth(0.5).strokeColor("#cccccc").stroke();
+    doc.moveDown(0.8);
+
+    doc.font("Helvetica-Bold").text("Invoice no.");
+    doc.font("Helvetica").text(invoice.invoiceNo);
+    doc.moveTo(LEFT_COL_X, doc.y + 2).lineTo(320, doc.y + 2).stroke();
+    doc.moveDown(0.8);
+
+    doc.font("Helvetica-Bold").text("Delivery Address");
+    doc.font("Helvetica").text(invoice.buyer.address, { width: 280 });
+    doc.moveTo(LEFT_COL_X, doc.y + 2).lineTo(320, doc.y + 2).stroke();
+    doc.moveDown(0.8);
+
+    doc.font("Helvetica-Bold").text("Invoice Date");
+    doc.font("Helvetica").text(invoice.date);
+    doc.moveTo(LEFT_COL_X, doc.y + 2).lineTo(320, doc.y + 2).stroke();
+    doc.moveDown(0.8);
+
+    doc.font("Helvetica-Bold").text("State Name & Code");
+    doc.font("Helvetica").text(`${invoice.buyer.state} ${invoice.buyer.stateCode || ""}`);
+    doc.moveTo(LEFT_COL_X, doc.y + 2).lineTo(320, doc.y + 2).stroke();
+    doc.moveDown(0.8);
+
+    doc.font("Helvetica-Bold").text("Place of Supply");
+    doc.font("Helvetica").text(`${invoice.buyer.placeOfSupply || invoice.buyer.state}`);
+    doc.moveTo(LEFT_COL_X, doc.y + 2).lineTo(320, doc.y + 2).stroke();
+
+    // Right Column
+    doc.fontSize(9).font("Helvetica-Bold").text("DELIVERY SERVICE PROVIDER", RIGHT_COL_X, currentY);
+    doc.moveDown(0.5);
+
+    doc.font("Helvetica-Bold").text("Business GSTIN");
+    doc.font("Helvetica").text(invoice.seller.gstin || "");
+    doc.moveTo(RIGHT_COL_X, doc.y + 2).lineTo(PAGE_WIDTH, doc.y + 2).stroke();
+    doc.moveDown(0.8);
+
+    doc.font("Helvetica-Bold").text("Business Name");
+    doc.font("Helvetica").text(invoice.seller.name, { width: 200 });
+    doc.moveTo(RIGHT_COL_X, doc.y + 2).lineTo(PAGE_WIDTH, doc.y + 2).stroke();
+    doc.moveDown(0.8);
+
+    doc.font("Helvetica-Bold").text("Address");
+    doc.font("Helvetica").text(invoice.seller.address || "", { width: 200 });
+    doc.moveTo(RIGHT_COL_X, doc.y + 2).lineTo(PAGE_WIDTH, doc.y + 2).stroke();
+    doc.moveDown(0.8);
+
+    doc.font("Helvetica-Bold").text("State Name & Code");
+    doc.font("Helvetica").text(`${invoice.seller.state || ""} ${invoice.seller.stateCode || ""}`);
+    doc.moveTo(RIGHT_COL_X, doc.y + 2).lineTo(PAGE_WIDTH, doc.y + 2).stroke();
+
+    doc.moveDown(3);
+
+    /* ---------------- ITEMS TABLE HEADER ---------------- */
+    const tableTop = doc.y;
+    doc.rect(LEFT_COL_X, tableTop, PAGE_WIDTH - LEFT_COL_X, 20).fill("#f7f7f7");
+    doc.fillColor("black").font("Helvetica-Bold").fontSize(10);
+    doc.text("Items", LEFT_COL_X + 5, tableTop + 5);
+    doc.text("Taxable Value", PAGE_WIDTH - 100, tableTop + 5, { align: "right" });
+
+    let yPos = tableTop + 30;
+
+    /* ---------------- ITEMS ---------------- */
+    invoice.items.forEach(item => {
+        doc.font("Helvetica-Bold").fontSize(10).text(item.description, LEFT_COL_X + 5, yPos);
+        doc.font("Helvetica").fontSize(8).text(`SAC: ${item.sac || "N/A"}`, LEFT_COL_X + 5, doc.y);
+
+        const valueX = PAGE_WIDTH - 150;
+        const amountX = PAGE_WIDTH - 10;
+
+        doc.fontSize(9).text("Gross Amount", valueX, yPos, { align: "left" });
+        doc.text(`Rs. ${item.amount.toFixed(2)}`, amountX - 40, yPos, { align: "right" });
+        yPos += 40;
+
+        doc.text("Discount", valueX, yPos);
+        doc.text(`- Rs. ${(item.discount || 0).toFixed(2)}`, amountX - 40, yPos, { align: "right" });
+        yPos += 40;
+
+        doc.text("Taxable Value", valueX, yPos);
+        doc.text(`Rs. ${item.taxableValue.toFixed(2)}`, amountX - 40, yPos, { align: "right" });
+        doc.font("Helvetica").fontSize(7).text(`(${invoice.taxableValueInWords || amountToWords(item.taxableValue)})`, valueX, doc.y + 2, { width: 150 });
+        yPos += 40;
+    });
+
+    /* ---------------- TOTAL SECTION ---------------- */
+    doc.rect(LEFT_COL_X, yPos, PAGE_WIDTH - LEFT_COL_X, 20).fill("#f7f7f7");
+    doc.fillColor("black").font("Helvetica-Bold").fontSize(10);
+    doc.text("TOTAL AMOUNT", LEFT_COL_X + 5, yPos + 5);
+    doc.text(`Rs. ${invoice.total.toFixed(0)}`, PAGE_WIDTH - 100, yPos + 5, { align: "right" });
+
+    yPos += 20;
+
+    // Signature
+    const signaturePath = path.join(__dirname, "../../assests/signature/Adobe_page-0001.jpg");
+    if (fs.existsSync(signaturePath)) {
+        doc.image(signaturePath, LEFT_COL_X, yPos, { width: 120 });
+        yPos += 65;
+        doc.fontSize(9).font("Helvetica-Bold").text("Signature of supplier / Authorized Seal", LEFT_COL_X, yPos);
+    }
+
+    doc.moveDown(6); // Final bottom margin
+    doc.end();
+
+    return new Promise((resolve) => {
+        stream.on("finish", resolve);
+    });
+};

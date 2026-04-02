@@ -387,9 +387,10 @@ export const uploadController = {
 
             let isblur = false;
             let remainingDays = 0;
+            let isFullyPaid = false;
 
             if (booking) {
-                const isFullyPaid = booking.paymentStatus === "fully paid" || booking.full_Payment === true;
+                isFullyPaid = booking.paymentStatus === "fully paid" || booking.full_Payment === true;
 
                 if (isFullyPaid) {
                     let expiryDate = null;
@@ -407,19 +408,19 @@ export const uploadController = {
                     if (expiryDate) {
                         const now = new Date();
                         const diffTime = expiryDate - now;
-                        
+
                         // Calculate remaining days (rounded up)
                         remainingDays = Math.max(0, Math.ceil(diffTime / (1000 * 60 * 60 * 24)));
                         isblur = (now > expiryDate);
                     } else {
                         // Fully paid but no photos yet: Unblurred by default
                         isblur = false;
-                        remainingDays = 14; 
+                        remainingDays = 14;
                     }
                 } else {
                     // Partially paid or pending: Always blurred
                     isblur = true;
-                    remainingDays = 0; 
+                    remainingDays = 0;
                 }
             }
 
@@ -438,6 +439,8 @@ export const uploadController = {
                     data: [],
                     isblur,
                     remainingDays,
+                    full_payment: isFullyPaid,
+                    reverse_charge_mechanism: "*Reverse Charge mechanism not applicable",
                     pagination: {
                         page: pageNum,
                         limit: limitNum,
@@ -462,6 +465,8 @@ export const uploadController = {
                 message: "Images fetched successfully",
                 isblur,
                 remainingDays,
+                full_payment: isFullyPaid,
+                reverse_charge_mechanism: "*Reverse Charge mechanism not applicable",
                 data,
                 pagination: {
                     page: pageNum,
