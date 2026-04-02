@@ -163,7 +163,7 @@ app.get("/api/health", (req, res) => {
   });
 });
 
-// --- Main Route Mounting ---
+// --- Main Route Mounting ----
 app.use("/api/auth", authRoutes);
 
 // Detailed role-based routes
