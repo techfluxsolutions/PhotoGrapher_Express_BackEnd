@@ -24,6 +24,11 @@ class PhotographerAuthController {
         return sendErrorResponse(res, "Invalid email or password", 401);
       }
 
+      // Check Photographer Activation Status
+      if (photographer.status !== "active") {
+        return sendErrorResponse(res, "Your account is unverified. Please contact the admin.", 403);
+      }
+
       // Password Check (Support both hashed and legacy plain text if needed, but primarily hashed)
       if (!photographer.password) {
         return sendErrorResponse(res, "Invalid email or password", 401);
