@@ -741,13 +741,15 @@ class BookingController {
             const upcommingBookingCount = await ServiceBooking.countDocuments({
                 photographer_id: myId,
                 bookingStatus: "accepted",
-                date: {
-                    $gte: todaysDate
-                }
+                $or: [
+                    { bookingDate: { $gte: todaysDate } },
+                    { startDate: { $gte: todaysDate.toISOString().split("T")[0] } }
+                ]
             });
             const completedBookingCount = await ServiceBooking.countDocuments({
                 photographer_id: myId,
-                bookingStatus: "completed"
+                bookingStatus: "accepted",
+                status: "completed"
             });
             const uploadPending = await ServiceBooking.countDocuments({
                 photographer_id: myId,
@@ -777,8 +779,10 @@ class BookingController {
                 photographer_id: myId,
                 bookingStatus: "accepted",
                 $or: [
-                    { startDate: today },
-                    { endDate: today }
+                    { fromDate: { $lte: today }, toDate: { $gte: today } },
+                    { bookingDate: { $gte: new Date(today), $lt: new Date(new Date(today).getTime() + 86400000) } },
+                    { fromDate: today },
+                    { toDate: today }
                 ]
             })
                            .sort({ startDate: 1, bookingDate: 1, createdAt: 1 }) // Primary sort: startDate ASC
@@ -827,13 +831,17 @@ class BookingController {
     async getSummaryCounts(req, res) {
         try {
             const myId = new mongoose.Types.ObjectId(req.user.id);
-            const todayMidnight = new Date();
-            todayMidnight.setUTCHours(0, 0, 0, 0);
-            const todayStr = todayMidnight.toISOString().split("T")[0];
+            const now = new Date();
+            // Adjust to IST (UTC+5:30)
+            const istTime = new Date(now.getTime() + (5.5 * 60 * 60 * 1000));
+            const todayStr = istTime.toISOString().split("T")[0];
+            
+            const tomorrowIST = new Date(istTime.getTime() + (24 * 60 * 60 * 1000));
+            const tomorrowStr = tomorrowIST.toISOString().split("T")[0];
 
-            const tomorrowMidnight = new Date(todayMidnight);
-            tomorrowMidnight.setUTCDate(tomorrowMidnight.getUTCDate() + 1);
-            const tomorrowStr = tomorrowMidnight.toISOString().split("T")[0];
+            // Convert to UTC Date for comparison (Start of Today IST in UTC)
+            const todayStartIST = new Date(`${todayStr}T00:00:00.000+05:30`);
+            const tomorrowStartIST = new Date(`${tomorrowStr}T00:00:00.000+05:30`);
 
             const acceptedBase = {
                 photographer_id: myId,
@@ -841,31 +849,32 @@ class BookingController {
                 status: { $nin: ["completed", "canceled"] }
             };
 
-            // 1. todaysBookings: Total Active work (Today + Future)
+            // 1. Todays & Upcoming: (Today + Future)
             const activeCount = await ServiceBooking.countDocuments({
                 ...acceptedBase,
                 $or: [
-                    { bookingDate: { $gte: todayMidnight } },
+                    { bookingDate: { $gte: todayStartIST } },
                     { startDate: { $gte: todayStr } }
                 ]
             });
 
-            // 2. upcommingBooking: Strictly Tomorrow onwards (Future only)
+            // 2. Upcoming: Strictly Tomorrow onwards
             const futureOnlyCount = await ServiceBooking.countDocuments({
                 ...acceptedBase,
                 $or: [
-                    { bookingDate: { $gte: tomorrowMidnight } },
+                    { bookingDate: { $gte: tomorrowStartIST } },
                     { startDate: { $gte: tomorrowStr } }
                 ]
             });
 
-            // 3. completed: History count (including past date bookings, excluding canceled)
+            // 3. Completed: History count (must be accepted, past or completed)
             const completedCount = await ServiceBooking.countDocuments({
                 photographer_id: myId,
+                bookingStatus: "accepted",
                 status: { $ne: "canceled" },
                 $or: [
                     { status: "completed" },
-                    { bookingDate: { $lt: todayMidnight } },
+                    { bookingDate: { $lt: todayStartIST } },
                     { startDate: { $lt: todayStr } }
                 ]
             });

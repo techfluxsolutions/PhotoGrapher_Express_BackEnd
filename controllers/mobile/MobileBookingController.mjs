@@ -283,12 +283,16 @@ class MobileBookingController {
       const limit = Math.max(1, parseInt(req.query.limit) || 20);
       const skip = (page - 1) * limit;
 
-      const todayMidnight = new Date();
-      todayMidnight.setUTCHours(0, 0, 0, 0);
+      const now = new Date();
+      // Adjust to IST (UTC+5:30) for accurate Today/Tomorrow strings
+      const istTime = new Date(now.getTime() + (5.5 * 60 * 60 * 1000));
+      const todayStr = istTime.toISOString().split("T")[0];
+      
+      const tomorrowIST = new Date(istTime.getTime() + (24 * 60 * 60 * 1000));
+      const tomorrowStr = tomorrowIST.toISOString().split("T")[0];
 
-      const tomorrowMidnight = new Date(todayMidnight);
-      tomorrowMidnight.setUTCDate(tomorrowMidnight.getUTCDate() + 1);
-      const tomorrowStr = tomorrowMidnight.toISOString().split("T")[0];
+      // Convert Tomorrow 00:00 IST to a UTC Date object for MongoDB 'bookingDate'
+      const tomorrowStartIST = new Date(`${tomorrowStr}T00:00:00.000+05:30`);
 
       const query = {
         $and: [
@@ -301,8 +305,8 @@ class MobileBookingController {
           { status: { $nin: ["completed", "canceled"] } },
           {
             $or: [
-              { bookingDate: { $gte: tomorrowMidnight } }, // Tomorrow or Future
-              { startDate: { $gte: tomorrowStr } } // Tomorrow or Future (String)
+              { bookingDate: { $gte: tomorrowStartIST } },      // Tomorrow or Future (Date object)
+              { startDate: { $gte: tomorrowStr } }             // Tomorrow or Future (String)
             ]
           }
         ]
