@@ -627,3 +627,4 @@
 {"level":"info","message":"::1 - - [03/Apr/2026:10:12:56 +0000] \"GET /api/photographers/bookings/accepted HTTP/1.1\" 200 1037 \"-\" \"axios/0.28.1\"","timestamp":"2026-04-03 15:42:56"}
 {"level":"info","message":"::1 - - [03/Apr/2026:10:13:30 +0000] \"GET /api/photographers/bookings/summary-counts HTTP/1.1\" 200 135 \"-\" \"axios/0.28.1\"","timestamp":"2026-04-03 15:43:30"}
 {"level":"info","message":"::1 - - [03/Apr/2026:10:13:31 +0000] \"GET /api/photographers/bookings/summary-counts HTTP/1.1\" 200 135 \"-\" \"axios/0.28.1\"","timestamp":"2026-04-03 15:43:31"}
+{"level":"info","message":"::1 - - [03/Apr/2026:10:58:16 +0000] \"GET /api/mobile/photographer/bookings/upcoming HTTP/1.1\" 500 523 \"-\" \"axios/0.28.1\"","timestamp":"2026-04-03 16:28:16"}

@@ -145,6 +145,7 @@ class ServiceBookingController {
           paymentMode: booking.paymentMode,
           paymentStatus: booking.paymentStatus,
           bookingStatus: booking.bookingStatus || booking.status,
+          galleryStatus: booking.galleryStatus || "Upload Pending",
         };
       });
 
@@ -364,6 +365,7 @@ class ServiceBookingController {
           paymentMode: booking.paymentMode,
           paymentStatus: booking.paymentStatus,
           bookingStatus: booking.bookingStatus || booking.status,
+          galleryStatus: booking.galleryStatus || "Upload Pending",
         };
       });
 
@@ -515,6 +517,7 @@ class ServiceBookingController {
           paymentMode: booking.paymentMode,
           paymentStatus: booking.paymentStatus,
           bookingStatus: booking.bookingStatus || booking.status,
+          galleryStatus: booking.galleryStatus || "Upload Pending",
         };
       });
 
@@ -1023,6 +1026,7 @@ class ServiceBookingController {
               "paymentMode": "$paymentMode",
               "bookingStatus": "$status",
               "paymentStatus": "$paymentStatus",
+              "galleryStatus": { $ifNull: ["$galleryStatus", "Upload Pending"] },
               "assignPhotographer": "$photographer_id.basicInfo.fullName",
               "team_studio": {
                 $cond: {
