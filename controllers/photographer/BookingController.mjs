@@ -81,18 +81,20 @@ class BookingController {
                 };
             } else if (statusToFilter === "accepted") {
                 // Shows bookings specifically assigned to me and explicitly accepted/confirmed
-                // ONLY for TODAY or FUTURE dates
-                const todayMidnight = new Date();
-                todayMidnight.setUTCHours(0, 0, 0, 0);
-                const todayStr = todayMidnight.toISOString().split("T")[0];
+                // ONLY for FUTURE dates (Tomorrow onwards), as requested.
+                const now = new Date();
+                const istTime = new Date(now.getTime() + (5.5 * 60 * 60 * 1000));
+                const tomorrowIST = new Date(istTime.getTime() + (24 * 60 * 60 * 1000));
+                const tomorrowStr = tomorrowIST.toISOString().split("T")[0];
+                const tomorrowStartIST = new Date(`${tomorrowStr}T00:00:00.000+05:30`);
 
                 filter = {
                     photographer_id: photographerId,
                     bookingStatus: "accepted",
                     status: { $nin: ["completed", "canceled"] },
                     $or: [
-                        { bookingDate: { $gte: todayMidnight } },
-                        { startDate: { $gte: todayStr } }
+                        { bookingDate: { $gte: tomorrowStartIST } },
+                        { startDate: { $gte: tomorrowStr } }
                     ]
                 };
             } else {
@@ -779,10 +781,10 @@ class BookingController {
                 photographer_id: myId,
                 bookingStatus: "accepted",
                 $or: [
-                    { fromDate: { $lte: today }, toDate: { $gte: today } },
+                    { startDate: { $lte: today }, endDate: { $gte: today } },
                     { bookingDate: { $gte: new Date(today), $lt: new Date(new Date(today).getTime() + 86400000) } },
-                    { fromDate: today },
-                    { toDate: today }
+                    { startDate: today },
+                    { endDate: today }
                 ]
             })
                            .sort({ startDate: 1, bookingDate: 1, createdAt: 1 }) // Primary sort: startDate ASC
