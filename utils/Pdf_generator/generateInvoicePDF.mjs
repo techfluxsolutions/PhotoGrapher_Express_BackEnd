@@ -83,8 +83,26 @@ export const generateInvoicePDF = async (invoice, stream) => {
     const logoPath = path.join(__dirname, "../../assests/Logo/logo.png");
 
     if (fs.existsSync(logoPath)) {
-        doc.image(logoPath,20, 25, { width: 70 });
-        doc.fontSize(14).font("Helvetica-Bold").text("Veroa Photography", LEFT_COL_X + 40, 44);
+        doc.image(logoPath, 5, 15, { width: 100 });
+        // Brand Name (Main)
+        doc
+            .font("Helvetica-Bold")
+            .fontSize(20)
+            .fillColor("#111111")
+            .text("VEROA", LEFT_COL_X + 40, 40);
+
+        // Tagline / Sub Brand
+        doc
+            .font("Helvetica")
+            .fontSize(12)
+            .fillColor("#666666")
+            .text("Photography Studio", LEFT_COL_X + 40, 62);
+
+        // Optional: Add a divider line
+        doc
+            .moveTo(LEFT_COL_X + 40, 80)
+            .lineTo(LEFT_COL_X + 200, 80)
+            .lineWidth(1)
     } else {
         doc.fontSize(18).font("Helvetica-Bold").text("UC ", LEFT_COL_X, 40, { continued: true })
             .fontSize(14).text("Urban Company", { continued: false });
@@ -96,7 +114,7 @@ export const generateInvoicePDF = async (invoice, stream) => {
 
     // Company Information (Left Side under Logo)
     doc.fontSize(8).font("Helvetica")
-        .text(invoice.seller.fullName || "Urban Company Limited (Formerly known as Urbanclap Technologies India Limited)", LEFT_COL_X, 75, { width: 250 })
+        .text(invoice.seller.fullName || "Urban Company Limited (Formerly known as Urbanclap Technologies India Limited)", LEFT_COL_X, 90, { width: 250 })
         .text("Registered Office")
         .text(invoice.seller.address, { width: 250 })
         .text(`Email: ${invoice.seller.email}`)
@@ -105,7 +123,7 @@ export const generateInvoicePDF = async (invoice, stream) => {
         .text(invoice.seller.website)
         .moveDown(2);
 
-    const currentY = doc.y + 40;
+    const currentY = doc.y + 30;
 
     /* ---------------- DETAILS COLUMNS ---------------- */
 
@@ -166,12 +184,12 @@ export const generateInvoicePDF = async (invoice, stream) => {
 
     /* ---------------- ITEMS TABLE HEADER ---------------- */
     const tableTop = doc.y;
-    doc.rect(LEFT_COL_X, tableTop, PAGE_WIDTH - LEFT_COL_X, 20).fill("#f7f7f7");
+    doc.rect(LEFT_COL_X, tableTop+20, PAGE_WIDTH - LEFT_COL_X, 20).fill("#f7f7f7");
     doc.fillColor("black").font("Helvetica-Bold").fontSize(10);
-    doc.text("Items", LEFT_COL_X + 5, tableTop + 5);
-    doc.text("Taxable Value", PAGE_WIDTH - 100, tableTop + 5, { align: "right" });
+    doc.text("Items", LEFT_COL_X + 5, tableTop + 28);
+    doc.text("Taxable Value", PAGE_WIDTH - 100, tableTop + 28, { align: "right" });
 
-    let yPos = tableTop + 30;
+    let yPos = tableTop + 50;
 
     /* ---------------- ITEMS ---------------- */
     invoice.items.forEach(item => {
@@ -220,23 +238,23 @@ export const generateInvoicePDF = async (invoice, stream) => {
     yPos += 60;
 
     /* ---------------- FOOTER ---------------- */
-    doc.fontSize(8).font("Helvetica").text("*Reverse Charge mechanism not applicable", LEFT_COL_X, yPos + 150);
+    doc.fontSize(8).font("Helvetica").text("*Reverse Charge mechanism not applicable", LEFT_COL_X, yPos + 120);
 
     const signaturePath = path.join(__dirname, "../../assests/signature/Adobe_page-0001.jpg");
     let signatureY = yPos + 10;
-    
+
     if (fs.existsSync(signaturePath)) {
-        doc.image(signaturePath, PAGE_WIDTH - 150, signatureY+80, { width: 120 });
-        signatureY += 140;
+        doc.image(signaturePath, PAGE_WIDTH - 150, signatureY + 28, { width: 120 });
+        signatureY += 110;
     } else if (invoice.signatureImage && fs.existsSync(invoice.signatureImage)) {
         doc.image(invoice.signatureImage, PAGE_WIDTH - 150, signatureY, { width: 120 });
-        signatureY += 140;
+        signatureY += 110;
     }
 
     doc.fontSize(9).font("Helvetica-Bold").text("Signature of supplier/authorized representative", PAGE_WIDTH - 250, signatureY, { align: "right" });
 
     doc.moveDown(6); // Final bottom margin
-    
+
     doc.end();
 
     return new Promise((resolve) => {
@@ -317,9 +335,28 @@ export const generatePartnerInvoicePDF = async (invoice, stream) => {
     /* ---------------- HEADER ---------------- */
     // Logo
     const logoPath = path.join(__dirname, "../../assests/Logo/logo.png");
+    
     if (fs.existsSync(logoPath)) {
-        doc.image(logoPath,20, 25, { width: 70 });
-        doc.fontSize(14).font("Helvetica-Bold").text("Veroa Photography", LEFT_COL_X + 40, 44);
+        doc.image(logoPath, 5, 15, { width: 100 });
+        // Brand Name (Main)
+        doc
+            .font("Helvetica-Bold")
+            .fontSize(20)
+            .fillColor("#111111")
+            .text("VEROA", LEFT_COL_X + 40, 40);
+
+        // Tagline / Sub Brand
+        doc
+            .font("Helvetica")
+            .fontSize(12)
+            .fillColor("#666666")
+            .text("Photography Studio", LEFT_COL_X + 40, 62);
+
+        // Optional: Add a divider line
+        doc
+            .moveTo(LEFT_COL_X + 40, 80)
+            .lineTo(LEFT_COL_X + 200, 80)
+            .lineWidth(1)
     } else {
         doc.fontSize(18).font("Helvetica-Bold").text("UC ", LEFT_COL_X, 40, { continued: true })
             .fontSize(14).text("Urban Company", { continued: false });
@@ -341,7 +378,7 @@ export const generatePartnerInvoicePDF = async (invoice, stream) => {
     /* ---------------- DETAILS COLUMNS ---------------- */
 
     // Left Column
-    doc.fontSize(9).font("Helvetica-Bold").text("Customer Name", LEFT_COL_X, currentY);
+    doc.fontSize(9).font("Helvetica-Bold").text("Customer Name", LEFT_COL_X , currentY+20);
     doc.font("Helvetica").text(invoice.buyer.name);
     doc.moveTo(LEFT_COL_X, doc.y + 2).lineTo(320, doc.y + 2).lineWidth(0.5).strokeColor("#cccccc").stroke();
     doc.moveDown(0.8);
@@ -371,7 +408,7 @@ export const generatePartnerInvoicePDF = async (invoice, stream) => {
     doc.moveTo(LEFT_COL_X, doc.y + 2).lineTo(320, doc.y + 2).stroke();
 
     // Right Column
-    doc.fontSize(9).font("Helvetica-Bold").text("DELIVERY SERVICE PROVIDER", RIGHT_COL_X, currentY);
+    doc.fontSize(9).font("Helvetica-Bold").text("DELIVERY SERVICE PROVIDER", RIGHT_COL_X, currentY+20);
     doc.moveDown(0.5);
 
     doc.font("Helvetica-Bold").text("Business GSTIN");
@@ -397,12 +434,12 @@ export const generatePartnerInvoicePDF = async (invoice, stream) => {
 
     /* ---------------- ITEMS TABLE HEADER ---------------- */
     const tableTop = doc.y;
-    doc.rect(LEFT_COL_X, tableTop, PAGE_WIDTH - LEFT_COL_X, 20).fill("#f7f7f7");
+    doc.rect(LEFT_COL_X, tableTop+60, PAGE_WIDTH - LEFT_COL_X, 20).fill("#f7f7f7");
     doc.fillColor("black").font("Helvetica-Bold").fontSize(10);
-    doc.text("Items", LEFT_COL_X + 5, tableTop + 5);
-    doc.text("Taxable Value", PAGE_WIDTH - 100, tableTop + 5, { align: "right" });
+    doc.text("Items", LEFT_COL_X + 5, tableTop + 65);
+    doc.text("Taxable Value", PAGE_WIDTH - 100, tableTop + 65, { align: "right" });
 
-    let yPos = tableTop + 30;
+    let yPos = tableTop + 85;
 
     /* ---------------- ITEMS ---------------- */
     invoice.items.forEach(item => {
@@ -434,15 +471,7 @@ export const generatePartnerInvoicePDF = async (invoice, stream) => {
 
     yPos += 100;
 
-    
 
-    // Signature
-    const signaturePath = path.join(__dirname, "../../assests/signature/Adobe_page-0001.jpg");
-    if (fs.existsSync(signaturePath)) {
-        doc.image(signaturePath, LEFT_COL_X, yPos, { width: 120 });
-        yPos += 65;
-        doc.fontSize(9).font("Helvetica-Bold").text("Signature of supplier / Authorized Seal", LEFT_COL_X, yPos);
-    }
 
     doc.moveDown(6); // Final bottom margin
     doc.end();
