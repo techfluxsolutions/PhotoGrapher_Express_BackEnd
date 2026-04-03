@@ -87,7 +87,7 @@ const reviewAndRatingSchema = new mongoose.Schema({
         type: Number,
         default: 10,
         min: 1,
-        max: 5
+        max: 10
     },
 
     rateComments: {
