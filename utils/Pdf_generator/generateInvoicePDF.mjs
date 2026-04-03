@@ -74,7 +74,6 @@ export const generateInvoicePDF = async (invoice, stream) => {
 
     doc.pipe(stream);
 
-    const LOGO_WIDTH = 60;
     const LEFT_COL_X = 40;
     const RIGHT_COL_X = 350;
     const PAGE_WIDTH = 550;
@@ -84,8 +83,8 @@ export const generateInvoicePDF = async (invoice, stream) => {
     const logoPath = path.join(__dirname, "../../assests/Logo/logo.png");
 
     if (fs.existsSync(logoPath)) {
-        doc.image(logoPath, LEFT_COL_X, 30, { width: 60 });
-        doc.fontSize(16).font("Helvetica-Bold").text("Veroa Photography", LEFT_COL_X + 55, 38);
+        doc.image(logoPath,20, 25, { width: 70 });
+        doc.fontSize(14).font("Helvetica-Bold").text("Veroa Photography", LEFT_COL_X + 40, 44);
     } else {
         doc.fontSize(18).font("Helvetica-Bold").text("UC ", LEFT_COL_X, 40, { continued: true })
             .fontSize(14).text("Urban Company", { continued: false });
@@ -106,7 +105,7 @@ export const generateInvoicePDF = async (invoice, stream) => {
         .text(invoice.seller.website)
         .moveDown(2);
 
-    const currentY = doc.y;
+    const currentY = doc.y + 40;
 
     /* ---------------- DETAILS COLUMNS ---------------- */
 
@@ -221,17 +220,17 @@ export const generateInvoicePDF = async (invoice, stream) => {
     yPos += 60;
 
     /* ---------------- FOOTER ---------------- */
-    doc.fontSize(8).font("Helvetica").text("*Reverse Charge mechanism not applicable", LEFT_COL_X, yPos);
+    doc.fontSize(8).font("Helvetica").text("*Reverse Charge mechanism not applicable", LEFT_COL_X, yPos + 150);
 
     const signaturePath = path.join(__dirname, "../../assests/signature/Adobe_page-0001.jpg");
     let signatureY = yPos + 10;
     
     if (fs.existsSync(signaturePath)) {
-        doc.image(signaturePath, PAGE_WIDTH - 150, signatureY, { width: 120 });
-        signatureY += 60;
+        doc.image(signaturePath, PAGE_WIDTH - 150, signatureY+80, { width: 120 });
+        signatureY += 140;
     } else if (invoice.signatureImage && fs.existsSync(invoice.signatureImage)) {
         doc.image(invoice.signatureImage, PAGE_WIDTH - 150, signatureY, { width: 120 });
-        signatureY += 60;
+        signatureY += 140;
     }
 
     doc.fontSize(9).font("Helvetica-Bold").text("Signature of supplier/authorized representative", PAGE_WIDTH - 250, signatureY, { align: "right" });
@@ -319,8 +318,8 @@ export const generatePartnerInvoicePDF = async (invoice, stream) => {
     // Logo
     const logoPath = path.join(__dirname, "../../assests/Logo/logo.png");
     if (fs.existsSync(logoPath)) {
-        doc.image(logoPath, LEFT_COL_X, 30, { width: 45 });
-        doc.fontSize(16).font("Helvetica-Bold").text("Veroa Photography", LEFT_COL_X + 55, 38);
+        doc.image(logoPath,20, 25, { width: 70 });
+        doc.fontSize(14).font("Helvetica-Bold").text("Veroa Photography", LEFT_COL_X + 40, 44);
     } else {
         doc.fontSize(18).font("Helvetica-Bold").text("UC ", LEFT_COL_X, 40, { continued: true })
             .fontSize(14).text("Urban Company", { continued: false });
@@ -332,7 +331,7 @@ export const generatePartnerInvoicePDF = async (invoice, stream) => {
 
     // Address under logo
     doc.fontSize(8).font("Helvetica")
-        .text(invoice.headerAddress || "1st Floor, C-123, Janpath, Lal Kothi, Jaipur", LEFT_COL_X, 75, { width: 250 })
+        .text(invoice.headerAddress || "1st Floor, C-123, Janpath, Lal Kothi, Jaipur", LEFT_COL_X, 100, { width: 250 })
         .text(invoice.headerCityState || "Jaipur, Rajasthan, 302015")
         .text(`GSTIN: ${invoice.headerGstin || "08AABCU7755Q1ZG"}`)
         .moveDown(2);
@@ -433,7 +432,9 @@ export const generatePartnerInvoicePDF = async (invoice, stream) => {
     doc.text("TOTAL AMOUNT", LEFT_COL_X + 5, yPos + 5);
     doc.text(`Rs. ${invoice.total.toFixed(0)}`, PAGE_WIDTH - 100, yPos + 5, { align: "right" });
 
-    yPos += 20;
+    yPos += 100;
+
+    
 
     // Signature
     const signaturePath = path.join(__dirname, "../../assests/signature/Adobe_page-0001.jpg");
