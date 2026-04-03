@@ -1,6 +1,6 @@
 
 import ReviewAndRating from "../../models/ReviewAndRating.mjs";
-import Photograoher from "../../models/Photographer.mjs"
+import Photographer from "../../models/Photographer.mjs"
 class ReviewAndRatingController {
     // ✅ CREATE REVIEW & RATING
     async create(req, res, next) {
@@ -117,34 +117,44 @@ class ReviewAndRatingController {
         console.log(photographerId)
 
         try {
-            const ratings = await ReviewAndRating.find({
+            // 1. Fetch all User Ratings
+            const userRatings = await ReviewAndRating.find({
                 photographerId,
                 createdBy: "user"
             });
 
-            const totalRating = ratings.reduce(
-                (acc, rating) => acc + rating.ratingCount,
-                0
-            );
-
-            const averageRating = ratings.length > 0 ? totalRating / ratings.length : 0;
-
+            // 2. Fetch Admin Rating
             const adminRating = await ReviewAndRating.findOne({
                 photographerId,
                 createdBy: "admin"
             }).populate("photographerId", 'professionalDetails.expertiseLevel basicInfo.profilePhoto basicInfo.fullName');
 
-            const photographerDetails = await Photograoher.findById(photographerId).select("basicInfo.fullName basicInfo.profilePhoto professionalDetails.expertiseLevel")
+            // 3. Combined Average Calculation
+            let totalRatingSum = userRatings.reduce((acc, r) => acc + (r.ratingCount || 0), 0);
+            let totalRatingCount = userRatings.length;
+
+            if (adminRating) {
+                totalRatingSum += (adminRating.ratingCount || 0);
+                totalRatingCount += 1;
+            }
+
+            // 3. Scale down to 1-5 (assuming input is out of 10)
+            const averageRating = totalRatingCount > 0 ? parseFloat(((totalRatingSum / totalRatingCount) / 2).toFixed(1)) : 0;
+
+            // 4. Metadata and Transformation
+            const photographerDetails = await Photographer.findById(photographerId).select("basicInfo.fullName basicInfo.profilePhoto professionalDetails.expertiseLevel")
             const avatar = process.env.BASE_URL && photographerDetails?.basicInfo?.profilePhoto ? `${process.env.BASE_URL}${photographerDetails.basicInfo.profilePhoto}` : "";
 
             if (adminRating && adminRating.photographerId && adminRating.photographerId.basicInfo) {
                 adminRating.photographerId.basicInfo.profilePhoto = avatar;
             }
 
+            const collectiveAvg = Math.min(5, Math.max(0, averageRating));
+
             return res.status(200).json({
                 success: true,
-                averageRating,
-                totalUserRatings: ratings.length,
+                avgRating: collectiveAvg,
+                totalUserRatings: userRatings.length,
                 adminRating,
                 avatar: avatar,
                 photographerDetails

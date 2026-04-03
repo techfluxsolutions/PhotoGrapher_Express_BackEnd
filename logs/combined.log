@@ -628,3 +628,8 @@
 {"level":"info","message":"::1 - - [03/Apr/2026:10:13:30 +0000] \"GET /api/photographers/bookings/summary-counts HTTP/1.1\" 200 135 \"-\" \"axios/0.28.1\"","timestamp":"2026-04-03 15:43:30"}
 {"level":"info","message":"::1 - - [03/Apr/2026:10:13:31 +0000] \"GET /api/photographers/bookings/summary-counts HTTP/1.1\" 200 135 \"-\" \"axios/0.28.1\"","timestamp":"2026-04-03 15:43:31"}
 {"level":"info","message":"::1 - - [03/Apr/2026:10:58:16 +0000] \"GET /api/mobile/photographer/bookings/upcoming HTTP/1.1\" 500 523 \"-\" \"axios/0.28.1\"","timestamp":"2026-04-03 16:28:16"}
+{"level":"info","message":"::1 - - [03/Apr/2026:13:17:22 +0000] \"GET /api/photographers/ratings HTTP/1.1\" 500 539 \"-\" \"axios/0.28.1\"","timestamp":"2026-04-03 18:47:22"}
+{"level":"info","message":"::1 - - [03/Apr/2026:13:20:48 +0000] \"GET /api/photographers/ratings HTTP/1.1\" 200 774 \"-\" \"axios/0.28.1\"","timestamp":"2026-04-03 18:50:48"}
+{"level":"info","message":"::1 - - [03/Apr/2026:13:21:17 +0000] \"GET /api/photographers/ratings HTTP/1.1\" 200 774 \"-\" \"axios/0.28.1\"","timestamp":"2026-04-03 18:51:17"}
+{"level":"info","message":"::1 - - [03/Apr/2026:13:22:10 +0000] \"GET /api/photographers/ratings HTTP/1.1\" 200 774 \"-\" \"axios/0.28.1\"","timestamp":"2026-04-03 18:52:10"}
+{"level":"info","message":"::1 - - [03/Apr/2026:13:23:29 +0000] \"GET /api/photographers/ratings HTTP/1.1\" 200 1005 \"-\" \"axios/0.28.1\"","timestamp":"2026-04-03 18:53:29"}
