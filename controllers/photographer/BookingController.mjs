@@ -758,10 +758,37 @@ class BookingController {
         }
     }
 
-    // Download Invoice
-    async downloadInvoice(req, res, next) {
-        // Delegate to InvoiceController logic for Partner Receipts
-        return downloadPartnerInvoice(req, res, next);
+    // Download Invoices
+    async downloadCustomerInvoice(req, res, next) {
+        try {
+            const booking = await ServiceBooking.findById(req.params.bookingId);
+            if (!booking) return res.status(404).json({ success: false, message: "Booking not found" });
+
+            // Check authorization
+            if (booking.photographer_id?.toString() !== req.user.id && !booking.photographerIds?.includes(req.user.id)) {
+                return res.status(403).json({ success: false, message: "Unauthorized to view this invoice" });
+            }
+
+            return downloadInvoice(req, res, next);
+        } catch (err) {
+            next(err);
+        }
+    }
+
+    async downloadPartnerInvoice(req, res, next) {
+        try {
+            const booking = await ServiceBooking.findById(req.params.bookingId);
+            if (!booking) return res.status(404).json({ success: false, message: "Booking not found" });
+
+            // Check authorization
+            if (booking.photographer_id?.toString() !== req.user.id) {
+                return res.status(403).json({ success: false, message: "Unauthorized: Only the assigned photographer can download their receipt" });
+            }
+
+            return downloadPartnerInvoice(req, res, next);
+        } catch (err) {
+            next(err);
+        }
     }
     async getBookingCount(req, res, next) {
         try {
