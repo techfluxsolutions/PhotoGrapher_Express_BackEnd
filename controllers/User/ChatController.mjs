@@ -82,7 +82,7 @@ class ChatController {
 
             const total = await Message.countDocuments({ conversationId: conversation._id });
             const baseUrl = `${req.protocol}://${req.get("host")}`;
-            
+
             let pinedBookings;
 
             const gotBookings = await ServiceBooking.findOne({ _id: conversation.bookingId })
@@ -93,7 +93,7 @@ class ChatController {
                 pinedBookings = gotBookings.toObject();
                 // Format client avatar if it's the client's profile image
                 if (pinedBookings.client_id && pinedBookings.client_id.avatar && !pinedBookings.client_id.avatar.startsWith("http")) {
-                   pinedBookings.client_id.avatar = `${baseUrl}/${pinedBookings.client_id.avatar.replace(/\\/g, "/").replace(/^\//, "")}`;
+                    pinedBookings.client_id.avatar = `${baseUrl}/${pinedBookings.client_id.avatar.replace(/\\/g, "/").replace(/^\//, "")}`;
                 }
             } else {
                 const quoteData = await Quote.findOne({ _id: conversation.quoteId })
@@ -107,12 +107,12 @@ class ChatController {
                         options: { strictPopulate: false }
                     })
                     .populate('clientId', 'username avatar');
-                
+
                 if (quoteData) {
                     pinedBookings = quoteData.toObject();
                     // Format client avatar if it's the client's profile image
                     if (pinedBookings.clientId && pinedBookings.clientId.avatar && !pinedBookings.clientId.avatar.startsWith("http")) {
-                       pinedBookings.clientId.avatar = `${baseUrl}/${pinedBookings.clientId.avatar.replace(/\\/g, "/").replace(/^\//, "")}`;
+                        pinedBookings.clientId.avatar = `${baseUrl}/${pinedBookings.clientId.avatar.replace(/\\/g, "/").replace(/^\//, "")}`;
                     }
                 }
             }
@@ -262,7 +262,7 @@ class ChatController {
             let finalState = req.body.state;
             let finalPostalCode = req.body.postalCode;
             let finalClientId = req.body.clientId;
-            
+
             let finalLat = lat !== undefined ? lat : req.body.lat;
             let finalLng = lng !== undefined ? lng : req.body.lng;
             let finalAddress = (typeof address === "string") ? address : req.body.address;
@@ -334,12 +334,12 @@ class ChatController {
                 // Get all admins to add as participants
                 const admins = await AdminEmailAuth.find({}, "_id");
                 const adminIds = admins.map(admin => admin._id);
-                
+
                 // Participants: User (sender), all Admins, Client (if not sender), Photographer (if assigned)
                 const participantsSet = new Set();
                 participantsSet.add(userId.toString());
                 adminIds.forEach(id => participantsSet.add(id.toString()));
-                
+
                 if (booking) {
                     if (booking.client_id) participantsSet.add(booking.client_id.toString());
                     if (booking.photographer_id) participantsSet.add(booking.photographer_id.toString());
@@ -515,6 +515,19 @@ class ChatController {
         } catch (err) {
             next(err);
         }
+    }
+    async rejectBooking(req, res, next) {
+        const id = req.params.id;
+        if (!id) {
+            return res.status(400).json({ success: false, message: "Invalid Quotation ID" });
+        }
+        const quotation = await Message.findOne({ _id: id, messageType: "paymentCard" });
+        if (!quotation) {
+            return res.status(404).json({ success: false, message: "Not a Payment Card" });
+        }
+        quotation.isRejected = true;
+        await quotation.save();
+        return res.status(200).json({ success: true, message: "Quotation rejected successfully" });
     }
 }
 
