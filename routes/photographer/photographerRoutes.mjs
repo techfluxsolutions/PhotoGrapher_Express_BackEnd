@@ -103,7 +103,10 @@ router.post("/bookings/:id/gallery/share", (req, res, next) => BookingController
 
 
 // --- Invoice (For their bookings) ---
-router.get("/invoices/:bookingId", (req, res, next) => BookingController.downloadInvoice(req, res, next));
+router.get("/invoices/:bookingId", (req, res, next) => BookingController.downloadCustomerInvoice(req, res, next));
+router.get("/partner-invoices/:bookingId", (req, res, next) => BookingController.downloadPartnerInvoice(req, res, next));
+router.get("/photographer-invoice/:bookingId", (req, res, next) => BookingController.downloadPartnerInvoice(req, res, next));
+router.get("/partner-invoice/:bookingId", (req, res, next) => BookingController.downloadPartnerInvoice(req, res, next));
 
 // --- Notifications ---
 router.get("/notifications", (req, res, next) => NotificationController.getNotifications(req, res, next));

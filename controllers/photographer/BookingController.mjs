@@ -758,10 +758,37 @@ class BookingController {
         }
     }
 
-    // Download Invoice
-    async downloadInvoice(req, res, next) {
-        // Delegate to InvoiceController logic for Partner Receipts
-        return downloadPartnerInvoice(req, res, next);
+    // Download Invoices
+    async downloadCustomerInvoice(req, res, next) {
+        try {
+            const booking = await ServiceBooking.findById(req.params.bookingId);
+            if (!booking) return res.status(404).json({ success: false, message: "Booking not found" });
+
+            // Check authorization
+            if (booking.photographer_id?.toString() !== req.user.id && !booking.photographerIds?.includes(req.user.id)) {
+                return res.status(403).json({ success: false, message: "Unauthorized to view this invoice" });
+            }
+
+            return downloadInvoice(req, res, next);
+        } catch (err) {
+            next(err);
+        }
+    }
+
+    async downloadPartnerInvoice(req, res, next) {
+        try {
+            const booking = await ServiceBooking.findById(req.params.bookingId);
+            if (!booking) return res.status(404).json({ success: false, message: "Booking not found" });
+
+            // Check authorization
+            if (booking.photographer_id?.toString() !== req.user.id) {
+                return res.status(403).json({ success: false, message: "Unauthorized: Only the assigned photographer can download their receipt" });
+            }
+
+            return downloadPartnerInvoice(req, res, next);
+        } catch (err) {
+            next(err);
+        }
     }
     async getBookingCount(req, res, next) {
         try {
@@ -946,6 +973,51 @@ class BookingController {
                 ]
             };
 
+            // Date Filter
+            const { startDate, endDate } = req.query;
+            if (startDate) {
+                const sDate = new Date(startDate);
+                if (isNaN(sDate.getTime())) {
+                    return res.status(200).json({ success: false, message: "Invalid startDate format." });
+                }
+                sDate.setUTCHours(0, 0, 0, 0);
+
+                const eDate = endDate ? new Date(endDate) : new Date(startDate);
+                if (isNaN(eDate.getTime())) {
+                    return res.status(200).json({ success: false, message: "Invalid endDate format." });
+                }
+                eDate.setUTCHours(23, 59, 59, 999);
+                
+                const fs = sDate.toISOString().split("T")[0];
+                const ts = eDate.toISOString().split("T")[0];
+
+                query.$and = query.$and || [];
+                query.$and.push({
+                    $or: [
+                        { bookingDate: { $gte: sDate, $lte: eDate } },
+                        { startDate: { $gte: fs, $lte: ts } }
+                    ]
+                });
+            }
+
+            // Search Filter
+            const { search } = req.query;
+            if (search) {
+                const searchRegex = new RegExp(search, "i");
+                const matchingClients = await User.find({ username: searchRegex }).select("_id");
+                const clientIds = matchingClients.map(c => c._id);
+                
+                const searchOr = [
+                    { veroaBookingId: searchRegex }
+                ];
+                if (clientIds.length > 0) {
+                    searchOr.push({ client_id: { $in: clientIds } });
+                }
+
+                query.$and = query.$and || [];
+                query.$and.push({ $or: searchOr });
+            }
+
             const [bookings, total] = await Promise.all([
                 ServiceBooking.find(query)
                     .sort({ startDate: 1, bookingDate: 1, createdAt: 1 }) // Sort earliest first
@@ -978,7 +1050,8 @@ class BookingController {
                     city: booking.city,
                     lat: booking.lat || null,
                     lng: booking.lng || null,
-                    address: displayAddress
+                    address: displayAddress,
+                    otpVerified: booking.otpVerified
                 };
 
                 // Only include client number for today's bookings

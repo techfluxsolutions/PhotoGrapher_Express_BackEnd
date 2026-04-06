@@ -24,6 +24,9 @@ import DataLinksController from "../../controllers/DataLinksController.js";
 import ReviewAndRatingController from "../../controllers/User/ReviewAndRating.mjs";
 import authMiddleware from "../../middleware/authmiddleware.mjs";
 import CloudPlanController from "../../controllers/Admin/CloudPlanController.mjs";
+import EditingController from "../../controllers/Admin/EditingPlanController.mjs";
+import PhotographyPlanController from "../../controllers/Admin/PhotographyPlanController.mjs";
+
 const router = express.Router();
 import { uploadController } from "../../controllers/uploadController.js";
 // --- Debug ---
@@ -244,7 +247,23 @@ router.delete("/deleteAllFiles/:bookingId", (req, res, next) => uploadController
 
 router.get("/getArrayImages/:bookingId", (req, res, next) => uploadController.getUrlsListArray(req, res, next));
 
-//
+
+// --- Editing Plan Management ---
+router.post("/editing-plans", (req, res, next) => EditingController.create(req, res, next));
+router.get("/editing-plans", (req, res, next) => EditingController.getAll(req, res, next));
+router.get("/editing-plans/:id", (req, res, next) => EditingController.getById(req, res, next));
+router.put("/editing-plans/:id", (req, res, next) => EditingController.update(req, res, next));
+router.delete("/editing-plans/:id", (req, res, next) => EditingController.delete(req, res, next));
+
+// --- Photography Plan Management ---
+router.post("/photography-plans", (req, res, next) => PhotographyPlanController.create(req, res, next));
+router.get("/photography-plans", (req, res, next) => PhotographyPlanController.getAll(req, res, next));
+router.get("/photography-plans/:id", (req, res, next) => PhotographyPlanController.getById(req, res, next));
+router.put("/photography-plans/:id", (req, res, next) => PhotographyPlanController.update(req, res, next));
+router.delete("/photography-plans/:id", (req, res, next) => PhotographyPlanController.delete(req, res, next));
+
+
+
 // --- Admin Management (MUST BE LAST - generic /:id routes) ---
 router.post("/", upload.single("avatar"), (req, res, next) => AdminController.create(req, res, next));
 router.get("/", (req, res, next) => AdminController.getAll(req, res, next));
@@ -252,5 +271,6 @@ router.put("/:id/status", (req, res, next) => AdminController.changeStatus(req, 
 router.get("/:id", (req, res, next) => AdminController.getById(req, res, next));
 router.put("/:id", (req, res, next) => AdminController.update(req, res, next));
 router.delete("/:id", (req, res, next) => AdminController.delete(req, res, next));
+
 
 export default router;

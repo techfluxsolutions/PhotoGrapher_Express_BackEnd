@@ -26,7 +26,10 @@ const roleSchema = new mongoose.Schema({
             'Roles',
             'Staff',
             'Queries',
-            'Storage Management'
+            'Storage Management',
+            'Contact Us',
+            'Join Us',
+            'Gallery Plan'
         ],
         default: []
     }
