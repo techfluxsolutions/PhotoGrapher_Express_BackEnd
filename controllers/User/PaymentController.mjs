@@ -160,7 +160,7 @@ class PaymentController {
     if (booking.paymentStatus === "fully paid") return;
 
     // Update Payment collection (similar to your verify function)
-    let paymentRecord = await Payment.findOne({ job_id: booking._id });
+    let paymentRecord = await Payment.findOne({ job_id: booking._id, payment_status: "pending" });
 
     if (!paymentRecord) {
       paymentRecord = await Payment.create({
