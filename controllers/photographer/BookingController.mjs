@@ -168,6 +168,33 @@ class BookingController {
                 });
             }
 
+            // --- Search Filter (Client Name or Veroa ID) ---
+            const { search } = req.query;
+            if (search) {
+                const searchRegex = new RegExp(search, "i");
+                
+                // Find clients whose username matches search
+                const matchingClients = await User.find({ username: searchRegex }).select("_id");
+                const clientIds = matchingClients.map(c => c._id);
+                
+                const searchOr = [
+                    { veroaBookingId: searchRegex }
+                ];
+                if (clientIds.length > 0) {
+                    searchOr.push({ client_id: { $in: clientIds } });
+                }
+
+                if (filter.$and) {
+                    filter.$and.push({ $or: searchOr });
+                } else if (filter.$or) {
+                    const existingOr = filter.$or;
+                    delete filter.$or;
+                    filter.$and = [{ $or: existingOr }, { $or: searchOr }];
+                } else {
+                    filter.$or = searchOr;
+                }
+            }
+
             const [bookings, total] = await Promise.all([
                 ServiceBooking.find(filter)
                     .select("-gallery -images")

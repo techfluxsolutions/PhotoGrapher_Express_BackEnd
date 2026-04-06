@@ -671,3 +671,4 @@
 {"level":"info","message":"::1 - - [06/Apr/2026:09:06:42 +0000] \"POST /api/photographers/bookings/69ca1fae655a31ab4847ba30/verify-otp HTTP/1.1\" 200 118 \"-\" \"axios/0.28.1\"","timestamp":"2026-04-06 14:36:42"}
 {"level":"info","message":"::1 - - [06/Apr/2026:09:08:14 +0000] \"POST /api/photographers/bookings/69ca1fae655a31ab4847ba30/verify-otp HTTP/1.1\" 400 50 \"-\" \"axios/0.28.1\"","timestamp":"2026-04-06 14:38:14"}
 {"level":"info","message":"::1 - - [06/Apr/2026:09:08:30 +0000] \"POST /api/photographers/bookings/69ca1fae655a31ab4847ba30/resend-otp HTTP/1.1\" 200 143 \"-\" \"axios/0.28.1\"","timestamp":"2026-04-06 14:38:30"}
+{"level":"info","message":"::1 - - [06/Apr/2026:09:12:08 +0000] \"POST /api/photographers/bookings/69ca1fae655a31ab4847ba30/resend-otp HTTP/1.1\" 400 51 \"-\" \"axios/0.28.1\"","timestamp":"2026-04-06 14:42:08"}
