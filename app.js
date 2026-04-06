@@ -152,7 +152,7 @@ app.use(
   })
 );
 
-// --- System Monitoring Route ---
+// --- System Monitoring Route --
 // Health check endpoint for uptime monitoring
 app.get("/api/health", (req, res) => {
   res.status(200).json({
@@ -163,7 +163,7 @@ app.get("/api/health", (req, res) => {
   });
 });
 
-// --- Main Route Mounting ---
+// --- Main Route Mounting ----
 app.use("/api/auth", authRoutes);
 
 // Detailed role-based routes

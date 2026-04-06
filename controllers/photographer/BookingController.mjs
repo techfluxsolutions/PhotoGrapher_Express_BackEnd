@@ -12,7 +12,7 @@ import {
 import fs from 'fs';
 import path from 'path';
 import { sendBookingSMS, sendMessageCentral, retryMessageCentral, verifyMessageCentral } from "../../utils/messageCentral.mjs";
-import { downloadInvoice } from "../../controllers/Admin/InvoiceController.mjs";
+import { downloadInvoice, downloadPartnerInvoice } from "../../controllers/Admin/InvoiceController.mjs";
 
 class BookingController {
     // Helper to format date to IST (Separate Date and Time)
@@ -81,18 +81,20 @@ class BookingController {
                 };
             } else if (statusToFilter === "accepted") {
                 // Shows bookings specifically assigned to me and explicitly accepted/confirmed
-                // ONLY for TODAY or FUTURE dates
-                const todayMidnight = new Date();
-                todayMidnight.setUTCHours(0, 0, 0, 0);
-                const todayStr = todayMidnight.toISOString().split("T")[0];
+                // ONLY for FUTURE dates (Tomorrow onwards), as requested.
+                const now = new Date();
+                const istTime = new Date(now.getTime() + (5.5 * 60 * 60 * 1000));
+                const tomorrowIST = new Date(istTime.getTime() + (24 * 60 * 60 * 1000));
+                const tomorrowStr = tomorrowIST.toISOString().split("T")[0];
+                const tomorrowStartIST = new Date(`${tomorrowStr}T00:00:00.000+05:30`);
 
                 filter = {
                     photographer_id: photographerId,
                     bookingStatus: "accepted",
                     status: { $nin: ["completed", "canceled"] },
                     $or: [
-                        { bookingDate: { $gte: todayMidnight } },
-                        { startDate: { $gte: todayStr } }
+                        { bookingDate: { $gte: tomorrowStartIST } },
+                        { startDate: { $gte: tomorrowStr } }
                     ]
                 };
             } else {
@@ -166,6 +168,33 @@ class BookingController {
                 });
             }
 
+            // --- Search Filter (Client Name or Veroa ID) ---
+            const { search } = req.query;
+            if (search) {
+                const searchRegex = new RegExp(search, "i");
+                
+                // Find clients whose username matches search
+                const matchingClients = await User.find({ username: searchRegex }).select("_id");
+                const clientIds = matchingClients.map(c => c._id);
+                
+                const searchOr = [
+                    { veroaBookingId: searchRegex }
+                ];
+                if (clientIds.length > 0) {
+                    searchOr.push({ client_id: { $in: clientIds } });
+                }
+
+                if (filter.$and) {
+                    filter.$and.push({ $or: searchOr });
+                } else if (filter.$or) {
+                    const existingOr = filter.$or;
+                    delete filter.$or;
+                    filter.$and = [{ $or: existingOr }, { $or: searchOr }];
+                } else {
+                    filter.$or = searchOr;
+                }
+            }
+
             const [bookings, total] = await Promise.all([
                 ServiceBooking.find(filter)
                     .select("-gallery -images")
@@ -205,11 +234,7 @@ class BookingController {
                 }
 
                 // Construct Venue if address is missing
-                const venueParts = [];
-                if (booking.flatOrHouseNo) venueParts.push(booking.flatOrHouseNo);
-                if (booking.streetName) venueParts.push(booking.streetName);
-                if (booking.city) venueParts.push(booking.city);
-                const displayAddress = booking.address || (venueParts.length > 0 ? venueParts.join(", ") : null);
+                const displayAddress = booking.address || booking.location || ""
 
                 return {
                     _id: booking._id,
@@ -735,8 +760,8 @@ class BookingController {
 
     // Download Invoice
     async downloadInvoice(req, res, next) {
-        // Delegate to InvoiceController logic
-        return downloadInvoice(req, res, next);
+        // Delegate to InvoiceController logic for Partner Receipts
+        return downloadPartnerInvoice(req, res, next);
     }
     async getBookingCount(req, res, next) {
         try {
@@ -745,13 +770,15 @@ class BookingController {
             const upcommingBookingCount = await ServiceBooking.countDocuments({
                 photographer_id: myId,
                 bookingStatus: "accepted",
-                date: {
-                    $gte: todaysDate
-                }
+                $or: [
+                    { bookingDate: { $gte: todaysDate } },
+                    { startDate: { $gte: todaysDate.toISOString().split("T")[0] } }
+                ]
             });
             const completedBookingCount = await ServiceBooking.countDocuments({
                 photographer_id: myId,
-                bookingStatus: "completed"
+                bookingStatus: "accepted",
+                status: "completed"
             });
             const uploadPending = await ServiceBooking.countDocuments({
                 photographer_id: myId,
@@ -781,6 +808,8 @@ class BookingController {
                 photographer_id: myId,
                 bookingStatus: "accepted",
                 $or: [
+                    { startDate: { $lte: today }, endDate: { $gte: today } },
+                    { bookingDate: { $gte: new Date(today), $lt: new Date(new Date(today).getTime() + 86400000) } },
                     { startDate: today },
                     { endDate: today }
                 ]
@@ -795,11 +824,7 @@ class BookingController {
                 const ist = this.formatIST(booking.bookingDate, booking.startDate || booking.eventDate);
 
                 // Construct Venue if address is missing
-                const venueParts = [];
-                if (booking.flatOrHouseNo) venueParts.push(booking.flatOrHouseNo);
-                if (booking.streetName) venueParts.push(booking.streetName);
-                if (booking.city) venueParts.push(booking.city);
-                const displayAddress = booking.address || (venueParts.length > 0 ? venueParts.join(", ") : null);
+                const displayAddress = booking.address || booking.location || ""
 
                 return {
                     _id: booking._id,
@@ -835,13 +860,17 @@ class BookingController {
     async getSummaryCounts(req, res) {
         try {
             const myId = new mongoose.Types.ObjectId(req.user.id);
-            const todayMidnight = new Date();
-            todayMidnight.setUTCHours(0, 0, 0, 0);
-            const todayStr = todayMidnight.toISOString().split("T")[0];
+            const now = new Date();
+            // Adjust to IST (UTC+5:30)
+            const istTime = new Date(now.getTime() + (5.5 * 60 * 60 * 1000));
+            const todayStr = istTime.toISOString().split("T")[0];
+            
+            const tomorrowIST = new Date(istTime.getTime() + (24 * 60 * 60 * 1000));
+            const tomorrowStr = tomorrowIST.toISOString().split("T")[0];
 
-            const tomorrowMidnight = new Date(todayMidnight);
-            tomorrowMidnight.setUTCDate(tomorrowMidnight.getUTCDate() + 1);
-            const tomorrowStr = tomorrowMidnight.toISOString().split("T")[0];
+            // Convert to UTC Date for comparison (Start of Today IST in UTC)
+            const todayStartIST = new Date(`${todayStr}T00:00:00.000+05:30`);
+            const tomorrowStartIST = new Date(`${tomorrowStr}T00:00:00.000+05:30`);
 
             const acceptedBase = {
                 photographer_id: myId,
@@ -849,31 +878,32 @@ class BookingController {
                 status: { $nin: ["completed", "canceled"] }
             };
 
-            // 1. todaysBookings: Total Active work (Today + Future)
+            // 1. Todays & Upcoming: (Today + Future)
             const activeCount = await ServiceBooking.countDocuments({
                 ...acceptedBase,
                 $or: [
-                    { bookingDate: { $gte: todayMidnight } },
+                    { bookingDate: { $gte: todayStartIST } },
                     { startDate: { $gte: todayStr } }
                 ]
             });
 
-            // 2. upcommingBooking: Strictly Tomorrow onwards (Future only)
+            // 2. Upcoming: Strictly Tomorrow onwards
             const futureOnlyCount = await ServiceBooking.countDocuments({
                 ...acceptedBase,
                 $or: [
-                    { bookingDate: { $gte: tomorrowMidnight } },
+                    { bookingDate: { $gte: tomorrowStartIST } },
                     { startDate: { $gte: tomorrowStr } }
                 ]
             });
 
-            // 3. completed: History count (including past date bookings, excluding canceled)
+            // 3. Completed: History count (must be accepted, past or completed)
             const completedCount = await ServiceBooking.countDocuments({
                 photographer_id: myId,
+                bookingStatus: "accepted",
                 status: { $ne: "canceled" },
                 $or: [
                     { status: "completed" },
-                    { bookingDate: { $lt: todayMidnight } },
+                    { bookingDate: { $lt: todayStartIST } },
                     { startDate: { $lt: todayStr } }
                 ]
             });
@@ -930,13 +960,12 @@ class BookingController {
                 const ist = this.formatIST(booking.bookingDate, booking.startDate || booking.eventDate);
 
                 // Construct Venue if address is missing
-                const venueParts = [];
-                if (booking.flatOrHouseNo) venueParts.push(booking.flatOrHouseNo);
-                if (booking.streetName) venueParts.push(booking.streetName);
-                if (booking.city) venueParts.push(booking.city);
-                const displayAddress = booking.address || (venueParts.length > 0 ? venueParts.join(", ") : null);
+                const displayAddress = booking.address || booking.location || ""
 
-                return {
+                const bStartDate = booking.startDate || (booking.bookingDate ? booking.bookingDate.toISOString().split("T")[0] : null);
+                const isToday = bStartDate === todayStr;
+
+                const result = {
                     _id: booking._id,
                     bookingId: booking.veroaBookingId,
                     clientName: booking.client_id?.username || "N/A",
@@ -951,6 +980,13 @@ class BookingController {
                     lng: booking.lng || null,
                     address: displayAddress
                 };
+
+                // Only include client number for today's bookings
+                if (isToday) {
+                    result.clientnumber = booking.client_id?.mobileNumber || "N/A";
+                }
+
+                return result;
             });
 
             return sendSuccessResponse(res, {
@@ -972,6 +1008,10 @@ class BookingController {
             const booking = await ServiceBooking.findById(id).populate("photographer_id");
             if (!booking) {
                 return sendErrorResponse(res, { message: "Booking not found" }, 404);
+            }
+
+            if (booking.otpVerified) {
+                return sendErrorResponse(res, { message: "This booking is already OTP verified." }, 400);
             }
 
             // Verify the photographer requesting the OTP is the one assigned
@@ -1053,6 +1093,10 @@ class BookingController {
                 return sendErrorResponse(res, { message: "Booking not found" }, 404);
             }
 
+            if (booking.otpVerified) {
+                return sendErrorResponse(res, { message: "This booking is already OTP verified." }, 400);
+            }
+
             // Verify the photographer doing the verification is the one assigned
             const requesterId = req.user?.id || req.user?._id;
             const assignedId = booking.photographer_id?._id || booking.photographer_id;
@@ -1068,10 +1112,26 @@ class BookingController {
             // Call Message Central to verify the 4-digit code against the stored token
             try {
                 const response = await verifyMessageCentral(booking.bookingOtp, otp);
+                const responseData = response?.data || {};
+                const providerCode = Number(responseData.responseCode || responseData.data?.responseCode || 0);
+
+                if (response.status !== 200 || providerCode !== 200) {
+                     let errorMessage = "Invalid or expired OTP";
+                     if (providerCode === 702) errorMessage = "Incorrect OTP entered. Please try again.";
+                     if (providerCode === 705) errorMessage = "OTP session expired. Please resend.";
+                     if (providerCode === 700) errorMessage = "Verification failed. Please try again.";
+
+                     return sendErrorResponse(res, { 
+                        message: errorMessage, 
+                        provider: responseData.message || responseData.errorMessage,
+                        providerCode
+                    }, 400);
+                }
                 
                 // If we are here, it means the provider returned 200/Success
                 // Mark the booking as verified/confirmed
                 booking.bookingOtp = null; // Clear OTP after success
+                booking.otpVerified = true;
                 booking.status = "confirmed";
                 
                 await booking.save();
@@ -1079,11 +1139,18 @@ class BookingController {
                 return sendSuccessResponse(res, { bookingId: id }, "OTP verified successfully. Job confirmed.");
             } catch (err) {
                 const errorData = err.response?.data || {};
+                const providerCode = Number(errorData.responseCode || errorData.data?.responseCode || err.response?.status || 0);
                 console.error("OTP Verification failed for booking:", id, errorData);
                 
+                let errorMessage = "Invalid or expired OTP";
+                if (providerCode === 702) errorMessage = "Incorrect OTP entered. Please try again.";
+                if (providerCode === 705) errorMessage = "OTP session expired. Please resend.";
+                if (providerCode === 700) errorMessage = "Verification failed. Please try again.";
+
                 return sendErrorResponse(res, { 
-                    message: "Invalid or expired OTP", 
-                    provider: errorData.message || errorData.errorMessage
+                    message: errorMessage, 
+                    provider: errorData.message || errorData.errorMessage,
+                    providerCode
                 }, 400);
             }
         } catch (error) {

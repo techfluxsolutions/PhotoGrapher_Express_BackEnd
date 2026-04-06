@@ -18,6 +18,7 @@ import PartnerRegistrationController from "../controllers/PartnerRegistrationCon
 import ContactUsController from "../controllers/ContactUsController.mjs";
 import DataLinksController from "../controllers/DataLinksController.js";
 import PaymentController from "../controllers/User/PaymentController.mjs";
+import CloudPlanController from "../controllers/Admin/CloudPlanController.mjs";
 const router = express.Router();
 import { uploadController } from "../controllers/uploadController.js";
 // Partner Registration (Public)
@@ -109,6 +110,12 @@ router.get("/reviews/:id", (req, res, next) => ReviewController.getById(req, res
 
 // --- Services ---
 router.get("/services", (req, res, next) => ServiceController.list(req, res, next));
+
+// --- Cloud Plans ---
+router.get("/cloud-plans", (req, res, next) => CloudPlanController.getAll(req, res, next));
+router.get("/cloud-plans/:id", (req, res, next) => CloudPlanController.getOne(req, res, next));
+router.post("/cloud-plans/create-order", (req, res, next) => CloudPlanController.createCloudPlanOrder(req, res, next));
+router.post("/cloud-plans/verify", (req, res, next) => CloudPlanController.verifyCloudPlanPayment(req, res, next));
 
 
 

@@ -11,6 +11,7 @@ import Review from "./Review.mjs";
 import Payment from "./Payment.mjs";
 import Payout from "./Payout.mjs";
 import Notification from "./Notification.mjs";
+import CloudPayment from "./CloudPayment.mjs";
 
 export {
   Admin,
@@ -25,6 +26,7 @@ export {
   Payment,
   Payout,
   Notification,
+  CloudPayment,
 };
 
 // Optional: export as default object for easier import
@@ -41,4 +43,5 @@ export default {
   Payment,
   Payout,
   Notification,
+  CloudPayment,
 };

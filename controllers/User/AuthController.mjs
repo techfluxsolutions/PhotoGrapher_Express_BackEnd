@@ -85,6 +85,14 @@ class AuthController {
         }
       }
 
+      // Check Photographer Activation Status
+      if (role === "photographer" && user.status !== "active") {
+        return res.status(403).json({
+          success: false,
+          message: "Your account is unverified. Please contact the admin.",
+        });
+      }
+
       /* 4️⃣ OTP Bypass */
       if (OTP_BYPASS_ENABLED && OTP_BYPASS_NUMBERS.includes(cleanedMobile)) {
         user.verificationId = "bypass_verification_id";
@@ -242,6 +250,14 @@ class AuthController {
         return res.status(404).json({
           success: false,
           message: "User not found",
+        });
+      }
+
+      // Check Photographer Activation Status
+      if (role === "photographer" && user.status !== "active") {
+        return res.status(403).json({
+          success: false,
+          message: "Your account is unverified. Please contact the admin.",
         });
       }
 

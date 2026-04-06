@@ -7,22 +7,8 @@ const cloudPlansSchema = new mongoose.Schema({
     },
     days: {
         type: Number,
-    },
-    isPaid: {
-        type: Boolean,
-        default: false
-    },
-    booking_id: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "ServiceBooking"
-    },
-    client_id: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "User"
-    },
-    expiry_date: {
-        type: Date,
-    } 
-})
+        required: true
+    }
+}, { timestamps: true })
 
 export default mongoose.model("CloudPlans", cloudPlansSchema);

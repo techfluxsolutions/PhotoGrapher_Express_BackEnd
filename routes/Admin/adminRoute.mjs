@@ -10,7 +10,7 @@ import PaymentController from "../../controllers/Admin/PaymentController.mjs";
 import AdminEmailAuthController from "../../controllers/Admin/AdminEmailAuthController.mjs";
 import PhotographerController from "../../controllers/photographer/PhotographerController.mjs"; // Added Import
 import upload from "../../Config/multer.mjs";
-import { downloadInvoice } from "../../controllers/Admin/InvoiceController.mjs";
+import { downloadInvoice, downloadPartnerInvoice, testUserInvoice, testPartnerInvoice } from "../../controllers/Admin/InvoiceController.mjs";
 import { chunkUpload } from "../../Config/chunkMulter.mjs";
 import SubscribedUserController from "../../controllers/User/SubscribedUserController.mjs";
 import AdminController from "../../controllers/User/AdminController.mjs";
@@ -34,6 +34,10 @@ router.get("/photographers/sort", (req, res, next) => PhotographerController.get
 
 // --- Admin Authentication (No middleware required) ---
 router.post("/auth/login", (req, res, next) => AdminEmailAuthController.login(req, res, next));
+
+// --- Test Invoice Formats (Temporary - No Auth) ---
+router.get("/test/user-invoice", (req, res, next) => testUserInvoice(req, res, next));
+router.get("/test/partner-invoice", (req, res, next) => testPartnerInvoice(req, res, next));
 //
 router.post("/uploadNineServices", (req, res, next) => ServiceController.uploadNineServices(req, res, next))
 
@@ -168,6 +172,7 @@ router.delete("/customers/:id", (req, res, next) => CustomerController.delete(re
 
 // --- Invoice Management ---
 router.get("/invoices/:bookingId", (req, res, next) => downloadInvoice(req, res, next));
+router.get("/partner-invoices/:bookingId", (req, res, next) => downloadPartnerInvoice(req, res, next));
 
 //Subscriber
 

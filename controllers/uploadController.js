@@ -1,6 +1,8 @@
 import { s3Service } from "../lib/s3Service.js";
 import DataLinks from "../models/DataLinks.js";
 import ServiceBooking from "../models/ServiceBookings.mjs";
+import CloudPlans from "../models/CloudPlans.mjs";
+import CloudPayment from "../models/CloudPayment.mjs";
 import archiver from "archiver";
 import mongoose from "mongoose";
 export const uploadController = {
@@ -377,36 +379,48 @@ export const uploadController = {
             const total = await DataLinks.countDocuments({ bookingid: bookingId });
             // Fetch booking status to determine isblur
             const booking = await ServiceBooking.findById(bookingId).select("paymentStatus full_Payment firstPhotoUploadedAt fullyPaidAt");
-            let isblur = true; // Default to true (blurred)
-            let remainingDays = 0; 
-            
+            // Check if any active cloud plans exist for this booking in CloudPayment
+            const activeCloudPlan = await CloudPayment.findOne({
+                booking_id: bookingId,
+                payment_status: "paid"
+            }).sort({ expiry_date: -1 });
+
+            let isblur = false;
+            let remainingDays = 0;
+            let isFullyPaid = false;
+
             if (booking) {
-                const isFullyPaid = booking.paymentStatus === "fully paid" || booking.full_Payment === true;
+                isFullyPaid = booking.paymentStatus === "fully paid" || booking.full_Payment === true;
 
                 if (isFullyPaid) {
-                    const effectiveUploadDate = booking.firstPhotoUploadedAt || (total > 0 ? booking.createdAt : null);
+                    let expiryDate = null;
 
-                    if (effectiveUploadDate) {
-                        // Countdown starts strictly from when photos are first present
-                        const referenceDate = effectiveUploadDate;
+                    if (activeCloudPlan && activeCloudPlan.expiry_date) {
+                        expiryDate = new Date(activeCloudPlan.expiry_date);
+                    } else {
+                        const effectiveUploadDate = booking.firstPhotoUploadedAt || (total > 0 ? booking.createdAt : null);
+                        if (effectiveUploadDate) {
+                            expiryDate = new Date(effectiveUploadDate);
+                            expiryDate.setDate(expiryDate.getDate() + 14); // Default 14-day window
+                        }
+                    }
 
+                    if (expiryDate) {
                         const now = new Date();
-                        const refDate = new Date(referenceDate);
-                        const diffTime = now - refDate;
-                        const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-                        
-                        remainingDays = Math.max(0, 14 - diffDays);
-                        isblur = (diffDays > 14);
+                        const diffTime = expiryDate - now;
 
+                        // Calculate remaining days (rounded up)
+                        remainingDays = Math.max(0, Math.ceil(diffTime / (1000 * 60 * 60 * 24)));
+                        isblur = (now > expiryDate);
                     } else {
                         // Fully paid but no photos yet: Unblurred by default
                         isblur = false;
-                        remainingDays = 14; 
+                        remainingDays = 14;
                     }
                 } else {
                     // Partially paid or pending: Always blurred
                     isblur = true;
-                    remainingDays = 0; 
+                    remainingDays = 0;
                 }
             }
 
@@ -425,6 +439,8 @@ export const uploadController = {
                     data: [],
                     isblur,
                     remainingDays,
+                    full_payment: isFullyPaid,
+                    reverse_charge_mechanism: "*Reverse Charge mechanism not applicable",
                     pagination: {
                         page: pageNum,
                         limit: limitNum,
@@ -449,6 +465,8 @@ export const uploadController = {
                 message: "Images fetched successfully",
                 isblur,
                 remainingDays,
+                full_payment: isFullyPaid,
+                reverse_charge_mechanism: "*Reverse Charge mechanism not applicable",
                 data,
                 pagination: {
                     page: pageNum,

@@ -3,28 +3,39 @@ import ServiceBooking from "../../models/ServiceBookings.mjs";
 class ReviewController {
   async create(req, res, next) {
     try {
-      const {
-        clientId,
-        bookingId,
-        ratingCount,
-      } = req.body;
+      const reviewData = { ...req.body };
 
-      // Prevent duplicate review for same booking by same client
-      const existingReview = await ReviewAndRating.findOne({
-        clientId,
-        bookingId,
-
-      });
-
-      if (existingReview) {
-        return res.status(409).json({
-          success: false,
-          message: "Review already submitted for this booking",
-        });
+      // Set createdBy manually based on authenticated user
+      if (req.user) {
+        reviewData.createdBy = req.user.isAdmin ? "admin" : (req.user.userType || "user");
+        
+        // If it's a user, ensure clientId matches the authenticated user
+        if (reviewData.createdBy === "user") {
+          reviewData.clientId = req.user.id;
+        }
       }
 
-      const data = await ReviewAndRating.create(req.body);
-      await ServiceBooking.findByIdAndUpdate(bookingId, { ratingsGivenByClient: ratingCount / 2 });
+      // Prevent duplicate review for same booking by same client
+      if (reviewData.clientId && reviewData.bookingId) {
+        const existingReview = await ReviewAndRating.findOne({
+          clientId: reviewData.clientId,
+          bookingId: reviewData.bookingId,
+        });
+
+        if (existingReview) {
+          return res.status(409).json({
+            success: false,
+            message: "Review already submitted for this booking",
+          });
+        }
+      }
+
+      const data = await ReviewAndRating.create(reviewData);
+      if (reviewData.bookingId && reviewData.ratingCount) {
+        await ServiceBooking.findByIdAndUpdate(reviewData.bookingId, { 
+            ratingsGivenByClient: reviewData.ratingCount / 2 
+        });
+      }
       res.status(201).json({ success: true, data });
     } catch (error) {
       next(error);

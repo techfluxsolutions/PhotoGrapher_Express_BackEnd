@@ -95,7 +95,7 @@ class ReviewAndRatingController {
 
             const formattedReviews = reviews.map(review => ({
                 _id: review._id,
-                ratingCount: review.ratingCount,
+                ratingCount: (review.ratingCount || 0) / 2,
                 rateComments: review.rateComments,
                 createdAt: review.createdAt,
                 username: review.clientId?.username || null,
@@ -122,17 +122,32 @@ class ReviewAndRatingController {
                 createdBy: "user"
             });
 
-            const totalRating = ratings.reduce(
-                (acc, rating) => acc + rating.ratingCount,
+            const totalUserPoints = ratings.reduce(
+                (acc, r) => acc + r.ratingCount,
                 0
             );
 
-            const averageRating = ratings.length > 0 ? totalRating / ratings.length : 0;
+            // Scale from 1-10 to 1-5
+            const userAverage = ratings.length > 0 ? (totalUserPoints / ratings.length) / 2 : 0;
 
-            const adminRating = await ReviewAndRating.findOne({
+            const adminRatingDoc = await ReviewAndRating.findOne({
                 photographerId,
                 createdBy: "admin"
             }).populate("photographerId", 'professionalDetails.expertiseLevel basicInfo.profilePhoto basicInfo.fullName');
+
+            let adminRating = null;
+            let adminRatingValue = 0;
+            if (adminRatingDoc) {
+                adminRating = adminRatingDoc.toObject();
+                // Scale admin rating from 1-10 to 1-5
+                adminRatingValue = adminRating.ratingCount / 2;
+                adminRating.ratingCount = adminRatingValue;
+            }
+
+            // Calculate overall average (User + Admin) scaled to 1-5
+            const totalPoints = totalUserPoints + (adminRatingDoc ? adminRatingDoc.ratingCount : 0);
+            const totalVotes = ratings.length + (adminRatingDoc ? 1 : 0);
+            const overallAverage = totalVotes > 0 ? (totalPoints / totalVotes) / 2 : 0;
 
             const photographerDetails = await Photograoher.findById(photographerId).select("basicInfo.fullName basicInfo.profilePhoto professionalDetails.expertiseLevel")
             const avatar = process.env.BASE_URL && photographerDetails?.basicInfo?.profilePhoto ? `${process.env.BASE_URL}${photographerDetails.basicInfo.profilePhoto}` : "";
@@ -143,8 +158,12 @@ class ReviewAndRatingController {
 
             return res.status(200).json({
                 success: true,
-                averageRating,
-                totalUserRatings: ratings.length,
+                overallAverageRating: Number(overallAverage.toFixed(2)),
+                userAverageRating: Number(userAverage.toFixed(2)),
+                adminAverageRating: Number(adminRatingValue.toFixed(2)),
+                // Keeping existing fields for backward compatibility
+                averageRating: Number(userAverage.toFixed(2)),
+                totalUserRatings: ratings.length, 
                 adminRating,
                 avatar: avatar,
                 photographerDetails

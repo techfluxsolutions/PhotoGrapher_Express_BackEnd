@@ -14,7 +14,7 @@ export const sendMessageCentral = async (mobileNumber, codeLength = 4) => {
         countryCode: "91",
         flowType: "SMS",
         mobileNumber,
-        timeout: "60",
+        timeout: "180",
         messageId: "1", // Optional: system requirement for some flows
         codeLength: codeLength.toString() // Support 4 or 6 digits
     });
@@ -41,7 +41,7 @@ export const verifyMessageCentral = async (verificationId, code) => {
     const verifyUrl = `${baseUrl}/verification/v3/validateOtp?customerId=${customerId}&verificationId=${verificationId}&code=${code}`;
 
     return await axios.get(verifyUrl, {
-        headers: { authToken },
+        headers: { AuthToken: authToken },
         timeout: 10000,
     });
 };
