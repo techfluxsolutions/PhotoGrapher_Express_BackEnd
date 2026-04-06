@@ -983,6 +983,10 @@ class BookingController {
                 return sendErrorResponse(res, { message: "Booking not found" }, 404);
             }
 
+            if (booking.otpVerified) {
+                return sendErrorResponse(res, { message: "This booking is already OTP verified." }, 400);
+            }
+
             // Verify the photographer requesting the OTP is the one assigned
             const requesterId = req.user?.id || req.user?._id;
             const assignedId = booking.photographer_id?._id || booking.photographer_id;
@@ -1062,6 +1066,10 @@ class BookingController {
                 return sendErrorResponse(res, { message: "Booking not found" }, 404);
             }
 
+            if (booking.otpVerified) {
+                return sendErrorResponse(res, { message: "This booking is already OTP verified." }, 400);
+            }
+
             // Verify the photographer doing the verification is the one assigned
             const requesterId = req.user?.id || req.user?._id;
             const assignedId = booking.photographer_id?._id || booking.photographer_id;
@@ -1077,10 +1085,26 @@ class BookingController {
             // Call Message Central to verify the 4-digit code against the stored token
             try {
                 const response = await verifyMessageCentral(booking.bookingOtp, otp);
+                const responseData = response?.data || {};
+                const providerCode = Number(responseData.responseCode || responseData.data?.responseCode || 0);
+
+                if (response.status !== 200 || providerCode !== 200) {
+                     let errorMessage = "Invalid or expired OTP";
+                     if (providerCode === 702) errorMessage = "Incorrect OTP entered. Please try again.";
+                     if (providerCode === 705) errorMessage = "OTP session expired. Please resend.";
+                     if (providerCode === 700) errorMessage = "Verification failed. Please try again.";
+
+                     return sendErrorResponse(res, { 
+                        message: errorMessage, 
+                        provider: responseData.message || responseData.errorMessage,
+                        providerCode
+                    }, 400);
+                }
                 
                 // If we are here, it means the provider returned 200/Success
                 // Mark the booking as verified/confirmed
                 booking.bookingOtp = null; // Clear OTP after success
+                booking.otpVerified = true;
                 booking.status = "confirmed";
                 
                 await booking.save();
@@ -1088,11 +1112,18 @@ class BookingController {
                 return sendSuccessResponse(res, { bookingId: id }, "OTP verified successfully. Job confirmed.");
             } catch (err) {
                 const errorData = err.response?.data || {};
+                const providerCode = Number(errorData.responseCode || errorData.data?.responseCode || err.response?.status || 0);
                 console.error("OTP Verification failed for booking:", id, errorData);
                 
+                let errorMessage = "Invalid or expired OTP";
+                if (providerCode === 702) errorMessage = "Incorrect OTP entered. Please try again.";
+                if (providerCode === 705) errorMessage = "OTP session expired. Please resend.";
+                if (providerCode === 700) errorMessage = "Verification failed. Please try again.";
+
                 return sendErrorResponse(res, { 
-                    message: "Invalid or expired OTP", 
-                    provider: errorData.message || errorData.errorMessage
+                    message: errorMessage, 
+                    provider: errorData.message || errorData.errorMessage,
+                    providerCode
                 }, 400);
             }
         } catch (error) {

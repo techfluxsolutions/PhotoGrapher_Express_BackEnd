@@ -1,6 +1,6 @@
 
 import ReviewAndRating from "../../models/ReviewAndRating.mjs";
-import Photographer from "../../models/Photographer.mjs"
+import Photograoher from "../../models/Photographer.mjs"
 class ReviewAndRatingController {
     // ✅ CREATE REVIEW & RATING
     async create(req, res, next) {
@@ -95,7 +95,7 @@ class ReviewAndRatingController {
 
             const formattedReviews = reviews.map(review => ({
                 _id: review._id,
-                ratingCount: review.ratingCount,
+                ratingCount: (review.ratingCount || 0) / 2,
                 rateComments: review.rateComments,
                 createdAt: review.createdAt,
                 username: review.clientId?.username || null,
@@ -117,44 +117,53 @@ class ReviewAndRatingController {
         console.log(photographerId)
 
         try {
-            // 1. Fetch all User Ratings
-            const userRatings = await ReviewAndRating.find({
+            const ratings = await ReviewAndRating.find({
                 photographerId,
                 createdBy: "user"
             });
 
-            // 2. Fetch Admin Rating
-            const adminRating = await ReviewAndRating.findOne({
+            const totalUserPoints = ratings.reduce(
+                (acc, r) => acc + r.ratingCount,
+                0
+            );
+
+            // Scale from 1-10 to 1-5
+            const userAverage = ratings.length > 0 ? (totalUserPoints / ratings.length) / 2 : 0;
+
+            const adminRatingDoc = await ReviewAndRating.findOne({
                 photographerId,
                 createdBy: "admin"
             }).populate("photographerId", 'professionalDetails.expertiseLevel basicInfo.profilePhoto basicInfo.fullName');
 
-            // 3. Combined Average Calculation
-            let totalRatingSum = userRatings.reduce((acc, r) => acc + (r.ratingCount || 0), 0);
-            let totalRatingCount = userRatings.length;
-
-            if (adminRating) {
-                totalRatingSum += (adminRating.ratingCount || 0);
-                totalRatingCount += 1;
+            let adminRating = null;
+            let adminRatingValue = 0;
+            if (adminRatingDoc) {
+                adminRating = adminRatingDoc.toObject();
+                // Scale admin rating from 1-10 to 1-5
+                adminRatingValue = adminRating.ratingCount / 2;
+                adminRating.ratingCount = adminRatingValue;
             }
 
-            // 3. Scale down to 1-5 (assuming input is out of 10)
-            const averageRating = totalRatingCount > 0 ? parseFloat(((totalRatingSum / totalRatingCount) / 2).toFixed(1)) : 0;
+            // Calculate overall average (User + Admin) scaled to 1-5
+            const totalPoints = totalUserPoints + (adminRatingDoc ? adminRatingDoc.ratingCount : 0);
+            const totalVotes = ratings.length + (adminRatingDoc ? 1 : 0);
+            const overallAverage = totalVotes > 0 ? (totalPoints / totalVotes) / 2 : 0;
 
-            // 4. Metadata and Transformation
-            const photographerDetails = await Photographer.findById(photographerId).select("basicInfo.fullName basicInfo.profilePhoto professionalDetails.expertiseLevel")
+            const photographerDetails = await Photograoher.findById(photographerId).select("basicInfo.fullName basicInfo.profilePhoto professionalDetails.expertiseLevel")
             const avatar = process.env.BASE_URL && photographerDetails?.basicInfo?.profilePhoto ? `${process.env.BASE_URL}${photographerDetails.basicInfo.profilePhoto}` : "";
 
             if (adminRating && adminRating.photographerId && adminRating.photographerId.basicInfo) {
                 adminRating.photographerId.basicInfo.profilePhoto = avatar;
             }
 
-            const collectiveAvg = Math.min(5, Math.max(0, averageRating));
-
             return res.status(200).json({
                 success: true,
-                avgRating: collectiveAvg,
-                totalUserRatings: userRatings.length,
+                overallAverageRating: Number(overallAverage.toFixed(2)),
+                userAverageRating: Number(userAverage.toFixed(2)),
+                adminAverageRating: Number(adminRatingValue.toFixed(2)),
+                // Keeping existing fields for backward compatibility
+                averageRating: Number(userAverage.toFixed(2)),
+                totalUserRatings: ratings.length, 
                 adminRating,
                 avatar: avatar,
                 photographerDetails

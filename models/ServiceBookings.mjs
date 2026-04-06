@@ -193,6 +193,10 @@ const serviceBookingSchema = new mongoose.Schema(
       type: String,
       default: null
     },
+    otpVerified: {
+      type: Boolean,
+      default: false
+    },
     razorpayOrderId: {
       type: String,
       default: null
