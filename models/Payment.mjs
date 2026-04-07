@@ -49,6 +49,13 @@ const paymentSchema = new mongoose.Schema(
     invoice_file: {
       type: String, // URL or file path to invoice PDF
     },
+    razorpay_details: [{
+      orderId: String,
+      paymentId: String,
+      amount: Number,
+      paymentType: String,
+      date: { type: Date, default: Date.now }
+    }],
   },
   {
     timestamps: true,
