@@ -50,13 +50,6 @@ class PaymentController {
 
       const order = await razorpayInstance.orders.create(options);
 
-      booking.razorpayOrderId = order.id;
-      if (!booking.razorpayOrderIds) {
-        booking.razorpayOrderIds = [];
-      }
-      booking.razorpayOrderIds.push(order.id);
-      await booking.save();
-
       return res.status(200).json({ success: true, order });
     } catch (error) {
       console.error("Error creating Razorpay order:", error);
@@ -150,6 +143,13 @@ class PaymentController {
 
       booking.paymentMode = "online";
       booking.paymentDate = new Date().toISOString();
+      booking.razorpayOrderId = razorpay_order_id;
+      if (!booking.razorpayOrderIds) {
+        booking.razorpayOrderIds = [];
+      }
+      if (!booking.razorpayOrderIds.includes(razorpay_order_id)) {
+        booking.razorpayOrderIds.push(razorpay_order_id);
+      }
       await booking.save();
       return res.status(200).json({ success: true, message: "Payment verified successfully", payment });
     } catch (error) {
@@ -243,6 +243,12 @@ class PaymentController {
     booking.paymentMode = "online";
     booking.paymentDate = new Date();
     booking.razorpayOrderId = razorpayOrderId; // Store for future reference
+    if (!booking.razorpayOrderIds) {
+      booking.razorpayOrderIds = [];
+    }
+    if (!booking.razorpayOrderIds.includes(razorpayOrderId)) {
+      booking.razorpayOrderIds.push(razorpayOrderId);
+    }
     await booking.save();
   }
 
