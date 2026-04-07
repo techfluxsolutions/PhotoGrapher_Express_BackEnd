@@ -303,6 +303,7 @@ class MobileBookingController {
             ]
           },
           { status: { $nin: ["completed", "canceled"] } },
+          { bookingStatus: "accepted" },
           {
             $or: [
               { bookingDate: { $gte: tomorrowStartIST } },      // Tomorrow or Future (Date object)
