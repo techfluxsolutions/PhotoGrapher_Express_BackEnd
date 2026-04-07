@@ -725,3 +725,5 @@
 {"level":"info","message":"::1 - - [07/Apr/2026:12:34:00 +0000] \"GET /api/mobile/photographer/bookings/upcoming HTTP/1.1\" 403 54 \"-\" \"axios/0.28.1\"","timestamp":"2026-04-07 18:04:00"}
 {"level":"info","message":"::1 - - [07/Apr/2026:12:34:52 +0000] \"GET /api/mobile/photographer/bookings/upcoming HTTP/1.1\" 200 1233 \"-\" \"axios/0.28.1\"","timestamp":"2026-04-07 18:04:52"}
 {"level":"info","message":"::1 - - [07/Apr/2026:12:35:52 +0000] \"GET /api/photographers/bookings/pending HTTP/1.1\" 200 1842 \"-\" \"axios/0.28.1\"","timestamp":"2026-04-07 18:05:52"}
+{"level":"info","message":"::1 - - [07/Apr/2026:12:38:46 +0000] \"GET /api/mobile/photographer/bookings/upcoming HTTP/1.1\" 200 781 \"-\" \"axios/0.28.1\"","timestamp":"2026-04-07 18:08:46"}
+{"level":"info","message":"::1 - - [07/Apr/2026:12:38:58 +0000] \"GET /api/photographers/bookings/pending HTTP/1.1\" 200 994 \"-\" \"axios/0.28.1\"","timestamp":"2026-04-07 18:08:58"}
