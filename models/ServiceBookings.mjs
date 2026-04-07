@@ -200,6 +200,10 @@ const serviceBookingSchema = new mongoose.Schema(
     razorpayOrderId: {
       type: String,
       default: null
+    },
+    razorpayOrderIds: {
+      type: [String],
+      default: []
     }
   }, { timestamps: true }
 );

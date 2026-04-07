@@ -43,14 +43,12 @@ class PaymentController {
         currency: "INR",
         receipt: `receipt_${bookingId}`,
         notes: {
+          bookingId: booking._id.toString(),
           paymentType: paymentType || (booking.paymentStatus === "partially paid" ? "remaining" : "full")
         }
       };
 
       const order = await razorpayInstance.orders.create(options);
-
-      booking.razorpayOrderId = order.id;
-      await booking.save();
 
       return res.status(200).json({ success: true, order });
     } catch (error) {
@@ -101,11 +99,26 @@ class PaymentController {
           upfront_amount: paidAmount,
           payment_status: "paid",
           outstanding_amount: booking.totalAmount - paidAmount,
-          paid_type: `${paymentType === "partial" ? "partial paid" : "full paid"}`
+          paid_type: `${paymentType === "partial" ? "partial paid" : "full paid"}`,
+          razorpay_details: [{
+            orderId: razorpay_order_id,
+            paymentId: razorpay_payment_id,
+            amount: paidAmount,
+            paymentType: paymentType
+          }]
         });
       } else {
         isPaymentExisted.payment_status = "paid";
         isPaymentExisted.outstanding_amount = 0;
+        if (!isPaymentExisted.razorpay_details) {
+          isPaymentExisted.razorpay_details = [];
+        }
+        isPaymentExisted.razorpay_details.push({
+          orderId: razorpay_order_id,
+          paymentId: razorpay_payment_id,
+          amount: paidAmount,
+          paymentType: paymentType
+        });
         await isPaymentExisted.save();
         payment = isPaymentExisted;
       }
@@ -130,6 +143,13 @@ class PaymentController {
 
       booking.paymentMode = "online";
       booking.paymentDate = new Date().toISOString();
+      booking.razorpayOrderId = razorpay_order_id;
+      if (!booking.razorpayOrderIds) {
+        booking.razorpayOrderIds = [];
+      }
+      if (!booking.razorpayOrderIds.includes(razorpay_order_id)) {
+        booking.razorpayOrderIds.push(razorpay_order_id);
+      }
       await booking.save();
       return res.status(200).json({ success: true, message: "Payment verified successfully", payment });
     } catch (error) {
@@ -147,12 +167,21 @@ class PaymentController {
     const razorpayOrderId = payment.order_id || (order ? order.id : null);
     const razorpayPaymentId = payment.id;
     const paidAmount = payment.amount / 100;
+    const paymentType = payment.notes?.paymentType || (order && order.notes?.paymentType) || "full";
 
-    // Find booking using notes or order_id (you can store bookingId in notes while creating order)
-    const booking = await ServiceBooking.findOne({
-      // Add a field like razorpayOrderId in your Booking model for easy lookup
-      razorpayOrderId: razorpayOrderId
-    });
+    const bookingId = payment.notes?.bookingId || (order && order.notes?.bookingId);
+
+    let booking;
+    if (bookingId) {
+      booking = await ServiceBooking.findById(bookingId);
+    } else {
+      booking = await ServiceBooking.findOne({
+        $or: [
+          { razorpayOrderId: razorpayOrderId },
+          { razorpayOrderIds: razorpayOrderId }
+        ]
+      });
+    }
 
     if (!booking) return;
 
@@ -170,12 +199,25 @@ class PaymentController {
         payment_status: "paid",
         outstanding_amount: booking.totalAmount - paidAmount,
         paid_type: booking.paymentStatus === "pending" ? "partial paid" : "full paid",
-        razorpayPaymentId,
-        razorpayOrderId
+        razorpay_details: [{
+          orderId: razorpayOrderId,
+          paymentId: razorpayPaymentId,
+          amount: paidAmount,
+          paymentType: paymentType
+        }]
       });
     } else {
       paymentRecord.payment_status = "paid";
       paymentRecord.outstanding_amount = 0;
+      if (!paymentRecord.razorpay_details) {
+        paymentRecord.razorpay_details = [];
+      }
+      paymentRecord.razorpay_details.push({
+        orderId: razorpayOrderId,
+        paymentId: razorpayPaymentId,
+        amount: paidAmount,
+        paymentType: paymentType
+      });
       await paymentRecord.save();
     }
 
@@ -201,6 +243,12 @@ class PaymentController {
     booking.paymentMode = "online";
     booking.paymentDate = new Date();
     booking.razorpayOrderId = razorpayOrderId; // Store for future reference
+    if (!booking.razorpayOrderIds) {
+      booking.razorpayOrderIds = [];
+    }
+    if (!booking.razorpayOrderIds.includes(razorpayOrderId)) {
+      booking.razorpayOrderIds.push(razorpayOrderId);
+    }
     await booking.save();
   }
 
