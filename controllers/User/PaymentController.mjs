@@ -35,15 +35,17 @@ class PaymentController {
         amountToPay = booking.outStandingAmount > 0 ? booking.outStandingAmount : booking.totalAmount;
       }
 
-      // Limit huge payments to avoid Razorpay max payment limits safely
-      const MAX_PAYMENT_LIMIT = 1000000; // 5 Lakhs is the standard maximum allowable per transaction
-      if (amountToPay > MAX_PAYMENT_LIMIT) {
+      // Limit huge payments dynamically to circumvent Razorpay maximums limits safely
+      // Razorpay cap is commonly 5 Lakhs per order. We cap securely around 4.5 Lakhs.
+      const SAFE_MAX_AMOUNT = 450000;
+      if (amountToPay > SAFE_MAX_AMOUNT) {
         let basisAmount = booking.outStandingAmount > 0 ? booking.outStandingAmount : booking.totalAmount;
-        let stepAmount = Math.ceil(basisAmount / 4);
-        if (stepAmount > MAX_PAYMENT_LIMIT) {
-          stepAmount = Math.ceil(basisAmount / 6);
-        }
-        amountToPay = Math.min(amountToPay, stepAmount, MAX_PAYMENT_LIMIT);
+        
+        // Dynamically compute the number of slices to safely keep every slice under SAFE_MAX_AMOUNT
+        let slicesNeeded = Math.ceil(basisAmount / SAFE_MAX_AMOUNT);
+        let dynamicStepAmount = Math.ceil(basisAmount / slicesNeeded);
+        
+        amountToPay = Math.min(amountToPay, dynamicStepAmount, SAFE_MAX_AMOUNT);
       }
 
       if (!amountToPay || amountToPay <= 0) {

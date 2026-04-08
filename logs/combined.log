@@ -691,3 +691,6 @@
 {"level":"info","message":"::1 - - [08/Apr/2026:12:05:33 +0000] \"POST /api/auth/verify HTTP/1.1\" 200 842 \"-\" \"PostmanRuntime/7.51.1\"","timestamp":"2026-04-08 17:35:33"}
 {"level":"info","message":"::1 - - [08/Apr/2026:12:05:55 +0000] \"POST /api/users/payment/create-order HTTP/1.1\" 500 52 \"-\" \"PostmanRuntime/7.51.1\"","timestamp":"2026-04-08 17:35:55"}
 {"level":"info","message":"::1 - - [08/Apr/2026:12:13:40 +0000] \"POST /api/users/payment/create-order HTTP/1.1\" 200 334 \"-\" \"PostmanRuntime/7.51.1\"","timestamp":"2026-04-08 17:43:40"}
+{"level":"info","message":"::1 - - [08/Apr/2026:14:20:56 +0000] \"POST /api/users/payment/create-order HTTP/1.1\" 500 52 \"-\" \"PostmanRuntime/7.51.1\"","timestamp":"2026-04-08 19:50:56"}
+{"level":"info","message":"::1 - - [08/Apr/2026:14:32:52 +0000] \"POST /api/users/payment/create-order HTTP/1.1\" 500 17 \"-\" \"PostmanRuntime/7.51.1\"","timestamp":"2026-04-08 20:02:52"}
+{"level":"info","message":"::1 - - [08/Apr/2026:14:35:49 +0000] \"POST /api/users/payment/create-order HTTP/1.1\" 200 334 \"-\" \"PostmanRuntime/7.51.1\"","timestamp":"2026-04-08 20:05:49"}
