@@ -82,6 +82,7 @@ class BookingController {
             } else if (statusToFilter === "accepted") {
                 // Shows bookings specifically assigned to me and explicitly accepted/confirmed
                 // ONLY for FUTURE dates (Tomorrow onwards), as requested.
+                // AND only if PAID.
                 const now = new Date();
                 const istTime = new Date(now.getTime() + (5.5 * 60 * 60 * 1000));
                 const tomorrowIST = new Date(istTime.getTime() + (24 * 60 * 60 * 1000));
@@ -92,6 +93,7 @@ class BookingController {
                     photographer_id: photographerId,
                     bookingStatus: "accepted",
                     status: { $nin: ["completed", "canceled"] },
+                    paymentStatus: { $in: ["partially paid", "fully paid"] },
                     $or: [
                         { bookingDate: { $gte: tomorrowStartIST } },
                         { startDate: { $gte: tomorrowStr } }
@@ -797,6 +799,8 @@ class BookingController {
             const upcommingBookingCount = await ServiceBooking.countDocuments({
                 photographer_id: myId,
                 bookingStatus: "accepted",
+                status: { $nin: ["completed", "canceled"] },
+                paymentStatus: { $in: ["partially paid", "fully paid"] },
                 $or: [
                     { bookingDate: { $gte: todaysDate } },
                     { startDate: { $gte: todaysDate.toISOString().split("T")[0] } }
