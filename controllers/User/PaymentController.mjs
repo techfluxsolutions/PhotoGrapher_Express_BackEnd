@@ -34,6 +34,17 @@ class PaymentController {
         amountToPay = booking.outStandingAmount > 0 ? booking.outStandingAmount : booking.totalAmount;
       }
 
+      // Limit huge payments to avoid Razorpay max payment limits safely
+      const MAX_PAYMENT_LIMIT = 500000; // 5 Lakhs is the standard maximum allowable per transaction
+      if (amountToPay > MAX_PAYMENT_LIMIT) {
+        let basisAmount = booking.outStandingAmount > 0 ? booking.outStandingAmount : booking.totalAmount;
+        let stepAmount = Math.ceil(basisAmount / 4);
+        if (stepAmount > MAX_PAYMENT_LIMIT) {
+          stepAmount = Math.ceil(basisAmount / 6);
+        }
+        amountToPay = Math.min(amountToPay, stepAmount, MAX_PAYMENT_LIMIT);
+      }
+
       if (!amountToPay || amountToPay <= 0) {
         return res.status(400).json({ success: false, message: "Invalid amount or booking already paid" });
       }
@@ -88,6 +99,14 @@ class PaymentController {
       const paidAmount = order.amount / 100;
 
 
+      // Calculate new outstanding correctly
+      let currentOutstanding = booking.paymentStatus === "pending" ? booking.totalAmount : booking.outStandingAmount;
+      if (currentOutstanding == null || isNaN(currentOutstanding)) {
+        currentOutstanding = booking.totalAmount;
+      }
+      let newOutstandingAmount = currentOutstanding - paidAmount;
+      if (newOutstandingAmount < 0) newOutstandingAmount = 0;
+
       // updating payment table
       let payment;
       const isPaymentExisted = await Payment.findOne({ job_id: bookingId });
@@ -98,7 +117,7 @@ class PaymentController {
           job_id: bookingId,
           upfront_amount: paidAmount,
           payment_status: "paid",
-          outstanding_amount: booking.totalAmount - paidAmount,
+          outstanding_amount: newOutstandingAmount,
           paid_type: `${paymentType === "partial" ? "partial paid" : "full paid"}`,
           razorpay_details: [{
             orderId: razorpay_order_id,
@@ -109,7 +128,7 @@ class PaymentController {
         });
       } else {
         isPaymentExisted.payment_status = "paid";
-        isPaymentExisted.outstanding_amount = 0;
+        isPaymentExisted.outstanding_amount = newOutstandingAmount;
         if (!isPaymentExisted.razorpay_details) {
           isPaymentExisted.razorpay_details = [];
         }
@@ -122,23 +141,17 @@ class PaymentController {
         await isPaymentExisted.save();
         payment = isPaymentExisted;
       }
+
       // Update booking based on what was paid
-      if (booking.paymentStatus === "pending") {
-        if (paymentType === "partial") {
-          booking.paymentStatus = "partially paid";
-          booking.partial_Payment = true;
-          booking.outStandingAmount = booking.totalAmount - paidAmount;
-        } else {
-          booking.paymentStatus = "fully paid";
-          booking.full_Payment = true;
-          booking.outStandingAmount = 0;
-          booking.fullyPaidAt = new Date();
-        }
-      } else if (booking.paymentStatus === "partially paid") {
+      if (newOutstandingAmount <= 0) {
         booking.paymentStatus = "fully paid";
         booking.full_Payment = true;
         booking.outStandingAmount = 0;
         booking.fullyPaidAt = new Date();
+      } else {
+        booking.paymentStatus = "partially paid";
+        booking.partial_Payment = true;
+        booking.outStandingAmount = newOutstandingAmount;
       }
 
       booking.paymentMode = "online";
@@ -188,6 +201,14 @@ class PaymentController {
     // Prevent duplicate processing
     if (booking.paymentStatus === "fully paid") return;
 
+    // Calculate new outstanding correctly
+    let currentOutstanding = booking.paymentStatus === "pending" ? booking.totalAmount : booking.outStandingAmount;
+    if (currentOutstanding == null || isNaN(currentOutstanding)) {
+      currentOutstanding = booking.totalAmount;
+    }
+    let newOutstandingAmount = currentOutstanding - paidAmount;
+    if (newOutstandingAmount < 0) newOutstandingAmount = 0;
+
     // Update Payment collection (similar to your verify function)
     let paymentRecord = await Payment.findOne({ job_id: booking._id });
 
@@ -197,7 +218,7 @@ class PaymentController {
         job_id: booking._id,
         upfront_amount: paidAmount,
         payment_status: "paid",
-        outstanding_amount: booking.totalAmount - paidAmount,
+        outstanding_amount: newOutstandingAmount,
         paid_type: booking.paymentStatus === "pending" ? "partial paid" : "full paid",
         razorpay_details: [{
           orderId: razorpayOrderId,
@@ -208,7 +229,7 @@ class PaymentController {
       });
     } else {
       paymentRecord.payment_status = "paid";
-      paymentRecord.outstanding_amount = 0;
+      paymentRecord.outstanding_amount = newOutstandingAmount;
       if (!paymentRecord.razorpay_details) {
         paymentRecord.razorpay_details = [];
       }
@@ -222,22 +243,15 @@ class PaymentController {
     }
 
     // Update Booking
-    if (booking.paymentStatus === "pending") {
-      if (paidAmount < booking.totalAmount) {
-        booking.paymentStatus = "partially paid";
-        booking.partial_Payment = true;
-        booking.outStandingAmount = booking.totalAmount - paidAmount;
-      } else {
-        booking.paymentStatus = "fully paid";
-        booking.full_Payment = true;
-        booking.outStandingAmount = 0;
-        booking.fullyPaidAt = new Date();
-      }
-    } else if (booking.paymentStatus === "partially paid") {
+    if (newOutstandingAmount <= 0) {
       booking.paymentStatus = "fully paid";
       booking.full_Payment = true;
       booking.outStandingAmount = 0;
       booking.fullyPaidAt = new Date();
+    } else {
+      booking.paymentStatus = "partially paid";
+      booking.partial_Payment = true;
+      booking.outStandingAmount = newOutstandingAmount;
     }
 
     booking.paymentMode = "online";

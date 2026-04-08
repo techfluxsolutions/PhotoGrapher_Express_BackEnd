@@ -686,3 +686,8 @@
 {"level":"info","message":"::1 - - [06/Apr/2026:12:44:03 +0000] \"PUT /api/chat/reject-qutation/1234556 HTTP/1.1\" 500 - \"-\" \"PostmanRuntime/7.51.1\"","timestamp":"2026-04-06 18:14:03"}
 {"level":"info","message":"::1 - - [06/Apr/2026:13:28:21 +0000] \"PUT /api/chat/reject-qutation/699d7fb7f71265d5ab5cd303 HTTP/1.1\" 200 60 \"-\" \"PostmanRuntime/7.51.1\"","timestamp":"2026-04-06 18:58:21"}
 {"level":"info","message":"::1 - - [06/Apr/2026:13:31:10 +0000] \"PUT /api/chat/reject-qutation/699d7fb7f71265d5ab5cd303 HTTP/1.1\" 404 48 \"-\" \"PostmanRuntime/7.51.1\"","timestamp":"2026-04-06 19:01:10"}
+{"level":"info","message":"::1 - - [08/Apr/2026:12:04:04 +0000] \"POST /api/users/payment/create-order HTTP/1.1\" 403 54 \"-\" \"PostmanRuntime/7.51.1\"","timestamp":"2026-04-08 17:34:04"}
+{"level":"info","message":"::1 - - [08/Apr/2026:12:05:12 +0000] \"POST /api/auth/login HTTP/1.1\" 200 50 \"-\" \"PostmanRuntime/7.51.1\"","timestamp":"2026-04-08 17:35:12"}
+{"level":"info","message":"::1 - - [08/Apr/2026:12:05:33 +0000] \"POST /api/auth/verify HTTP/1.1\" 200 842 \"-\" \"PostmanRuntime/7.51.1\"","timestamp":"2026-04-08 17:35:33"}
+{"level":"info","message":"::1 - - [08/Apr/2026:12:05:55 +0000] \"POST /api/users/payment/create-order HTTP/1.1\" 500 52 \"-\" \"PostmanRuntime/7.51.1\"","timestamp":"2026-04-08 17:35:55"}
+{"level":"info","message":"::1 - - [08/Apr/2026:12:13:40 +0000] \"POST /api/users/payment/create-order HTTP/1.1\" 200 334 \"-\" \"PostmanRuntime/7.51.1\"","timestamp":"2026-04-08 17:43:40"}
