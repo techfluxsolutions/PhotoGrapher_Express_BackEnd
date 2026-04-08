@@ -67,12 +67,12 @@ class QuoteController {
       const skip = (page - 1) * limit;
 
       const [items, total] = await Promise.all([
-        Quote.find({ isQuoteFinal: true })
+        Quote.find({ isQuoteFinal: true, quoteStatus: { $nin: ["awaiting-payment", "upcommingBookings"] } })
           .skip(skip)
           .limit(limit)
           .sort({ finalizeAt: -1 })
           .populate("service_id clientId"),
-        Quote.countDocuments({ isQuoteFinal: true }),
+        Quote.countDocuments({ isQuoteFinal: true, quoteStatus: { $nin: ["awaiting-payment", "upcommingBookings"] } }),
       ]);
 
       return res.json({

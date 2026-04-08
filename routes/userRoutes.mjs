@@ -19,6 +19,10 @@ import ContactUsController from "../controllers/ContactUsController.mjs";
 import DataLinksController from "../controllers/DataLinksController.js";
 import PaymentController from "../controllers/User/PaymentController.mjs";
 import CloudPlanController from "../controllers/Admin/CloudPlanController.mjs";
+import CartController from "../controllers/User/CartController.mjs";
+import EditingController from "../controllers/User/EditingController.mjs";
+import PhotographyController from "../controllers/User/PhotographyController.mjs";
+
 const router = express.Router();
 import { uploadController } from "../controllers/uploadController.js";
 // Partner Registration (Public)
@@ -138,6 +142,7 @@ router.get("/servicebookings", (req, res, next) => ServiceBookingController.list
 router.get("/servicebookings/:id", (req, res, next) => ServiceBookingController.getById(req, res, next));
 router.put("/servicebookings/:id", (req, res, next) => ServiceBookingController.cancelBooking(req, res, next));
 router.get("/getpreviousbookings", (req, res, next) => ServiceBookingController.getPreviousBookings(req, res, next));
+router.put("/reschedule/:id", (req, res, next) => ServiceBookingController.reschedule(req, res, next));
 
 //Ticket Routes
 router.post("/raiseTicket", uploadTicketAttachment.single("attachment"), (req, res, next) => TicketController.create(req, res, next));
@@ -169,6 +174,21 @@ router.get("/getArrayImages/:bookingId", (req, res, next) => uploadController.ge
 router.get("/datalinks", (req, res, next) => DataLinksController.getAll(req, res, next));
 router.get("/datalinks/:id", (req, res, next) => DataLinksController.getById(req, res, next));
 
+// --- Cart ---
+router.post("/cart", (req, res, next) => CartController.addToCart(req, res, next));
+router.get("/cart", (req, res, next) => CartController.getMyCart(req, res, next));
+router.get("/cart/all", (req, res, next) => CartController.getAll(req, res, next));
+router.get("/cart/:id", (req, res, next) => CartController.getOne(req, res, next));
+router.put("/cart/:id", (req, res, next) => CartController.update(req, res, next));
+router.delete("/cart/:id", (req, res, next) => CartController.delete(req, res, next));
+
+//editing plans
+router.get("/editing-plans", (req, res, next) => EditingController.getAll(req, res, next));
+router.get("/editing-plans/:id", (req, res, next) => EditingController.getOne(req, res, next));
+
+//photography plans
+router.get("/photography-plans", (req, res, next) => PhotographyController.getAll(req, res, next));
+router.get("/photography-plans/:id", (req, res, next) => PhotographyController.getOne(req, res, next));
 
 
 

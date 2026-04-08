@@ -26,6 +26,7 @@ import authMiddleware from "../../middleware/authmiddleware.mjs";
 import CloudPlanController from "../../controllers/Admin/CloudPlanController.mjs";
 import EditingController from "../../controllers/Admin/EditingPlanController.mjs";
 import PhotographyPlanController from "../../controllers/Admin/PhotographyPlanController.mjs";
+import AdminRevenueController from "../../controllers/Admin/AdminRevenueController.mjs";
 
 const router = express.Router();
 import { uploadController } from "../../controllers/uploadController.js";
@@ -160,6 +161,10 @@ router.get("/payments/statistics", (req, res, next) => PaymentController.getStat
 router.get("/payments/:id", (req, res, next) => PaymentController.getById(req, res, next));
 router.put("/payments/:id", (req, res, next) => PaymentController.update(req, res, next));
 router.delete("/payments/:id", (req, res, next) => PaymentController.delete(req, res, next));
+
+// --- Revenue ---
+router.get("/revenue/dashboard", (req, res, next) => AdminRevenueController.getDashboard(req, res, next));
+router.get("/revenue/top-photographers", (req, res, next) => AdminRevenueController.getTopPhotographers(req, res, next));
 
 // --- Customers Management (Admin Controller) ---//
 router.post("/customers", (req, res, next) => CustomerController.create(req, res, next));

@@ -257,7 +257,7 @@ class ServiceBookingController {
         const fs = sDate.toISOString().split("T")[0];
         const ts = eDate.toISOString().split("T")[0];
 
-        // 📅 RANGE SEARCH for UPCOMING: BOTH start and end must be within [fs, ts] AND be today or future
+        // 📅 RANGE SEARCH for UPCOMING: BOTH start and end must be within [fs, ts] AND be today or future AND PAID
         filter.$and = [
           // Must be today or future
           {
@@ -267,6 +267,8 @@ class ServiceBookingController {
               { $and: [{ endDate: { $in: [null, ""] } }, { startDate: { $in: [null, ""] } }, { bookingDate: { $gte: today } }] }
             ]
           },
+          // Must not be pending payment
+          { paymentStatus: { $ne: "pending" } },
           // BOTH start and end must be within the date range [fs, ts]
           {
             $or: [
@@ -299,32 +301,37 @@ class ServiceBookingController {
           }
         ];
       } else {
-        // 📅 DEFAULT VIEW: Upcoming/Active
-        filter.$or = [
-          // Case 1: Has endDate (string) - must be >= today
-          { 
-            $and: [
-              { endDate: { $exists: true, $ne: null, $ne: "" } },
-              { endDate: { $gte: todayStr } }
+        // 📅 DEFAULT VIEW: Upcoming/Active AND PAID
+        filter.$and = [
+          {
+            $or: [
+              // Case 1: Has endDate (string) - must be >= today
+              { 
+                $and: [
+                  { endDate: { $exists: true, $ne: null, $ne: "" } },
+                  { endDate: { $gte: todayStr } }
+                ]
+              },
+              // Case 2: No endDate but has startDate (string) - must be >= today
+              { 
+                $and: [
+                  { $or: [{ endDate: { $exists: false } }, { endDate: null }, { endDate: "" }] },
+                  { startDate: { $exists: true, $ne: null, $ne: "" } },
+                  { startDate: { $gte: todayStr } }
+                ]
+              },
+              // Case 3: No endDate/startDate, use bookingDate (Date) - must be >= today
+              { 
+                $and: [
+                  { $or: [{ endDate: { $exists: false } }, { endDate: null }, { endDate: "" }] },
+                  { $or: [{ startDate: { $exists: false } }, { startDate: null }, { startDate: "" }] },
+                  { bookingDate: { $exists: true } },
+                  { bookingDate: { $gte: today } }
+                ]
+              }
             ]
           },
-          // Case 2: No endDate but has startDate (string) - must be >= today
-          { 
-            $and: [
-              { $or: [{ endDate: { $exists: false } }, { endDate: null }, { endDate: "" }] },
-              { startDate: { $exists: true, $ne: null, $ne: "" } },
-              { startDate: { $gte: todayStr } }
-            ]
-          },
-          // Case 3: No endDate/startDate, use bookingDate (Date) - must be >= today
-          { 
-            $and: [
-              { $or: [{ endDate: { $exists: false } }, { endDate: null }, { endDate: "" }] },
-              { $or: [{ startDate: { $exists: false } }, { startDate: null }, { startDate: "" }] },
-              { bookingDate: { $exists: true } },
-              { bookingDate: { $gte: today } }
-            ]
-          }
+          { paymentStatus: { $ne: "pending" } }
         ];
       }
 
