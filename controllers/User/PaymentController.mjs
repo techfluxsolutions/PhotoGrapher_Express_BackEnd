@@ -36,7 +36,7 @@ class PaymentController {
       }
 
       // Limit huge payments to avoid Razorpay max payment limits safely
-      const MAX_PAYMENT_LIMIT = 100000; // 5 Lakhs is the standard maximum allowable per transaction
+      const MAX_PAYMENT_LIMIT = 1000000; // 5 Lakhs is the standard maximum allowable per transaction
       if (amountToPay > MAX_PAYMENT_LIMIT) {
         let basisAmount = booking.outStandingAmount > 0 ? booking.outStandingAmount : booking.totalAmount;
         let stepAmount = Math.ceil(basisAmount / 4);
