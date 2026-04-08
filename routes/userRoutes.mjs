@@ -142,6 +142,7 @@ router.get("/servicebookings", (req, res, next) => ServiceBookingController.list
 router.get("/servicebookings/:id", (req, res, next) => ServiceBookingController.getById(req, res, next));
 router.put("/servicebookings/:id", (req, res, next) => ServiceBookingController.cancelBooking(req, res, next));
 router.get("/getpreviousbookings", (req, res, next) => ServiceBookingController.getPreviousBookings(req, res, next));
+router.put("/reschedule/:id", (req, res, next) => ServiceBookingController.reschedule(req, res, next));
 
 //Ticket Routes
 router.post("/raiseTicket", uploadTicketAttachment.single("attachment"), (req, res, next) => TicketController.create(req, res, next));

@@ -309,7 +309,8 @@ class MobileBookingController {
               { bookingDate: { $gte: tomorrowStartIST } },      // Tomorrow or Future (Date object)
               { startDate: { $gte: tomorrowStr } }             // Tomorrow or Future (String)
             ]
-          }
+          },
+          { paymentStatus: { $in: ["partially paid", "fully paid"] } }
         ]
       };
 

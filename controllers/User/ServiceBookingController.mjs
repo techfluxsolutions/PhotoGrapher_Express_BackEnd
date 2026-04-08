@@ -68,13 +68,15 @@ class ServiceBookingController {
       const limit = Math.max(1, parseInt(req.query.limit) || 20);
       const skip = (page - 1) * limit;
 
+      const query = { client_id: id, paymentStatus: { $ne: "pending" } };
+
       const [items, total] = await Promise.all([
-        ServiceBooking.find({ client_id: id })
+        ServiceBooking.find(query)
           .skip(skip)
           .limit(limit)
           .sort({ createdAt: -1 })
           .populate("service_id", "serviceName"),
-        ServiceBooking.countDocuments({ client_id: id }),
+        ServiceBooking.countDocuments(query),
       ]);
 
       const formattedItems = items.map((item) => {
@@ -313,6 +315,62 @@ class ServiceBookingController {
       const { id } = req.user;
       const bookings = await ServiceBooking.find({ client_id: id, is_Incomplete: true });
       return res.json({ success: true, data: bookings });
+    } catch (err) {
+      return next(err);
+    }
+  }
+  
+  async reschedule(req, res, next) {
+    try {
+      const { id } = req.params;
+      const { startDate, endDate } = req.body;
+      const { id: userId } = req.user;
+
+      if (!startDate) {
+        return res.status(400).json({ success: false, message: "startDate is required" });
+      }
+
+      // Find booking first to see if it exists
+      const booking = await ServiceBooking.findById(id);
+
+      if (!booking) {
+        return res.status(404).json({ success: false, message: "Booking not found" });
+      }
+
+      // Check authorization: Owner, Assigned Photographer, or Admin
+      const isOwner = booking.client_id && booking.client_id.toString() === userId;
+      const isAssignedPhotographer = booking.photographer_id && booking.photographer_id.toString() === userId;
+      const isAdmin = req.user.isAdmin === true;
+
+      if (!isOwner && !isAssignedPhotographer && !isAdmin) {
+        return res.status(403).json({ 
+          success: false, 
+          message: "You are not authorized to reschedule this booking" 
+        });
+      }
+
+      // Check if booking is in a state that allows rescheduling
+      if (["completed", "canceled"].includes(booking.status)) {
+        return res.status(400).json({ 
+          success: false, 
+          message: `Cannot reschedule a ${booking.status} booking` 
+        });
+      }
+
+      // Update dates
+      booking.startDate = startDate;
+      if (endDate) booking.endDate = endDate;
+      
+      // Update the Date object as well for consistent querying
+      booking.bookingDate = parseDDMMYYYY(startDate);
+
+      await booking.save();
+
+      return res.json({ 
+        success: true, 
+        message: "Booking rescheduled successfully", 
+        data: booking 
+      });
     } catch (err) {
       return next(err);
     }

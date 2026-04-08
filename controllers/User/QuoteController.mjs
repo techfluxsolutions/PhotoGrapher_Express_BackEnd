@@ -295,8 +295,8 @@ class QuoteController {
       // await quote.save();
       let deletedQuote;
       if (booking) {
-        // quote.quoteStatus = "upcommingBookings";
-        deletedQuote = await quote.deleteOne();
+        quote.quoteStatus = "awaiting-payment";
+        await quote.save();
       }
 
       return res.status(201).json({

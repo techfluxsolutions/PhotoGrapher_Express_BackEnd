@@ -1,5 +1,6 @@
 import Payment from "../../models/Payment.mjs";
 import ServiceBooking from "../../models/ServiceBookings.mjs";
+import Quote from "../../models/Quote.mjs";
 import razorpayInstance from "../../Config/razorpay.mjs";
 import crypto from "crypto";
 
@@ -151,6 +152,17 @@ class PaymentController {
         booking.razorpayOrderIds.push(razorpay_order_id);
       }
       await booking.save();
+
+      // [NEW] Update associated quote status after successful payment
+      if (booking.quoteId) {
+        try {
+          await Quote.findByIdAndUpdate(booking.quoteId, { quoteStatus: "upcommingBookings" });
+          console.log(`Associated quote ${booking.quoteId} updated to upcomingBookings after payment.`);
+        } catch (quoteUpdateErr) {
+          console.error("Error updating quote after payment:", quoteUpdateErr);
+        }
+      }
+
       return res.status(200).json({ success: true, message: "Payment verified successfully", payment });
     } catch (error) {
       console.error("Error verifying payment:", error);
@@ -250,6 +262,16 @@ class PaymentController {
       booking.razorpayOrderIds.push(razorpayOrderId);
     }
     await booking.save();
+
+    // [NEW] Update associated quote status after successful payment (Webhook)
+    if (booking.quoteId) {
+      try {
+        await Quote.findByIdAndUpdate(booking.quoteId, { quoteStatus: "upcommingBookings" });
+        console.log(`Associated quote ${booking.quoteId} updated to upcomingBookings via webhook.`);
+      } catch (quoteUpdateErr) {
+        console.error("Error updating quote via webhook:", quoteUpdateErr);
+      }
+    }
   }
 
   async handlePaymentAuthorized(payload) {
