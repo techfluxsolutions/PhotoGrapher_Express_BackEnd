@@ -201,7 +201,7 @@ class ServiceBookingController {
         const diffInHours = (currentTime - acceptedTime) / (1000 * 60 * 60);
 
         if (diffInHours > 48) {
-          return res.status(200).json({
+          return res.json({
             success: false,
             message: "Booking cannot be canceled after 48 hours of acceptance",
           });
