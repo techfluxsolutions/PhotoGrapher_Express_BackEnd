@@ -111,6 +111,8 @@ class UserController {
       for (const field of allowedFields) {
         if (req.body[field] !== undefined) {
           const value = req.body[field];
+
+          // Basic empty check (already requested)
           if (value === "" || value === null || value === undefined) {
             const capitalizedKey = field.charAt(0).toUpperCase() + field.slice(1);
             return res.status(400).json({
@@ -118,6 +120,29 @@ class UserController {
               message: `${capitalizedKey} cannot be empty`,
             });
           }
+
+          // Specific validation for email
+          if (field === "email") {
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailRegex.test(value)) {
+              return res.status(400).json({
+                success: false,
+                message: "Invalid email format",
+              });
+            }
+          }
+
+          // Specific validation for mobileNumber
+          if (field === "mobileNumber") {
+            const mobileRegex = /^[6-9]\d{9}$/;
+            if (!mobileRegex.test(value)) {
+              return res.status(400).json({
+                success: false,
+                message: "Invalid mobile number. Must be 10 digits and start with 6-9",
+              });
+            }
+          }
+
           updates[field] = value;
         }
       }
