@@ -347,7 +347,7 @@ class QuoteController {
 
       const quote = await Quote.findByIdAndUpdate(
         id,
-        { quoteStatus: "canceled" },
+        { quoteStatus: "canceled", bStatus: "rejected" },
         { new: true }
       );
 
@@ -644,6 +644,7 @@ class QuoteController {
               lat: { $ifNull: ["$lat", null] },
               lng: { $ifNull: ["$lng", null] },
               address: { $ifNull: ["$address", ""] },
+              bStatus: { $ifNull: ["$bStatus", "pending"] },
             },
           },
         ]),

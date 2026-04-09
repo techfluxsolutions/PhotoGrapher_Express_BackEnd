@@ -296,9 +296,11 @@ class QuoteController {
       // 🔄 Step 3: Update quote status
       // quote.quoteStatus = "upcommingBookings";
       // await quote.save();
+
       let deletedQuote;
       if (booking) {
         quote.quoteStatus = "awaiting-payment";
+        quote.bStatus = "accepted";
         await quote.save();
       }
 

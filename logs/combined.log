@@ -782,3 +782,15 @@
 {"level":"info","message":"::1 - - [09/Apr/2026:05:13:37 +0000] \"GET /api/users/bookings HTTP/1.1\" 200 - \"-\" \"PostmanRuntime/7.53.0\"","timestamp":"2026-04-09 10:43:37"}
 {"level":"info","message":"::1 - - [09/Apr/2026:05:16:44 +0000] \"GET /api/users/quotes HTTP/1.1\" 200 - \"-\" \"PostmanRuntime/7.53.0\"","timestamp":"2026-04-09 10:46:44"}
 {"level":"info","message":"::1 - - [09/Apr/2026:05:17:12 +0000] \"GET /api/users/quotes HTTP/1.1\" 200 - \"-\" \"PostmanRuntime/7.53.0\"","timestamp":"2026-04-09 10:47:12"}
+{"level":"info","message":"::1 - - [09/Apr/2026:05:28:56 +0000] \"GET /api/users/quotes HTTP/1.1\" 200 - \"-\" \"PostmanRuntime/7.53.0\"","timestamp":"2026-04-09 10:58:56"}
+{"level":"info","message":"::1 - - [09/Apr/2026:05:29:24 +0000] \"GET /api/users/bookings HTTP/1.1\" 200 - \"-\" \"PostmanRuntime/7.53.0\"","timestamp":"2026-04-09 10:59:24"}
+{"level":"info","message":"::1 - - [09/Apr/2026:06:44:59 +0000] \"POST /api/auth/login HTTP/1.1\" 502 111 \"-\" \"PostmanRuntime/7.53.0\"","timestamp":"2026-04-09 12:14:59"}
+{"level":"info","message":"::1 - - [09/Apr/2026:06:46:34 +0000] \"POST /api/auth/login HTTP/1.1\" 502 48 \"-\" \"PostmanRuntime/7.53.0\"","timestamp":"2026-04-09 12:16:34"}
+{"level":"info","message":"::1 - - [09/Apr/2026:06:47:01 +0000] \"POST /api/auth/login HTTP/1.1\" 400 58 \"-\" \"PostmanRuntime/7.53.0\"","timestamp":"2026-04-09 12:17:01"}
+{"level":"info","message":"::1 - - [09/Apr/2026:06:47:23 +0000] \"POST /api/auth/login HTTP/1.1\" 502 48 \"-\" \"PostmanRuntime/7.53.0\"","timestamp":"2026-04-09 12:17:23"}
+{"level":"info","message":"::1 - - [09/Apr/2026:07:00:41 +0000] \"GET /api/users/quotes HTTP/1.1\" 403 54 \"-\" \"PostmanRuntime/7.53.0\"","timestamp":"2026-04-09 12:30:41"}
+{"level":"info","message":"::1 - - [09/Apr/2026:07:04:37 +0000] \"GET /api/users/quotes HTTP/1.1\" 200 - \"-\" \"PostmanRuntime/7.53.0\"","timestamp":"2026-04-09 12:34:37"}
+{"level":"info","message":"::1 - - [09/Apr/2026:07:15:46 +0000] \"GET /api/users/quotes HTTP/1.1\" 200 - \"-\" \"PostmanRuntime/7.53.0\"","timestamp":"2026-04-09 12:45:46"}
+{"level":"info","message":"::1 - - [09/Apr/2026:07:18:12 +0000] \"GET /api/users/quotes HTTP/1.1\" 200 - \"-\" \"PostmanRuntime/7.53.0\"","timestamp":"2026-04-09 12:48:12"}
+{"level":"info","message":"::1 - - [09/Apr/2026:07:30:09 +0000] \"POST /api/auth/login HTTP/1.1\" 408 15 \"-\" \"PostmanRuntime/7.53.0\"","timestamp":"2026-04-09 13:00:09"}
+{"level":"info","message":"::1 - - [09/Apr/2026:07:32:06 +0000] \"POST /api/auth/login HTTP/1.1\" 408 15 \"-\" \"PostmanRuntime/7.53.0\"","timestamp":"2026-04-09 13:02:06"}

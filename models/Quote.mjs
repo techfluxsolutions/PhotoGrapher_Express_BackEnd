@@ -118,6 +118,16 @@ const quoteSchema = new mongoose.Schema(
       type: String,
       enum: ["pending", "yourQuotes", "awaiting-payment", "upcommingBookings", "previousBookings", "canceled"],
       default: "pending"
+    },
+    bStatus: {
+      type: String,
+      enum: ["accepted", "rejected", "pending"],
+      default: "pending"
+    },
+    photographer_id: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Photographer",
+      default: null
     }
   },
   {
