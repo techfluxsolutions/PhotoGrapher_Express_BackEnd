@@ -68,7 +68,19 @@ class ServiceBookingController {
       const limit = Math.max(1, parseInt(req.query.limit) || 20);
       const skip = (page - 1) * limit;
 
-      const query = { client_id: id, paymentStatus: { $ne: "pending" } };
+      const now = new Date();
+      const istNow = new Date(now.getTime() + (5.5 * 60 * 60 * 1000));
+      const todayStr = istNow.toISOString().split("T")[0];
+      const todayStartIST = new Date(`${todayStr}T00:00:00.000+05:30`);
+
+      const query = { 
+        client_id: id, 
+        paymentStatus: { $ne: "pending" },
+        $or: [
+          { bookingDate: { $gte: todayStartIST } },
+          { startDate: { $gte: todayStr } }
+        ]
+      };
 
       const [items, total] = await Promise.all([
         ServiceBooking.find(query)
