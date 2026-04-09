@@ -877,7 +877,8 @@ class BookingController {
                     bookingStatus: booking.bookingStatus,
                     galleryStatus: booking.galleryStatus || "Upload Pending",
                     totalAmount: booking.totalAmount,
-                    photographerAmount: booking.photographerAmount || 0
+                    photographerAmount: booking.photographerAmount || 0,
+                    IsVerified:booking.otpVerified
                 };
             });
 
@@ -1084,11 +1085,25 @@ class BookingController {
 
             const myId = new mongoose.Types.ObjectId(req.user.id);
 
-            // Filter for this photographer, only accepted bookings, and excluding those already uploaded
+            const todayMidnight = new Date();
+            todayMidnight.setUTCHours(0, 0, 0, 0);
+            const todayStr = todayMidnight.toISOString().split("T")[0];
+
+            // Filter for this photographer, only accepted bookings, excluding future dates, 
+            // and excluding those already uploaded
             const filter = {
                 photographer_id: myId,
                 bookingStatus: "accepted",
-                galleryStatus: { $ne: "Photos Uploaded" }
+                galleryStatus: { $ne: "Photos Uploaded" },
+                $and: [
+                    {
+                        $or: [
+                            { status: "completed" },
+                            { bookingDate: { $lt: todayMidnight } },
+                            { startDate: { $lt: todayStr } }
+                        ]
+                    }
+                ]
             };
 
             // Search Filter (Client Name or Veroa ID)
@@ -1105,7 +1120,6 @@ class BookingController {
                     searchOr.push({ client_id: { $in: clientIds } });
                 }
 
-                filter.$and = filter.$and || [];
                 filter.$and.push({ $or: searchOr });
             }
 
