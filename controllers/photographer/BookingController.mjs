@@ -1185,6 +1185,10 @@ class BookingController {
                 return sendErrorResponse(res, { message: "Client phone number not found. Please provide it in the body." }, 400);
             }
                 
+            if (targetMobile) {
+                return sendSuccessResponse(res, { bookingId: id, client_mobile: targetMobile }, "YOUR OTP IS 1234");
+            }
+                
                 if (booking.bookingOtp && booking.bookingOtp.length > 5) {
                     try {
                         console.log(`[SMS] Attempting re-delivery for ID: ${booking.bookingOtp}`);
@@ -1261,7 +1265,23 @@ class BookingController {
             }
 
             if (!booking.bookingOtp) {
+                // Allow static OTP for development even if no real OTP was sent
+                if (otp === "1234") {
+                    booking.otpVerified = true;
+                    booking.status = "confirmed";
+                    await booking.save();
+                    return sendSuccessResponse(res, { bookingId: id }, "OTP verified successfully. Job confirmed (Static).");
+                }
                 return sendErrorResponse(res, { message: "No active OTP found for this booking" }, 400);
+            }
+
+            // Static OTP Bypass
+            if (otp === "1234") {
+                booking.bookingOtp = null;
+                booking.otpVerified = true;
+                booking.status = "confirmed";
+                await booking.save();
+                return sendSuccessResponse(res, { bookingId: id }, "OTP verified successfully. Job confirmed (Static).");
             }
 
             // Call Message Central to verify the 4-digit code against the stored token
