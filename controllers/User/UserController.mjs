@@ -108,7 +108,10 @@ class UserController {
       let updates = {};
       for (const [key, value] of Object.entries(req.body)) {
         if (value === "" || value === null || value === undefined) {
-          continue;
+          return res.status(400).json({
+            success: false,
+            message: `${key} cannot be empty`,
+          });
         }
         updates[key] = value;
       }

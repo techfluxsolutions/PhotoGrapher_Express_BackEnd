@@ -613,6 +613,14 @@ class PhotographerController {
             }
 
             let updateData = { ...req.body };
+            for (const [key, value] of Object.entries(updateData)) {
+                if (value === "" || value === null || value === undefined) {
+                    return res.status(400).json({
+                        success: false,
+                        message: `${key} cannot be empty`,
+                    });
+                }
+            }
 
             // 1. Map Expertise Level
             if (updateData.professionalDetails?.expertiseLevel) {
