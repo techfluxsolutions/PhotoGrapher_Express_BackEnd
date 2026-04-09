@@ -808,3 +808,4 @@
 {"level":"info","message":"::1 - - [09/Apr/2026:10:25:51 +0000] \"GET /api/users/bookings HTTP/1.1\" 200 - \"-\" \"PostmanRuntime/7.53.0\"","timestamp":"2026-04-09 15:55:51"}
 {"level":"info","message":"::1 - - [09/Apr/2026:10:27:03 +0000] \"GET /api/users/bookings HTTP/1.1\" 200 65 \"-\" \"PostmanRuntime/7.53.0\"","timestamp":"2026-04-09 15:57:03"}
 {"level":"info","message":"::1 - - [09/Apr/2026:10:28:05 +0000] \"GET /api/users/bookings HTTP/1.1\" 200 - \"-\" \"PostmanRuntime/7.53.0\"","timestamp":"2026-04-09 15:58:05"}
+{"level":"info","message":"::1 - - [09/Apr/2026:10:29:26 +0000] \"GET /api/users/bookings HTTP/1.1\" 200 - \"-\" \"PostmanRuntime/7.53.0\"","timestamp":"2026-04-09 15:59:26"}
