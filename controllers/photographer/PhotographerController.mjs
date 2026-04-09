@@ -615,12 +615,15 @@ class PhotographerController {
             let updateData = { ...req.body };
             for (const [key, value] of Object.entries(updateData)) {
                 if (value === "" || value === null || value === undefined) {
+
+                    const capitalizedKey = key.charAt(0).toUpperCase() + key.slice(1);
+
                     return res.status(400).json({
                         success: false,
-                        message: `${key} cannot be empty`,
-                    });
-                }
-            }
+            message: `${capitalizedKey} cannot be empty`,
+        });
+    }
+}
 
             // 1. Map Expertise Level
             if (updateData.professionalDetails?.expertiseLevel) {
