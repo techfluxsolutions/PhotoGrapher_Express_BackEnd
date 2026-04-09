@@ -1075,6 +1075,84 @@ class BookingController {
         }
     }
 
+    // Get bookings specifically for gallery upload (filtered out "Photos Uploaded")
+    async getBookingsForGalleryUpload(req, res) {
+        try {
+            const page = Math.max(1, parseInt(req.query.page) || 1);
+            const limit = Math.max(1, parseInt(req.query.limit) || 10);
+            const skip = (page - 1) * limit;
+
+            const myId = new mongoose.Types.ObjectId(req.user.id);
+
+            // Filter for this photographer, only accepted bookings, and excluding those already uploaded
+            const filter = {
+                photographer_id: myId,
+                bookingStatus: "accepted",
+                galleryStatus: { $ne: "Photos Uploaded" }
+            };
+
+            // Search Filter (Client Name or Veroa ID)
+            const { search } = req.query;
+            if (search) {
+                const searchRegex = new RegExp(search, "i");
+                const matchingClients = await User.find({ username: searchRegex }).select("_id");
+                const clientIds = matchingClients.map(c => c._id);
+
+                const searchOr = [
+                    { veroaBookingId: searchRegex }
+                ];
+                if (clientIds.length > 0) {
+                    searchOr.push({ client_id: { $in: clientIds } });
+                }
+
+                filter.$and = filter.$and || [];
+                filter.$and.push({ $or: searchOr });
+            }
+
+            const [bookings, total] = await Promise.all([
+                ServiceBooking.find(filter)
+                    .sort({ createdAt: -1 })
+                    .populate("client_id", "username email mobileNumber avatar city")
+                    .populate("service_id", "serviceName")
+                    .skip(skip)
+                    .limit(limit),
+                ServiceBooking.countDocuments(filter)
+            ]);
+
+            const formattedBookings = bookings.map(booking => {
+                const ist = this.formatIST(booking.bookingDate, booking.startDate || booking.eventDate);
+
+                // Construct Venue if address is missing
+                const displayAddress = booking.address || booking.location || ""
+
+                return {
+                    _id: booking._id,
+                    bookingId: booking.veroaBookingId,
+                    clientName: booking.client_id?.username || "N/A",
+                    clientAvatar: booking.client_id?.avatar || null,
+                    eventType: booking.service_id?.serviceName || "N/A",
+                    date: ist.date,
+                    time: ist.time,
+                    fromDate: this.formatDMY(booking.startDate || booking.eventDate || booking.bookingDate),
+                    toDate: this.formatDMY(booking.endDate || booking.startDate || booking.eventDate || booking.bookingDate),
+                    city: booking.city,
+                    lat: booking.lat || null,
+                    lng: booking.lng || null,
+                    address: displayAddress,
+                    galleryStatus: booking.galleryStatus || "Upload Pending"
+                };
+            });
+
+            return sendSuccessResponse(res, {
+                bookings: formattedBookings,
+                meta: { total, page, limit }
+            }, "Bookings for gallery upload fetched successfully");
+        } catch (error) {
+            return sendErrorResponse(res, error, 500);
+        }
+    }
+
+
     // Resend Booking OTP for photographer
     async resendBookingOtp(req, res) {
         try {
