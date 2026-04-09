@@ -108,9 +108,10 @@ class UserController {
       let updates = {};
       for (const [key, value] of Object.entries(req.body)) {
         if (value === "" || value === null || value === undefined) {
+          const capitalizedKey = key.charAt(0).toUpperCase() + key.slice(1);
           return res.status(400).json({
             success: false,
-            message: `${key} cannot be empty`,
+            message: `${capitalizedKey} cannot be empty`,
           });
         }
         updates[key] = value;
