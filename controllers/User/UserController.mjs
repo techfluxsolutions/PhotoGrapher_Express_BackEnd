@@ -109,7 +109,7 @@ class UserController {
       let updates = {};
 
       for (const field of allowedFields) {
-        if (req.body.hasOwnProperty(field)) {
+        if (req.body[field] !== undefined) {
           const value = req.body[field];
           if (value === "" || value === null || value === undefined) {
             const capitalizedKey = field.charAt(0).toUpperCase() + field.slice(1);
