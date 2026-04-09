@@ -127,18 +127,18 @@ class UserController {
             if (!emailRegex.test(value)) {
               return res.status(400).json({
                 success: false,
-                message: "Invalid email format",
+                message: "Please enter a valid email address",
               });
             }
           }
 
           // Specific validation for mobileNumber
           if (field === "mobileNumber") {
-            const mobileRegex = /^[6-9]\d{9}$/;
+            const mobileRegex = /^\d{10}$/;
             if (!mobileRegex.test(value)) {
               return res.status(400).json({
                 success: false,
-                message: "Invalid mobile number. Must be 10 digits and start with 6-9",
+                message: "Mobile number must be 10 digits",
               });
             }
           }
