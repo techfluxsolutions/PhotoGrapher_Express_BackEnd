@@ -47,7 +47,10 @@ class QuoteController {
       // const filter = {};
       // if (enquiryId) filter.job_id = enquiryId;
       // if (photographerId) filter.photographer_id = photographerId;
-      const items = await Quote.find({ clientId: id })
+      const items = await Quote.find({ 
+        clientId: id,
+        quoteStatus: { $nin: ["awaiting-payment", "upcommingBookings", "previousBookings", "canceled"] }
+      })
         .populate("service_id")
         .sort({ createdAt: -1 });
       return res.json({ success: true, data: items });

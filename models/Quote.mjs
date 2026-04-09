@@ -113,6 +113,11 @@ const quoteSchema = new mongoose.Schema(
     finalizeAt: {
       type: Date,
       default: null
+    },
+    quoteStatus: {
+      type: String,
+      enum: ["pending", "yourQuotes", "awaiting-payment", "upcommingBookings", "previousBookings", "canceled"],
+      default: "pending"
     }
   },
   {
