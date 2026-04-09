@@ -68,7 +68,20 @@ class ServiceBookingController {
       const limit = Math.max(1, parseInt(req.query.limit) || 20);
       const skip = (page - 1) * limit;
 
-      const query = { client_id: id, paymentStatus: { $ne: "pending" } };
+      const todayMidnight = new Date();
+      todayMidnight.setUTCHours(0, 0, 0, 0);
+      const todayStr = todayMidnight.toISOString().split("T")[0];
+
+      const query = { 
+        client_id: id, 
+        paymentStatus: { $ne: "pending" },
+        status: { $ne: "canceled" },
+        $or: [
+          { bookingDate: { $gte: todayMidnight } },
+          { startDate: { $gte: todayStr } },
+          { endDate: { $gte: todayStr } }
+        ]
+      };
 
       const [items, total] = await Promise.all([
         ServiceBooking.find(query)
@@ -189,7 +202,7 @@ class ServiceBookingController {
         const diffInHours = (currentTime - acceptedTime) / (1000 * 60 * 60);
 
         if (diffInHours > 48) {
-          return res.status(400).json({
+          return res.status(200).json({
             success: false,
             message: "Booking cannot be canceled after 48 hours of acceptance",
           });
