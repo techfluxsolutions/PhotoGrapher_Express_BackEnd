@@ -155,6 +155,25 @@ class MobileBookingController {
         });
       }
 
+      const bookingFound = await ServiceBooking.findById(id);
+      if (!bookingFound) {
+        return res.status(404).json({ success: false, message: "ServiceBooking not found" });
+      }
+
+      // Check if 48 hours have passed after acceptance
+      if (bookingFound.bookingStatus === "accepted" && bookingFound.acceptedAt) {
+        const acceptedTime = new Date(bookingFound.acceptedAt);
+        const currentTime = new Date();
+        const diffInHours = (currentTime - acceptedTime) / (1000 * 60 * 60);
+
+        if (diffInHours > 48) {
+          return res.status(400).json({
+            success: false,
+            message: "Booking cannot be canceled after 48 hours of acceptance",
+          });
+        }
+      }
+
       const booking = await ServiceBooking.findByIdAndUpdate(
         id,
         { $set: updates },

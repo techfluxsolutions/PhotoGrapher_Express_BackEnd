@@ -796,3 +796,5 @@
 {"level":"info","message":"::1 - - [09/Apr/2026:07:32:06 +0000] \"POST /api/auth/login HTTP/1.1\" 408 15 \"-\" \"PostmanRuntime/7.53.0\"","timestamp":"2026-04-09 13:02:06"}
 {"level":"info","message":"::1 - - [09/Apr/2026:07:32:50 +0000] \"POST /api/auth/login HTTP/1.1\" 200 45 \"-\" \"PostmanRuntime/7.53.0\"","timestamp":"2026-04-09 13:02:50"}
 {"level":"info","message":"::1 - - [09/Apr/2026:07:33:22 +0000] \"POST /api/auth/verify HTTP/1.1\" 200 329 \"-\" \"PostmanRuntime/7.53.0\"","timestamp":"2026-04-09 13:03:22"}
+{"level":"info","message":"::1 - - [09/Apr/2026:09:31:01 +0000] \"POST /api/auth/login HTTP/1.1\" 500 51 \"-\" \"PostmanRuntime/7.53.0\"","timestamp":"2026-04-09 15:01:01"}
+{"level":"info","message":"::1 - - [09/Apr/2026:09:32:38 +0000] \"POST /api/auth/login HTTP/1.1\" 200 50 \"-\" \"PostmanRuntime/7.53.0\"","timestamp":"2026-04-09 15:02:38"}

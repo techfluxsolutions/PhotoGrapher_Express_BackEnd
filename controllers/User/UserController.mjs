@@ -105,16 +105,21 @@ class UserController {
     try {
       const { id } = req.user;
       console.log(req.body);
+      const allowedFields = ["username", "email", "mobileNumber", "state", "city"];
       let updates = {};
-      for (const [key, value] of Object.entries(req.body)) {
-        if (value === "" || value === null || value === undefined) {
-          const capitalizedKey = key.charAt(0).toUpperCase() + key.slice(1);
-          return res.status(400).json({
-            success: false,
-            message: `${capitalizedKey} cannot be empty`,
-          });
+
+      for (const field of allowedFields) {
+        if (req.body.hasOwnProperty(field)) {
+          const value = req.body[field];
+          if (value === "" || value === null || value === undefined) {
+            const capitalizedKey = field.charAt(0).toUpperCase() + field.slice(1);
+            return res.status(400).json({
+              success: false,
+              message: `${capitalizedKey} cannot be empty`,
+            });
+          }
+          updates[field] = value;
         }
-        updates[key] = value;
       }
 
       if (req.file) {
