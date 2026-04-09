@@ -779,3 +779,6 @@
 {"level":"info","message":"::1 - - [09/Apr/2026:01:18:55 +0000] \"GET /api/photographers/bookings/gallery-upload-list?search=VEROA-BK-000059&page=1&limit=10 HTTP/1.1\" 200 612 \"-\" \"PostmanRuntime/7.53.0\"","timestamp":"2026-04-09 06:48:55"}
 {"level":"info","message":"::1 - - [09/Apr/2026:01:21:04 +0000] \"GET /api/photographers/bookings/gallery-upload-list?search=VEROA-BK-000094&page=1&limit=10 HTTP/1.1\" 200 139 \"-\" \"PostmanRuntime/7.53.0\"","timestamp":"2026-04-09 06:51:04"}
 {"level":"info","message":"::1 - - [09/Apr/2026:01:23:20 +0000] \"GET /api/photographers/bookings/gallery-upload-list?search=VEROA-BK-000094&page=1&limit=10 HTTP/1.1\" 200 606 \"-\" \"PostmanRuntime/7.53.0\"","timestamp":"2026-04-09 06:53:20"}
+{"level":"info","message":"::1 - - [09/Apr/2026:05:13:37 +0000] \"GET /api/users/bookings HTTP/1.1\" 200 - \"-\" \"PostmanRuntime/7.53.0\"","timestamp":"2026-04-09 10:43:37"}
+{"level":"info","message":"::1 - - [09/Apr/2026:05:16:44 +0000] \"GET /api/users/quotes HTTP/1.1\" 200 - \"-\" \"PostmanRuntime/7.53.0\"","timestamp":"2026-04-09 10:46:44"}
+{"level":"info","message":"::1 - - [09/Apr/2026:05:17:12 +0000] \"GET /api/users/quotes HTTP/1.1\" 200 - \"-\" \"PostmanRuntime/7.53.0\"","timestamp":"2026-04-09 10:47:12"}

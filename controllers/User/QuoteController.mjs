@@ -49,7 +49,7 @@ class QuoteController {
       // if (photographerId) filter.photographer_id = photographerId;
       const items = await Quote.find({ 
         clientId: id,
-        quoteStatus: { $nin: ["awaiting-payment", "upcommingBookings", "previousBookings", "canceled"] }
+        quoteStatus: { $nin: ["upcommingBookings", "previousBookings", "canceled"] }
       })
         .populate("service_id")
         .sort({ createdAt: -1 });
