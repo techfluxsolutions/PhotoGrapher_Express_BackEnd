@@ -6,14 +6,6 @@ const userSchema = new mongoose.Schema(
       type: String,
       trim: true,
       required: [true, "Full Name is required"],
-      validate: {
-                validator: function (v) {
-                    if (!v) return true; // optional field
-                    return /^[A-Za-z\s]+$/.test(v); // only letters + spaces
-                },
-                message: () =>
-                    `Special letters and numeric value not allowed`,
-            }
     },
 
     mobileNumber: {
