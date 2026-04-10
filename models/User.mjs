@@ -78,7 +78,7 @@ const userSchema = new mongoose.Schema(
       validate: {
                 validator: function (v) {
                     if (!v) return true; // optional field
-                    return /^[A-Za-z\s]+$/.test(v); // only letters + spaces
+                    return /^[A-Za-z\s]+$/.test(v); // only letters + spaces.
                 },
                 message: () =>
                     `Special letters and numeric value not allowed`,
