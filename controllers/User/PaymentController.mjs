@@ -13,7 +13,9 @@ class PaymentController {
       if (!booking) {
         return res.status(404).json({ success: false, message: "Booking not found" });
       }
-
+      if (booking.outStandingAmount == 0) {
+        return res.status(400).json({ success: false, message: "Booking is already fully paid" });
+      }
       let amountToPay = 0;
 
       if (booking.paymentStatus === "fully paid") {
@@ -40,11 +42,11 @@ class PaymentController {
       const SAFE_MAX_AMOUNT = 450000;
       if (amountToPay > SAFE_MAX_AMOUNT) {
         let basisAmount = booking.outStandingAmount > 0 ? booking.outStandingAmount : booking.totalAmount;
-        
+
         // Dynamically compute the number of slices to safely keep every slice under SAFE_MAX_AMOUNT
         let slicesNeeded = Math.ceil(basisAmount / SAFE_MAX_AMOUNT);
         let dynamicStepAmount = Math.ceil(basisAmount / slicesNeeded);
-        
+
         amountToPay = Math.min(amountToPay, dynamicStepAmount, SAFE_MAX_AMOUNT);
       }
 
