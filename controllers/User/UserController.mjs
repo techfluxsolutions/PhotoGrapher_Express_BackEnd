@@ -170,10 +170,22 @@ class UserController {
         data: user,
       });
     } catch (err) {
+      if (err.name === "ValidationError") {
+        const errors = Object.values(err.errors).map(e => {
+          const field = e.path.charAt(0).toUpperCase() + e.path.slice(1);
+          return `${field}: ${e.message}`;
+        });
+
+        return res.status(400).json({
+          success: false,
+          message: errors.join(", "),
+        });
+      }
+
       return res.status(500).json({
         message: err.message,
         success: false,
-      })
+      });
     }
   }
 
