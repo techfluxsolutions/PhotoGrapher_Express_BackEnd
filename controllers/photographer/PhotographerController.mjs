@@ -625,27 +625,21 @@ class PhotographerController {
     }
 }
 
-            // Mandatory Fields Validation (Bank Details, Basic Info, etc.)
-            const mandatoryFields = [
-                "fullName",
-                "phone",
-                "bank_account_holder",
-                "bank_name",
-                "bank_account_number",
-                "bank_ifsc",
-                "account_type"
-            ];
-
-            const missingFields = mandatoryFields.filter(field => !updateData[field]);
-
-            if (missingFields.length > 0) {
-                // Formatting the message to be more user friendly (e.g., bank_account_holder -> Bank Account Holder)
-                const formattedMissing = missingFields.map(f => f.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' '));
-                
-                return res.status(400).json({
-                    success: false,
-                    message: `This fields are missing: ${formattedMissing.join(", ")}`
-                });
+            // Mandatory Fields Validation (Individual checks with 200 status)
+            if (!updateData.bank_account_holder) {
+                return res.status(200).json({ success: false, message: "Bank Account Holder Name is required" });
+            }
+            if (!updateData.bank_name) {
+                return res.status(200).json({ success: false, message: "Bank Name is required" });
+            }
+            if (!updateData.bank_account_number) {
+                return res.status(200).json({ success: false, message: "Bank Account Number is required" });
+            }
+            if (!updateData.bank_ifsc) {
+                return res.status(200).json({ success: false, message: "IFSC Code is required" });
+            }
+            if (!updateData.account_type) {
+                return res.status(200).json({ success: false, message: "Account Type is required" });
             }
 
             // 1. Map Expertise Level
@@ -671,6 +665,7 @@ class PhotographerController {
             }
 
             // 1. Handle JSON strings from FormData for nested objects
+            // 1. Handle JSON strings from FormData for nested objects
             const nestedObjects = ['basicInfo', 'professionalDetails', 'servicesAndStyles', 'availability', 'pricing', 'photographyAccessories'];
             nestedObjects.forEach(field => {
                 if (updateData[field] && typeof updateData[field] === 'string') {
@@ -681,6 +676,60 @@ class PhotographerController {
                     }
                 }
             });
+
+            // --- Comprehensive Mandatory Field Validation (Status 200) ---
+            
+            // 1. Basic Info
+            if (!updateData.basicInfo && !req.params.id) return res.status(200).json({ success: false, message: "Basic Information is required" });
+            if (updateData.basicInfo) {
+                if (!updateData.basicInfo.fullName && !updateData.fullName) return res.status(200).json({ success: false, message: "Full Name is required" });
+                if (!updateData.basicInfo.displayName && !updateData.displayName) return res.status(200).json({ success: false, message: "Display Name is required" });
+                if (!updateData.basicInfo.email) return res.status(200).json({ success: false, message: "Email is required" });
+                if (!updateData.basicInfo.phone && !updateData.phone) return res.status(200).json({ success: false, message: "Phone number is required" });
+            }
+
+            // 2. Professional Details
+            if (!updateData.professionalDetails && !req.params.id) return res.status(200).json({ success: false, message: "Professional Details are required" });
+            if (updateData.professionalDetails) {
+                if (!updateData.professionalDetails.photographerType) return res.status(200).json({ success: false, message: "Photographer Type is required" });
+                if (!updateData.professionalDetails.expertiseLevel && !updateData.expertiseLevel) {
+                    return res.status(200).json({ success: false, message: "Expertise Level is required" });
+                }
+                if (!updateData.professionalDetails.yearsOfExperience && !updateData.yearsOfExperience) {
+                    return res.status(200).json({ success: false, message: "Years of Experience is required" });
+                }
+                if (!updateData.professionalDetails.primaryLocation && !updateData.primaryLocation) {
+                    return res.status(200).json({ success: false, message: "Primary Location is required" });
+                }
+            }
+
+            // 3. About You
+            if (!updateData.aboutYou && !req.params.id) return res.status(200).json({ success: false, message: "About You section is required" });
+
+            // 4. Availability
+            if (!updateData.availability && !req.params.id) return res.status(200).json({ success: false, message: "Availability settings are required" });
+            if (updateData.availability) {
+                if (!updateData.availability.status) return res.status(200).json({ success: false, message: "Availability Status is required" });
+                if (!updateData.availability.workingDays || updateData.availability.workingDays.length === 0) {
+                    return res.status(200).json({ success: false, message: "At least one Working Day must be selected" });
+                }
+            }
+
+            // 5. Pricing
+            if (!updateData.pricing && !req.params.id) return res.status(200).json({ success: false, message: "Pricing information is required" });
+            if (updateData.pricing) {
+                if (!updateData.pricing.startingPrice && updateData.pricing.startingPrice !== 0) {
+                    return res.status(200).json({ success: false, message: "Starting Price is required" });
+                }
+            }
+
+            // 6. Services and Styles (At least one service)
+            if (!updateData.servicesAndStyles && !req.params.id) return res.status(200).json({ success: false, message: "Services and Styles are required" });
+            if (updateData.servicesAndStyles && updateData.servicesAndStyles.services) {
+                const services = updateData.servicesAndStyles.services;
+                const hasService = Object.values(services).some(val => val === true);
+                if (!hasService) return res.status(200).json({ success: false, message: "At least one service must be selected" });
+            }
 
             // 2. Map flat fields to nested objects (Utility for simple FormData)
             if (!updateData.basicInfo) updateData.basicInfo = {};
