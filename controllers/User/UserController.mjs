@@ -105,7 +105,47 @@ class UserController {
     try {
       const { id } = req.user;
       console.log(req.body);
+      const allowedFields = ["username", "email", "mobileNumber", "state", "city"];
       let updates = {};
+
+      for (const field of allowedFields) {
+        if (req.body[field] !== undefined) {
+          const value = req.body[field];
+
+          // Basic empty check (already requested)
+          if (value === "" || value === null || value === undefined) {
+            const capitalizedKey = field.charAt(0).toUpperCase() + field.slice(1);
+            return res.status(400).json({
+              success: false,
+              message: `${capitalizedKey} cannot be empty`,
+            });
+          }
+
+          // Specific validation for email
+          if (field === "email") {
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailRegex.test(value)) {
+              return res.status(400).json({
+                success: false,
+                message: "Please enter a valid email address",
+              });
+            }
+          }
+
+          // Specific validation for mobileNumber
+          if (field === "mobileNumber") {
+            const mobileRegex = /^\d{10}$/;
+            if (!mobileRegex.test(value)) {
+              return res.status(400).json({
+                success: false,
+                message: "Mobile number must be 10 digits",
+              });
+            }
+          }
+
+          updates[field] = value;
+        }
+      }
 
       if (req.file) {
         updates.avatar = `/uploads/userProfile/${req.file.filename}`;
