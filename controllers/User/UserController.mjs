@@ -170,24 +170,35 @@ class UserController {
         data: user,
       });
     } catch (err) {
-      if (err.name === "ValidationError") {
-        // Get first error only
-        const firstError = Object.values(err.errors)[0];
+  // ✅ Handle duplicate key error
+  if (err.code === 11000) {
+    const field = Object.keys(err.keyPattern)[0]; // e.g. "email"
+    const capitalizedField = field.charAt(0).toUpperCase() + field.slice(1);
 
-        const field = firstError.path.charAt(0).toUpperCase() + firstError.path.slice(1);
-
-        return res.status(400).json({
-          success: false,
-          message: `Invalid ${field} format. ${firstError.message}`,
-        });
-      }
-
-      return res.status(500).json({
-        message: err.message,
-        success: false,
-      });
-    }
+    return res.status(400).json({
+      success: false,
+      message: `${capitalizedField} already exists`,
+    });
   }
+
+  // ✅ Handle mongoose validation (one-by-one error)
+  if (err.name === "ValidationError") {
+    const firstError = Object.values(err.errors)[0];
+    const field = firstError.path.charAt(0).toUpperCase() + firstError.path.slice(1);
+
+    return res.status(400).json({
+      success: false,
+      message: `${field}: ${firstError.message}`,
+    });
+  }
+
+  // ❌ fallback
+  return res.status(500).json({
+    message: err.message,
+    success: false,
+  });
+}
+}
 
   // ✅ Delete user by ID
   async delete(req, res, next) {
