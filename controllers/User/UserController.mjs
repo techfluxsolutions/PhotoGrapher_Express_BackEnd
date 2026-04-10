@@ -101,63 +101,200 @@ class UserController {
   }
 
   // ✅ Update user by ID
+  //   async update(req, res) {
+  //     try {
+  //       const { id } = req.user;
+  //       console.log(req.body);
+  //       const allowedFields = ["username", "email", "mobileNumber", "state", "city"];
+  //       let updates = {};
+
+  //       for (const field of allowedFields) {
+  //         if (req.body[field] !== undefined) {
+  //           const value = req.body[field];
+
+  //           // Basic empty check (already requested)
+  //           if (value === "" || value === null || value === undefined) {
+  //             if(field === "username"){
+  //               return res.status(400).json({
+  //                 success: false,
+  //                 message: `Full Name cannot be empty`,
+  //               });
+  //             }
+  //             const capitalizedKey = field.charAt(0).toUpperCase() + field.slice(1);
+  //             return res.status(400).json({
+  //               success: false,
+  //               message: `${capitalizedKey} cannot be empty`,
+  //             });
+  //           }
+
+  //           // Specific validation for email
+  //           if (field === "email") {
+  //             const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  //             if (!emailRegex.test(value)) {
+  //               return res.status(400).json({
+  //                 success: false,
+  //                 message: "Please enter a valid email address",
+  //               });
+  //             }
+  //           }
+
+  //           // Specific validation for mobileNumber
+  //           if (field === "mobileNumber") {
+  //             const mobileRegex = /^\d{10}$/;
+  //             if (!mobileRegex.test(value)) {
+  //               return res.status(400).json({
+  //                 success: false,
+  //                 message: "Mobile number must be 10 digits",
+  //               });
+  //             }
+  //           }
+
+  //           updates[field] = value;
+  //         }
+  //       }
+
+  //       if (req.file) {
+  //         updates.avatar = `/uploads/userProfile/${req.file.filename}`;
+  //       }
+
+  //       console.log(updates);
+  //       const user = await User.findByIdAndUpdate(id, updates, {
+  //         new: true,
+  //         runValidators: true,
+  //       });
+
+  //       if (!user) {
+  //         return res.status(404).json({
+  //           message: "User not found",
+  //           success: false,
+  //         });
+  //       }
+
+  //       return res.json({
+  //         message: "User updated successfully",
+  //         success: true,
+  //         data: user,
+  //       });
+  //     } catch (err) {
+  //   // ✅ Handle duplicate key error
+  //   if (err.code === 11000) {
+  //     const field = Object.keys(err.keyPattern)[0]; // e.g. "email"
+  //     const capitalizedField = field.charAt(0).toUpperCase() + field.slice(1);
+
+  //     return res.status(400).json({
+  //       success: false,
+  //       message: `${capitalizedField} already exists so please add another ${capitalizedField}`,
+  //     });
+  //   }
+
+  //   // ✅ Handle mongoose validation (one-by-one error)
+  //   if (err.name === "ValidationError") {
+  //     const firstError = Object.values(err.errors)[0];
+  //     const field = firstError.path.charAt(0).toUpperCase() + firstError.path.slice(1);
+
+  //     return res.status(400).json({
+  //       success: false,
+  //       message: `Invalid ${field} format. ${firstError.message}`,
+  //     });
+  //   }
+
+  //   // ❌ fallback
+  //   return res.status(500).json({
+  //     message: err.message,
+  //     success: false,
+  //   });
+  // }
+  // }
+
+
   async update(req, res) {
     try {
       const { id } = req.user;
-      console.log(req.body);
-      const allowedFields = ["username", "email", "mobileNumber", "state", "city"];
+
+      const allowedFields = [
+        "username",
+        "email",
+        "mobileNumber",
+        "state",
+        "city",
+      ];
+
       let updates = {};
+
+      // ✅ Regex Validators
+      const validators = {
+        username: /^[A-Za-z\s]{2,50}$/,        // Only letters + spaces
+        email: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
+        mobileNumber: /^[6-9]\d{9}$/,          // Indian mobile number
+        state: /^[A-Za-z\s]{2,50}$/,
+        city: /^[A-Za-z\s]{2,50}$/,
+      };
 
       for (const field of allowedFields) {
         if (req.body[field] !== undefined) {
-          const value = req.body[field];
+          let value = req.body[field];
 
-          // Basic empty check (already requested)
-          if (value === "" || value === null || value === undefined) {
-            if(field === "username"){
-              return res.status(400).json({
-                success: false,
-                message: `Full Name cannot be empty`,
-              });
-            }
-            const capitalizedKey = field.charAt(0).toUpperCase() + field.slice(1);
+          // Trim string values
+          if (typeof value === "string") {
+            value = value.trim();
+          }
+
+          // ✅ Empty check
+          if (!value) {
+            const label =
+              field === "username"
+                ? "Full Name"
+                : field.charAt(0).toUpperCase() + field.slice(1);
+
             return res.status(400).json({
               success: false,
-              message: `${capitalizedKey} cannot be empty`,
+              message: `${label} cannot be empty`,
             });
           }
 
-          // Specific validation for email
-          if (field === "email") {
-            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-            if (!emailRegex.test(value)) {
-              return res.status(400).json({
-                success: false,
-                message: "Please enter a valid email address",
-              });
-            }
-          }
+          // ✅ Regex validation
+          if (validators[field] && !validators[field].test(value)) {
+            let message = "";
 
-          // Specific validation for mobileNumber
-          if (field === "mobileNumber") {
-            const mobileRegex = /^\d{10}$/;
-            if (!mobileRegex.test(value)) {
-              return res.status(400).json({
-                success: false,
-                message: "Mobile number must be 10 digits",
-              });
+            switch (field) {
+              case "username":
+                message =
+                  "Full Name must contain only letters and spaces (2–50 characters)";
+                break;
+
+              case "email":
+                message = "Please enter a valid email address";
+                break;
+
+              case "mobileNumber":
+                message =
+                  "Mobile number must be a valid 10-digit Indian mobile number";
+                break;
+
+              case "state":
+                message = "State must contain only letters";
+                break;
+
+              case "city":
+                message = "City must contain only letters";
+                break;
             }
+
+            return res.status(400).json({
+              success: false,
+              message,
+            });
           }
 
           updates[field] = value;
         }
       }
 
+      // ✅ Avatar Upload
       if (req.file) {
         updates.avatar = `/uploads/userProfile/${req.file.filename}`;
       }
 
-      console.log(updates);
       const user = await User.findByIdAndUpdate(id, updates, {
         new: true,
         runValidators: true,
@@ -165,47 +302,49 @@ class UserController {
 
       if (!user) {
         return res.status(404).json({
-          message: "User not found",
           success: false,
+          message: "User not found",
         });
       }
 
       return res.json({
-        message: "User updated successfully",
         success: true,
+        message: "User updated successfully",
         data: user,
       });
     } catch (err) {
-  // ✅ Handle duplicate key error
-  if (err.code === 11000) {
-    const field = Object.keys(err.keyPattern)[0]; // e.g. "email"
-    const capitalizedField = field.charAt(0).toUpperCase() + field.slice(1);
 
-    return res.status(400).json({
-      success: false,
-      message: `${capitalizedField} already exists so please add another ${capitalizedField}`,
-    });
+      // ✅ Duplicate key error
+      if (err.code === 11000) {
+        const field = Object.keys(err.keyPattern)[0];
+        const capitalizedField =
+          field.charAt(0).toUpperCase() + field.slice(1);
+
+        return res.status(400).json({
+          success: false,
+          message: `${capitalizedField} already exists so please add another ${capitalizedField}`,
+        });
+      }
+
+      // ✅ Mongoose validation error
+      if (err.name === "ValidationError") {
+        const firstError = Object.values(err.errors)[0];
+        const field =
+          firstError.path.charAt(0).toUpperCase() +
+          firstError.path.slice(1);
+
+        return res.status(400).json({
+          success: false,
+          message: `Invalid ${field} format. ${firstError.message}`,
+        });
+      }
+
+      return res.status(500).json({
+        success: false,
+        message: err.message,
+      });
+    }
   }
-
-  // ✅ Handle mongoose validation (one-by-one error)
-  if (err.name === "ValidationError") {
-    const firstError = Object.values(err.errors)[0];
-    const field = firstError.path.charAt(0).toUpperCase() + firstError.path.slice(1);
-
-    return res.status(400).json({
-      success: false,
-      message: `Invalid ${field} format. ${firstError.message}`,
-    });
-  }
-
-  // ❌ fallback
-  return res.status(500).json({
-    message: err.message,
-    success: false,
-  });
-}
-}
-
   // ✅ Delete user by ID
   async delete(req, res, next) {
     try {
