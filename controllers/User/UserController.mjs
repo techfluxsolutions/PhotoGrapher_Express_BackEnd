@@ -115,7 +115,10 @@ class UserController {
           // Basic empty check (already requested)
           if (value === "" || value === null || value === undefined) {
             if(field === "username"){
-              username = "Full Name"
+              return res.status(400).json({
+                success: false,
+                message: `Full Name cannot be empty`,
+              });
             }
             const capitalizedKey = field.charAt(0).toUpperCase() + field.slice(1);
             return res.status(400).json({
