@@ -2,6 +2,8 @@ import Quote from "../../models/Quote.mjs";
 import ServiceBooking from "../../models/ServiceBookings.mjs";
 import Counter from "../../models/Counter.mjs";
 import Conversation from "../../models/Conversation.mjs";
+import Message from "../../models/Message.mjs";
+
 class QuoteController {
   async create(req, res, next) {
     try {
@@ -330,6 +332,8 @@ class QuoteController {
 
           if (linkedConv) {
             console.log(`✅ Conversation ${linkedConv._id} for quote ${quote._id} linked to booking ${booking._id}`);
+            // Remove the auto paymentCard message which appears as an empty message after conversion
+            await Message.deleteMany({ conversationId: linkedConv._id, messageType: "paymentCard" });
           } else {
             console.log(`ℹ️ No existing conversation found for quote ${quote._id} to link.`);
           }
