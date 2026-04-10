@@ -10,7 +10,7 @@ const ContactUsSchema = new mongoose.Schema(
                     return /^[A-Za-z\s]+$/.test(v); // only letters + spaces
                 },
                 message: () =>
-                    `Full name should contain only alphabets and spaces (no numbers or special characters)!`,
+                    `Special letters and numeric value not allowed`,
             },
         },
         email: {

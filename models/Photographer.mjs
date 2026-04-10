@@ -9,6 +9,14 @@ const photographerSchema = new mongoose.Schema(
       trim: true,
       lowercase: true,
       sparse: true,
+      validate: {
+                validator: function (v) {
+                    if (!v) return true; // optional field
+                    return /^[A-Za-z\s]+$/.test(v); // only letters + spaces
+                },
+                message: () =>
+                    `Special letters and numeric value not allowed`,
+            },
     },
     mobileNumber: {
       type: String,
