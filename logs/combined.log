@@ -837,3 +837,14 @@
 {"level":"info","message":"::1 - - [09/Apr/2026:12:24:27 +0000] \"GET /api/photographers/getcount HTTP/1.1\" 200 165 \"-\" \"PostmanRuntime/7.53.0\"","timestamp":"2026-04-09 17:54:27"}
 {"level":"info","message":"::1 - - [09/Apr/2026:12:28:23 +0000] \"GET /api/photographers/bookings/summary-counts HTTP/1.1\" 200 136 \"-\" \"PostmanRuntime/7.53.0\"","timestamp":"2026-04-09 17:58:23"}
 {"level":"info","message":"::1 - - [10/Apr/2026:05:56:54 +0000] \"GET /api/chat/messages/69d88e06ec166c3e1d95cf0c HTTP/1.1\" 200 - \"-\" \"PostmanRuntime/7.53.0\"","timestamp":"2026-04-10 11:26:54"}
+{"level":"info","message":"::1 - - [10/Apr/2026:10:03:37 +0000] \"POST /api/auth/login HTTP/1.1\" 200 45 \"-\" \"PostmanRuntime/7.51.1\"","timestamp":"2026-04-10 15:33:37"}
+{"level":"info","message":"::1 - - [10/Apr/2026:10:03:48 +0000] \"POST /api/auth/verify HTTP/1.1\" 500 105 \"-\" \"PostmanRuntime/7.51.1\"","timestamp":"2026-04-10 15:33:48"}
+{"level":"info","message":"::1 - - [10/Apr/2026:10:04:25 +0000] \"POST /api/auth/verify HTTP/1.1\" 500 105 \"-\" \"PostmanRuntime/7.51.1\"","timestamp":"2026-04-10 15:34:25"}
+{"level":"info","message":"::1 - - [10/Apr/2026:10:11:38 +0000] \"POST /api/auth/verify HTTP/1.1\" 500 105 \"-\" \"PostmanRuntime/7.51.1\"","timestamp":"2026-04-10 15:41:38"}
+{"level":"info","message":"::1 - - [10/Apr/2026:10:12:09 +0000] \"POST /api/auth/verify HTTP/1.1\" 200 329 \"-\" \"PostmanRuntime/7.51.1\"","timestamp":"2026-04-10 15:42:09"}
+{"level":"info","message":"::1 - - [10/Apr/2026:10:17:11 +0000] \"PUT /api/users/me HTTP/1.1\" 400 89 \"-\" \"PostmanRuntime/7.51.1\"","timestamp":"2026-04-10 15:47:11"}
+{"level":"info","message":"::1 - - [10/Apr/2026:10:17:22 +0000] \"PUT /api/users/me HTTP/1.1\" 400 89 \"-\" \"PostmanRuntime/7.51.1\"","timestamp":"2026-04-10 15:47:22"}
+{"level":"info","message":"::1 - - [10/Apr/2026:10:17:29 +0000] \"PUT /api/users/me HTTP/1.1\" 200 592 \"-\" \"PostmanRuntime/7.51.1\"","timestamp":"2026-04-10 15:47:29"}
+{"level":"info","message":"::1 - - [10/Apr/2026:10:18:25 +0000] \"PUT /api/users/me HTTP/1.1\" 200 604 \"-\" \"PostmanRuntime/7.51.1\"","timestamp":"2026-04-10 15:48:25"}
+{"level":"info","message":"::1 - - [10/Apr/2026:10:18:35 +0000] \"PUT /api/users/me HTTP/1.1\" 200 592 \"-\" \"PostmanRuntime/7.51.1\"","timestamp":"2026-04-10 15:48:35"}
+{"level":"info","message":"::1 - - [10/Apr/2026:10:18:47 +0000] \"PUT /api/users/me HTTP/1.1\" 400 96 \"-\" \"PostmanRuntime/7.51.1\"","timestamp":"2026-04-10 15:48:47"}
