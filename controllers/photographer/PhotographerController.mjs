@@ -663,60 +663,25 @@ class PhotographerController {
                 return res.status(400).json({ message: "Photographer ID required" });
             }
 
+            const photographer = await Photographer.findById(id);
+            if (!photographer) {
+                return res.status(200).json({ success: false, message: "Photographer not found" });
+            }
+
             let updateData = { ...req.body };
+
+            // 1. Basic validation: ensure provided fields are not empty strings/nulls
             for (const [key, value] of Object.entries(updateData)) {
-                if (value === "" || value === null || value === undefined) {
-
+                if ((value === "" || value === null || value === undefined) && key !== "aboutYou") {
                     const capitalizedKey = key.charAt(0).toUpperCase() + key.slice(1);
-
                     return res.status(400).json({
                         success: false,
-            message: `${capitalizedKey} cannot be empty`,
-        });
-    }
-}
-
-            // Mandatory Fields Validation (Individual checks with 200 status)
-            if (!updateData.bank_account_holder) {
-                return res.status(200).json({ success: false, message: "Bank Account Holder Name is required" });
-            }
-            if (!updateData.bank_name) {
-                return res.status(200).json({ success: false, message: "Bank Name is required" });
-            }
-            if (!updateData.bank_account_number) {
-                return res.status(200).json({ success: false, message: "Bank Account Number is required" });
-            }
-            if (!updateData.bank_ifsc) {
-                return res.status(200).json({ success: false, message: "IFSC Code is required" });
-            }
-            if (!updateData.account_type) {
-                return res.status(200).json({ success: false, message: "Account Type is required" });
-            }
-
-            // 1. Map Expertise Level
-            if (updateData.professionalDetails?.expertiseLevel) {
-                const levelMap = { "Beginner": "INITIO", "Expert": "ELITE", "Master": "PRO" };
-                const level = updateData.professionalDetails.expertiseLevel;
-                updateData.professionalDetails.expertiseLevel = levelMap[level] || level.toUpperCase();
-            }
-
-            // 2. Sanitize Bank Details
-            if (updateData.bank_ifsc) {
-                updateData.bank_ifsc = updateData.bank_ifsc.trim().toUpperCase();
-            }
-
-            // 3. Bank Details Validation
-            if (updateData.bank_account_number && updateData.confirm_account_number) {
-                if (updateData.bank_account_number !== updateData.confirm_account_number) {
-                    return res.status(400).json({
-                        success: false,
-                        message: "Account number and Confirm account number do not match."
+                        message: `${capitalizedKey} cannot be empty`,
                     });
                 }
             }
 
-            // 1. Handle JSON strings from FormData for nested objects
-            // 1. Handle JSON strings from FormData for nested objects
+            // 2. Handle JSON strings from FormData for nested objects
             const nestedObjects = ['basicInfo', 'professionalDetails', 'servicesAndStyles', 'availability', 'pricing', 'photographyAccessories'];
             nestedObjects.forEach(field => {
                 if (updateData[field] && typeof updateData[field] === 'string') {
@@ -728,83 +693,58 @@ class PhotographerController {
                 }
             });
 
-            // --- Comprehensive Mandatory Field Validation (Status 200) ---
-            
-            // 1. Basic Info
-            if (!updateData.basicInfo && !req.params.id) return res.status(200).json({ success: false, message: "Basic Information is required" });
-            if (updateData.basicInfo) {
-                if (!updateData.basicInfo.fullName && !updateData.fullName) return res.status(200).json({ success: false, message: "Full Name is required" });
-                if (!updateData.basicInfo.displayName && !updateData.displayName) return res.status(200).json({ success: false, message: "Display Name is required" });
-                if (!updateData.basicInfo.email) return res.status(200).json({ success: false, message: "Email is required" });
-                if (!updateData.basicInfo.phone && !updateData.phone) return res.status(200).json({ success: false, message: "Phone number is required" });
+            // 3. Map flat fields to nested objects (Utility for simple FormData)
+            if (!updateData.basicInfo && (updateData.fullName || updateData.displayName || updateData.phone)) {
+                updateData.basicInfo = {};
             }
-
-            // 2. Professional Details
-            if (!updateData.professionalDetails && !req.params.id) return res.status(200).json({ success: false, message: "Professional Details are required" });
-            if (updateData.professionalDetails) {
-                if (!updateData.professionalDetails.photographerType) return res.status(200).json({ success: false, message: "Photographer Type is required" });
-                if (!updateData.professionalDetails.expertiseLevel && !updateData.expertiseLevel) {
-                    return res.status(200).json({ success: false, message: "Expertise Level is required" });
-                }
-                if (!updateData.professionalDetails.yearsOfExperience && !updateData.yearsOfExperience) {
-                    return res.status(200).json({ success: false, message: "Years of Experience is required" });
-                }
-                if (!updateData.professionalDetails.primaryLocation && !updateData.primaryLocation) {
-                    return res.status(200).json({ success: false, message: "Primary Location is required" });
-                }
-            }
-
-            // 3. About You
-            if (!updateData.aboutYou && !req.params.id) return res.status(200).json({ success: false, message: "About You section is required" });
-
-            // 4. Availability
-            if (!updateData.availability && !req.params.id) return res.status(200).json({ success: false, message: "Availability settings are required" });
-            if (updateData.availability) {
-                if (!updateData.availability.status) return res.status(200).json({ success: false, message: "Availability Status is required" });
-                if (!updateData.availability.workingDays || updateData.availability.workingDays.length === 0) {
-                    return res.status(200).json({ success: false, message: "At least one Working Day must be selected" });
-                }
-            }
-
-            // 5. Pricing
-            if (!updateData.pricing && !req.params.id) return res.status(200).json({ success: false, message: "Pricing information is required" });
-            if (updateData.pricing) {
-                if (!updateData.pricing.startingPrice && updateData.pricing.startingPrice !== 0) {
-                    return res.status(200).json({ success: false, message: "Starting Price is required" });
-                }
-            }
-
-            // 6. Services and Styles (At least one service)
-            if (!updateData.servicesAndStyles && !req.params.id) return res.status(200).json({ success: false, message: "Services and Styles are required" });
-            if (updateData.servicesAndStyles && updateData.servicesAndStyles.services) {
-                const services = updateData.servicesAndStyles.services;
-                const hasService = Object.values(services).some(val => val === true);
-                if (!hasService) return res.status(200).json({ success: false, message: "At least one service must be selected" });
-            }
-
-            // 2. Map flat fields to nested objects (Utility for simple FormData)
-            if (!updateData.basicInfo) updateData.basicInfo = {};
             if (updateData.fullName) updateData.basicInfo.fullName = updateData.fullName;
             if (updateData.displayName) updateData.basicInfo.displayName = updateData.displayName;
             if (updateData.phone) updateData.basicInfo.phone = updateData.phone;
 
-            if (!updateData.professionalDetails) updateData.professionalDetails = {};
-            if (updateData.expertiseLevel) updateData.professionalDetails.expertiseLevel = updateData.expertiseLevel;
+            if (!updateData.professionalDetails && (updateData.expertiseLevel || updateData.yearsOfExperience || updateData.primaryLocation)) {
+                updateData.professionalDetails = {};
+            }
+            if (updateData.expertiseLevel) {
+                const levelMap = { "Beginner": "INITIO", "Expert": "ELITE", "Master": "PRO" };
+                const level = updateData.expertiseLevel;
+                updateData.professionalDetails.expertiseLevel = levelMap[level] || level.toUpperCase();
+            }
             if (updateData.yearsOfExperience) updateData.professionalDetails.yearsOfExperience = updateData.yearsOfExperience;
             if (updateData.primaryLocation) updateData.professionalDetails.primaryLocation = updateData.primaryLocation;
 
-            // 3. Handle Profile Photo Upload
+            // 4. Sanitize Bank Details
+            if (updateData.bank_ifsc) {
+                updateData.bank_ifsc = updateData.bank_ifsc.trim().toUpperCase();
+            }
+
+            // 5. Bank Details Validation (Confirm Account Number)
+            if (updateData.bank_account_number && updateData.confirm_account_number) {
+                if (updateData.bank_account_number !== updateData.confirm_account_number) {
+                    return res.status(400).json({
+                        success: false,
+                        message: "Account number and Confirm account number do not match."
+                    });
+                }
+            }
+
+            // 6. Handle Profile Photo Upload
             if (req.file) {
+                if (!updateData.basicInfo) updateData.basicInfo = {};
                 updateData.basicInfo.profilePhoto = `/uploads/${req.file.filename}`;
             }
 
-            // 4. Flatten the object for deep partial updates (Avoid overwriting whole nested objects)
+            // 7. Handle Password update
+            if (updateData.password) {
+                const salt = await bcrypt.genSalt(10);
+                updateData.password = await bcrypt.hash(updateData.password, salt);
+            }
+
+            // 8. Flatten and Apply Updates
             const flatten = (obj, prefix = '') => {
                 let flattened = {};
                 for (let key in obj) {
                     if (obj.hasOwnProperty(key)) {
                         const newKey = prefix ? `${prefix}.${key}` : key;
-                        // Only flatten objects, not arrays or special types like Date/ObjectId
                         if (obj[key] && typeof obj[key] === 'object' && !Array.isArray(obj[key]) && !(obj[key] instanceof Date) && !(obj[key] instanceof mongoose.Types.ObjectId)) {
                             Object.assign(flattened, flatten(obj[key], newKey));
                         } else {
@@ -816,22 +756,23 @@ class PhotographerController {
             };
 
             const flatUpdateData = flatten(updateData);
+            
+            // Use set for partial updates on the document object to allow validation
+            photographer.set(flatUpdateData);
 
-            // Handle password update if present
-            if (updateData.password) {
-                const salt = await bcrypt.genSalt(10);
-                const hashedPassword = await bcrypt.hash(updateData.password, salt);
-                flatUpdateData.password = hashedPassword;
+            // 9. Profile Completeness Validation (Only for self-updates /me)
+            if (!req.params.id) {
+                const missing = this._validateProfileCompleteness(photographer);
+                if (missing.length > 0) {
+                    return res.status(200).json({
+                        success: false,
+                        message: "Cannot update profile. Some required fields are missing.",
+                        missingFields: missing
+                    });
+                }
             }
 
-            const photographer = await Photographer.findByIdAndUpdate(id, { $set: flatUpdateData }, {
-                new: true,
-                runValidators: true
-            });
-
-            if (!photographer) {
-                return res.status(200).json({ message: "Photographer not found" });
-            }
+            await photographer.save();
 
             // Prepend Base URL to Photo in response
             const photographerObj = photographer.toObject();
@@ -840,11 +781,13 @@ class PhotographerController {
                 photographerObj.basicInfo.profilePhoto = `${baseUrl}/${photographerObj.basicInfo.profilePhoto.replace(/\\/g, "/").replace(/^\//, "")}`;
             }
 
-            res.status(200).json({ message: "Photographer updated successfully", photographer: photographerObj });
+            res.status(200).json({ success: true, message: "Photographer updated successfully", photographer: photographerObj });
         } catch (error) {
+            console.error("Update Photographer Error:", error);
             res.status(500).json({ message: "Failed to update photographer", error: error.message });
         }
     }
+
 
     // delete photographer (Admin Only)
     async deletePhotographer(req, res) {
