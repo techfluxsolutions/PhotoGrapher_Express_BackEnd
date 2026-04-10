@@ -118,9 +118,16 @@ class PhotographerController {
         const services = p.servicesAndStyles?.services || {};
         const styles = p.servicesAndStyles?.styles || {};
 
-        // Check for any truthy value (true, 1, "true", etc.)
-        const hasService = Object.values(services).some(val => val === true || val === "true" || val === 1);
-        const hasStyle = Object.values(styles).some(val => val === true || val === "true" || val === 1);
+        // Helper to check if any field in an object is "truthy" (true, 1, "true", "on")
+        const isSelected = (obj) => Object.entries(obj).some(([key, val]) => {
+            if (key === "_id" || key === "id") return false;
+            if (val === true || val === 1 || val === "true" || val === "on") return true;
+            if (typeof val === 'string' && val.toLowerCase() === 'true') return true;
+            return false;
+        });
+
+        const hasService = isSelected(services);
+        const hasStyle = isSelected(styles);
 
         if (!hasService) missingFields.push("At least one service selected");
         if (!hasStyle) missingFields.push("At least one style selected");
