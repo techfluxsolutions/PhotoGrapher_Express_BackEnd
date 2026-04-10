@@ -50,7 +50,33 @@ class CustomerController {
         data: user
       });
     } catch (err) {
-      return next(err);
+
+      // ✅ Handle duplicate key (E11000)
+      if (err.code === 11000) {
+        const field = Object.keys(err.keyPattern)[0];
+        const capitalizedField =
+          field.charAt(0).toUpperCase() + field.slice(1);
+
+        return res.status(400).json({
+          success: false,
+          message: `${capitalizedField} already exists`,
+        });
+      }
+
+      // ✅ Handle mongoose validation (ONLY FIRST ERROR)
+      if (err.name === "ValidationError") {
+        const firstError = Object.values(err.errors)[0];
+
+        return res.status(400).json({
+          success: false,
+          message: firstError.message, // 👈 clean message only
+        });
+      }
+
+      return res.status(500).json({
+        success: false,
+        message: err.message,
+      });
     }
   }
 
