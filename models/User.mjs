@@ -5,7 +5,7 @@ const userSchema = new mongoose.Schema(
     username: {
       type: String,
       trim: true,
-      required: [true, "Full Name is required"],
+      //required: [true, "Full Name is required"],
     },
 
     mobileNumber: {
@@ -46,7 +46,7 @@ const userSchema = new mongoose.Schema(
     state: {
       type: String,
       default: "",
-      required: [true, "State is required"],
+      //required: [true, "State is required"],
 
     },
     city: {
