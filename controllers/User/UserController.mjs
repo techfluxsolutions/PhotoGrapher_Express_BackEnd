@@ -177,7 +177,7 @@ class UserController {
 
     return res.status(400).json({
       success: false,
-      message: `${capitalizedField} already exists`,
+      message: `${capitalizedField} already exists so please add another ${capitalizedField}`,
     });
   }
 
