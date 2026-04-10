@@ -92,8 +92,9 @@ class PhotographerController {
     }
 
     // Helper to validate profile completeness
-    _validateProfileCompleteness(p) {
+    _validateProfileCompleteness(photographerDoc) {
         const missingFields = [];
+        const p = photographerDoc.toObject ? photographerDoc.toObject() : photographerDoc;
 
         // 1. Personal Info (Basic Info)
         if (!p.basicInfo?.fullName) missingFields.push("Full Name");
@@ -114,11 +115,12 @@ class PhotographerController {
         if (!p.account_type) missingFields.push("Account Type");
 
         // 4. Services and Styles
-        const services = p.servicesAndStyles?.services;
-        const styles = p.servicesAndStyles?.styles;
+        const services = p.servicesAndStyles?.services || {};
+        const styles = p.servicesAndStyles?.styles || {};
 
-        const hasService = services ? Object.values(services.toObject ? services.toObject() : services).some(val => val === true) : false;
-        const hasStyle = styles ? Object.values(styles.toObject ? styles.toObject() : styles).some(val => val === true) : false;
+        // Check for any truthy value (true, 1, "true", etc.)
+        const hasService = Object.values(services).some(val => val === true || val === "true" || val === 1);
+        const hasStyle = Object.values(styles).some(val => val === true || val === "true" || val === 1);
 
         if (!hasService) missingFields.push("At least one service selected");
         if (!hasStyle) missingFields.push("At least one style selected");
