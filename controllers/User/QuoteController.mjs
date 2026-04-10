@@ -50,7 +50,7 @@ class QuoteController {
       // const filter = {};
       // if (enquiryId) filter.job_id = enquiryId;
       // if (photographerId) filter.photographer_id = photographerId;
-      const items = await Quote.find({ 
+      const items = await Quote.find({
         clientId: id,
         quoteStatus: { $nin: ["upcommingBookings", "previousBookings", "canceled"] }
       })
@@ -311,7 +311,7 @@ class QuoteController {
         // 🔄 Step 4: Link existing conversation to the new booking
         try {
           // Check if a "ghost" conversation was already created for this booking (race condition protection)
-          const ghostConversation = await Conversation.findOne({ 
+          const ghostConversation = await Conversation.findOne({
             bookingId: booking._id,
             quoteId: { $ne: quote._id } // Not the one we're about to link
           });

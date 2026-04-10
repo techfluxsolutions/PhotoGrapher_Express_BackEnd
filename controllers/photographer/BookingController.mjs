@@ -920,12 +920,12 @@ class BookingController {
                 status: { $nin: ["completed", "canceled"] }
             };
 
-            // 1. Todays & Upcoming Dashboard Value: (Today + Future)
-            const activeCount = await ServiceBooking.countDocuments({
+            // 1. Todays Bookings: Strictly Today (IST)
+            const todayCount = await ServiceBooking.countDocuments({
                 ...acceptedBase,
                 $or: [
-                    { bookingDate: { $gte: todayStartIST } },
-                    { startDate: { $gte: todayStr } }
+                    { bookingDate: { $gte: todayStartIST, $lt: tomorrowStartIST } },
+                    { startDate: todayStr }
                 ]
             });
 
@@ -951,7 +951,7 @@ class BookingController {
             });
 
             const data = {
-                todaysBookings: activeCount,
+                todaysBookings: todayCount,
                 upcommingBooking: futureOnlyCount,
                 completed: completedCount
             };
@@ -970,9 +970,11 @@ class BookingController {
             const skip = (page - 1) * limit;
 
             const myId = new mongoose.Types.ObjectId(req.user.id);
-            const todayMidnight = new Date();
-            todayMidnight.setUTCHours(0, 0, 0, 0);
-            const todayStr = todayMidnight.toISOString().split("T")[0];
+            const now = new Date();
+            const istTime = new Date(now.getTime() + (5.5 * 60 * 60 * 1000));
+            const todayStr = istTime.toISOString().split("T")[0];
+            const todayStartIST = new Date(`${todayStr}T00:00:00.000+05:30`);
+            const tomorrowStartIST = new Date(todayStartIST.getTime() + 86400000);
 
             const acceptedFilter = {
                 photographer_id: myId,
@@ -983,8 +985,8 @@ class BookingController {
             const query = {
                 ...acceptedFilter,
                 $or: [
-                    { bookingDate: { $gte: todayMidnight } },
-                    { startDate: { $gte: todayStr } }
+                    { bookingDate: { $gte: todayStartIST, $lt: tomorrowStartIST } },
+                    { startDate: todayStr }
                 ]
             };
 

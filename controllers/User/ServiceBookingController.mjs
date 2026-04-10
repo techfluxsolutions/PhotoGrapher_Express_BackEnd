@@ -75,10 +75,19 @@ class ServiceBookingController {
 
       const query = { 
         client_id: id, 
-        paymentStatus: { $ne: "pending" },
-        $or: [
-          { bookingDate: { $gte: todayStartIST } },
-          { startDate: { $gte: todayStr } }
+        $and: [
+          {
+            $or: [
+              { paymentStatus: { $ne: "pending" } },
+              { bookingStatus: { $in: ["pending", "rejected"] } }
+            ]
+          },
+          {
+            $or: [
+              { bookingDate: { $gte: todayStartIST } },
+              { startDate: { $gte: todayStr } }
+            ]
+          }
         ]
       };
 
@@ -94,6 +103,8 @@ class ServiceBookingController {
       const formattedItems = items.map((item) => {
         const doc = item.toObject();
         doc.eventType = item.shootType || item.service_id?.serviceName || "";
+        doc.bookingStatus = item.bookingStatus || "pending";
+        doc.status = item.status || "pending";
         return doc;
       });
 
@@ -122,7 +133,12 @@ class ServiceBookingController {
           .status(404)
           .json({ success: false, message: "ServiceBooking not found" });
       }
-      return res.json({ success: true, data: booking, photographer });
+
+      const bookingObj = booking.toObject();
+      bookingObj.bookingStatus = booking.bookingStatus || "pending";
+      bookingObj.status = booking.status || "pending";
+
+      return res.json({ success: true, data: bookingObj, photographer });
     } catch (err) {
       return next(err);
     }
@@ -334,7 +350,15 @@ class ServiceBookingController {
         .sort({ bookingDate: -1, createdAt: -1 }) // Show most recent past bookings first
         .populate("service_id", "serviceName");
 
-      return res.json({ success: true, data: bookings });
+      const formattedBookings = bookings.map((item) => {
+        const doc = item.toObject();
+        doc.eventType = item.shootType || item.service_id?.serviceName || "";
+        doc.bookingStatus = item.bookingStatus || "pending";
+        doc.status = item.status || "pending";
+        return doc;
+      });
+
+      return res.json({ success: true, data: formattedBookings });
     } catch (err) {
       return next(err);
     }
@@ -344,7 +368,13 @@ class ServiceBookingController {
     try {
       const { id } = req.user;
       const bookings = await ServiceBooking.find({ client_id: id, is_Incomplete: true });
-      return res.json({ success: true, data: bookings });
+      const formattedBookings = bookings.map((item) => {
+        const doc = item.toObject();
+        doc.bookingStatus = item.bookingStatus || "pending";
+        doc.status = item.status || "pending";
+        return doc;
+      });
+      return res.json({ success: true, data: formattedBookings });
     } catch (err) {
       return next(err);
     }
