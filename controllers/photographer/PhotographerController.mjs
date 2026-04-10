@@ -114,9 +114,8 @@ class PhotographerController {
         if (!p.bank_ifsc) missingFields.push("IFSC Code");
         if (!p.account_type) missingFields.push("Account Type");
 
-        // 4. Services and Styles
+        // 4. Services
         const services = p.servicesAndStyles?.services || {};
-        const styles = p.servicesAndStyles?.styles || {};
 
         // Helper to check if any field in an object is "truthy" (true, 1, "true", "on")
         const isSelected = (obj) => Object.entries(obj).some(([key, val]) => {
@@ -127,10 +126,8 @@ class PhotographerController {
         });
 
         const hasService = isSelected(services);
-        const hasStyle = isSelected(styles);
 
         if (!hasService) missingFields.push("At least one service selected");
-        if (!hasStyle) missingFields.push("At least one style selected");
 
         return missingFields;
     }
