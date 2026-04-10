@@ -47,417 +47,417 @@ const PROVIDER_MESSAGES = {
 
 class AuthController {
   // Production Routes
-  async sendOTP(req, res, next) {
-    try {
-      const { mobileNumber, role } = req.body;
+  // async sendOTP(req, res, next) {
+  //   try {
+  //     const { mobileNumber, role } = req.body;
 
-      /* 1️⃣ Validate mobile */
-      if (!mobileNumber) {
-        return res.status(400).json({
-          success: false,
-          message: "Mobile number is required",
-        });
-      }
+  //     /* 1️⃣ Validate mobile */
+  //     if (!mobileNumber) {
+  //       return res.status(400).json({
+  //         success: false,
+  //         message: "Mobile number is required",
+  //       });
+  //     }
 
-      const cleanedMobile = mobileNumber.toString().replace(/\D/g, "");
-      if (!/^[6-9]\d{9}$/.test(cleanedMobile)) {
-        return res.status(400).json({
-          success: false,
-          message: "Invalid Indian mobile number",
-        });
-      }
+  //     const cleanedMobile = mobileNumber.toString().replace(/\D/g, "");
+  //     if (!/^[6-9]\d{9}$/.test(cleanedMobile)) {
+  //       return res.status(400).json({
+  //         success: false,
+  //         message: "Invalid Indian mobile number",
+  //       });
+  //     }
 
-      /* 3️⃣ Find or create user */
-      const Model = roleModelMap[role] || User;
-      let user = await Model.findOne({ mobileNumber: cleanedMobile });
+  //     /* 3️⃣ Find or create user */
+  //     const Model = roleModelMap[role] || User;
+  //     let user = await Model.findOne({ mobileNumber: cleanedMobile });
 
-      if (!user) {
-        if (role === "photographer") {
-          return res.status(404).json({
-            success: false,
-            message: "Please contact admin",
-          });
-        } else {
-          user = await Model.create({
-            mobileNumber: cleanedMobile,
-            userType: role || "user",
-          });
-        }
-      }
+  //     if (!user) {
+  //       if (role === "photographer") {
+  //         return res.status(404).json({
+  //           success: false,
+  //           message: "Please contact admin",
+  //         });
+  //       } else {
+  //         user = await Model.create({
+  //           mobileNumber: cleanedMobile,
+  //           userType: role || "user",
+  //         });
+  //       }
+  //     }
 
-      // Check Photographer Activation Status
-      if (role === "photographer" && user.status !== "active") {
-        return res.status(403).json({
-          success: false,
-          message: "Your account is unverified. Please contact the admin.",
-        });
-      }
+  //     // Check Photographer Activation Status
+  //     if (role === "photographer" && user.status !== "active") {
+  //       return res.status(403).json({
+  //         success: false,
+  //         message: "Your account is unverified. Please contact the admin.",
+  //       });
+  //     }
 
-      /* 4️⃣ OTP Bypass */
-      if (OTP_BYPASS_ENABLED && OTP_BYPASS_NUMBERS.includes(cleanedMobile)) {
-        user.verificationId = "bypass_verification_id";
+  //     /* 4️⃣ OTP Bypass */
+  //     if (OTP_BYPASS_ENABLED && OTP_BYPASS_NUMBERS.includes(cleanedMobile)) {
+  //       user.verificationId = "bypass_verification_id";
 
-        user.verificationExpiry = new Date(
-          Date.now() + OTP_VALIDITY_MINUTES * 60 * 1000
-        );
-        await user.save();
+  //       user.verificationExpiry = new Date(
+  //         Date.now() + OTP_VALIDITY_MINUTES * 60 * 1000
+  //       );
+  //       await user.save();
 
-        return res.status(200).json({
-          success: true,
-          message: "OTP sent successfully (bypass)",
-          bypass: true,
-        });
-      }
+  //       return res.status(200).json({
+  //         success: true,
+  //         message: "OTP sent successfully (bypass)",
+  //         bypass: true,
+  //       });
+  //     }
 
-      /* Rate Limiting & Security Checks */
-      if (user.lockUntil && new Date(user.lockUntil) > new Date()) {
-        const waitMinutes = Math.ceil(
-          (new Date(user.lockUntil) - new Date()) / (60 * 1000)
-        );
-        return res.status(429).json({
-          success: false,
-          message: `Account locked due to too many failed attempts. Please try again in ${waitMinutes} minutes.`,
-        });
-      }
+  //     /* Rate Limiting & Security Checks */
+  //     if (user.lockUntil && new Date(user.lockUntil) > new Date()) {
+  //       const waitMinutes = Math.ceil(
+  //         (new Date(user.lockUntil) - new Date()) / (60 * 1000)
+  //       );
+  //       return res.status(429).json({
+  //         success: false,
+  //         message: `Account locked due to too many failed attempts. Please try again in ${waitMinutes} minutes.`,
+  //       });
+  //     }
 
 
 
-      if (
-        user.lastOtpSentAt &&
-        Date.now() - new Date(user.lastOtpSentAt).getTime() <
-        OTP_RESEND_COOLDOWN_SECONDS * 1000
-      ) {
-        const waitSeconds = Math.ceil(
-          (OTP_RESEND_COOLDOWN_SECONDS * 1000 -
-            (Date.now() - new Date(user.lastOtpSentAt).getTime())) /
-          1000
-        );
-        return res.status(429).json({
-          success: false,
-          message: `Please wait ${waitSeconds} seconds before requesting a new OTP.`,
-        });
-      }
+  //     if (
+  //       user.lastOtpSentAt &&
+  //       Date.now() - new Date(user.lastOtpSentAt).getTime() <
+  //       OTP_RESEND_COOLDOWN_SECONDS * 1000
+  //     ) {
+  //       const waitSeconds = Math.ceil(
+  //         (OTP_RESEND_COOLDOWN_SECONDS * 1000 -
+  //           (Date.now() - new Date(user.lastOtpSentAt).getTime())) /
+  //         1000
+  //       );
+  //       return res.status(429).json({
+  //         success: false,
+  //         message: `Please wait ${waitSeconds} seconds before requesting a new OTP.`,
+  //       });
+  //     }
 
-      /* 5️⃣ Send OTP via MessageCentral */
-      let response;
-      try {
-        response = await sendMessageCentral(cleanedMobile);
-        console.log("ress", response.data);
-      } catch (err) {
-        const providerData = err.response?.data;
-        console.error(
-          "❌ MessageCentral SEND failed:",
-          providerData || err.message
-        );
+  //     /* 5️⃣ Send OTP via MessageCentral */
+  //     let response;
+  //     try {
+  //       response = await sendMessageCentral(cleanedMobile);
+  //       console.log("ress", response.data);
+  //     } catch (err) {
+  //       const providerData = err.response?.data;
+  //       console.error(
+  //         "❌ MessageCentral SEND failed:",
+  //         providerData || err.message
+  //       );
 
-        return res.status(502).json({
-          success: false,
-          message:
-            providerData?.message ||
-            providerData?.errorMessage ||
-            "Failed to send OTP",
-          provider: providerData,
-        });
-      }
+  //       return res.status(502).json({
+  //         success: false,
+  //         message:
+  //           providerData?.message ||
+  //           providerData?.errorMessage ||
+  //           "Failed to send OTP",
+  //         provider: providerData,
+  //       });
+  //     }
 
-      /* 6️⃣ Validate provider response */
-      const data = response.data;
-      const verificationId =
-        data?.verificationId || data?.data?.verificationId || data?.id || null;
+  //     /* 6️⃣ Validate provider response */
+  //     const data = response.data;
+  //     const verificationId =
+  //       data?.verificationId || data?.data?.verificationId || data?.id || null;
 
-      const responseCode = Number(
-        data?.responseCode || data?.data?.responseCode
-      );
+  //     const responseCode = Number(
+  //       data?.responseCode || data?.data?.responseCode
+  //     );
 
-      if (response.status !== 200 || responseCode !== 200 || !verificationId) {
-        console.error("❌ Invalid SEND response:", data);
-        const mappedError = PROVIDER_MESSAGES[responseCode] || {
-          message: "Failed to send OTP",
-          status: 502,
-        };
-        return res.status(mappedError.status).json({
-          success: false,
-          message: mappedError.message,
-          provider: data,
-        });
-      }
+  //     if (response.status !== 200 || responseCode !== 200 || !verificationId) {
+  //       console.error("❌ Invalid SEND response:", data);
+  //       const mappedError = PROVIDER_MESSAGES[responseCode] || {
+  //         message: "Failed to send OTP",
+  //         status: 502,
+  //       };
+  //       return res.status(mappedError.status).json({
+  //         success: false,
+  //         message: mappedError.message,
+  //         provider: data,
+  //       });
+  //     }
 
-      /* 7️⃣ Save verification details */
-      user.verificationId = verificationId;
-      user.verificationExpiry = new Date(
-        Date.now() + OTP_VALIDITY_MINUTES * 60 * 1000
-      );
-      user.lastOtpSentAt = new Date();
-      user.otpAttempts = 0; // Reset attempts on new OTP send
-      // Ensure our canonical isVerified flag is false when sending OTP
-      user.isVerified = false;
-      await user.save();
+  //     /* 7️⃣ Save verification details */
+  //     user.verificationId = verificationId;
+  //     user.verificationExpiry = new Date(
+  //       Date.now() + OTP_VALIDITY_MINUTES * 60 * 1000
+  //     );
+  //     user.lastOtpSentAt = new Date();
+  //     user.otpAttempts = 0; // Reset attempts on new OTP send
+  //     // Ensure our canonical isVerified flag is false when sending OTP
+  //     user.isVerified = false;
+  //     await user.save();
 
-      return res.status(200).json({
-        success: true,
-        message: "OTP sent successfully",
-      });
-    } catch (error) {
-      console.error("❌ Send OTP error:", error.message);
-      return res
-        .status(500)
-        .json({ success: false, message: "Internal server error" });
-    }
-  }
+  //     return res.status(200).json({
+  //       success: true,
+  //       message: "OTP sent successfully",
+  //     });
+  //   } catch (error) {
+  //     console.error("❌ Send OTP error:", error.message);
+  //     return res
+  //       .status(500)
+  //       .json({ success: false, message: "Internal server error" });
+  //   }
+  // }
 
   // //   /* =======================
   // //    VERIFY OTP
   // // ======================= */
-  async verifyOTP(req, res) {
-    try {
-      const { mobileNumber, otp, fcmToken, role } = req.body;
+  // async verifyOTP(req, res) {
+  //   try {
+  //     const { mobileNumber, otp, fcmToken, role } = req.body;
 
-      /* 1️⃣ Validate input */
-      if (!mobileNumber) {
-        return res.status(400).json({
-          success: false,
-          message: "Mobile number is required",
-        });
-      }
+  //     /* 1️⃣ Validate input */
+  //     if (!mobileNumber) {
+  //       return res.status(400).json({
+  //         success: false,
+  //         message: "Mobile number is required",
+  //       });
+  //     }
 
-      if (!otp) {
-        return res.status(400).json({
-          success: false,
-          message: "OTP is required",
-        });
-      }
+  //     if (!otp) {
+  //       return res.status(400).json({
+  //         success: false,
+  //         message: "OTP is required",
+  //       });
+  //     }
 
-      const cleanedMobile = mobileNumber.toString().replace(/\D/g, "");
+  //     const cleanedMobile = mobileNumber.toString().replace(/\D/g, "");
 
-      if (!/^[6-9]\d{9}$/.test(cleanedMobile)) {
-        return res.status(400).json({
-          success: false,
-          message: "Invalid Indian mobile number",
-        });
-      }
+  //     if (!/^[6-9]\d{9}$/.test(cleanedMobile)) {
+  //       return res.status(400).json({
+  //         success: false,
+  //         message: "Invalid Indian mobile number",
+  //       });
+  //     }
 
-      /* 2️⃣ Find user */
-      const Model = roleModelMap[role] || User;
-      const user = await Model.findOne({ mobileNumber: cleanedMobile });
+  //     /* 2️⃣ Find user */
+  //     const Model = roleModelMap[role] || User;
+  //     const user = await Model.findOne({ mobileNumber: cleanedMobile });
 
-      if (!user) {
-        if (role === "photographer") {
-          return res.status(404).json({
-            success: false,
-            message: "Please contact admin",
-          });
-        }
-        return res.status(404).json({
-          success: false,
-          message: "User not found",
-        });
-      }
+  //     if (!user) {
+  //       if (role === "photographer") {
+  //         return res.status(404).json({
+  //           success: false,
+  //           message: "Please contact admin",
+  //         });
+  //       }
+  //       return res.status(404).json({
+  //         success: false,
+  //         message: "User not found",
+  //       });
+  //     }
 
-      // Check Photographer Activation Status
-      if (role === "photographer" && user.status !== "active") {
-        return res.status(403).json({
-          success: false,
-          message: "Your account is unverified. Please contact the admin.",
-        });
-      }
+  //     // Check Photographer Activation Status
+  //     if (role === "photographer" && user.status !== "active") {
+  //       return res.status(403).json({
+  //         success: false,
+  //         message: "Your account is unverified. Please contact the admin.",
+  //       });
+  //     }
 
-      /* 2.1️⃣ Check Lock Status */
-      if (user.lockUntil && new Date(user.lockUntil) > new Date()) {
-        const waitMinutes = Math.ceil(
-          (new Date(user.lockUntil) - new Date()) / (60 * 1000)
-        );
-        return res.status(429).json({
-          success: false,
-          message: `Account locked due to too many failed attempts. Please try again in ${waitMinutes} minutes.`,
-        });
-      }
-      /* 3️⃣ OTP BYPASS (DEV / QA) */
-      if (
-        process.env.OTP_BYPASS_ENABLED === "true" &&
-        process.env.OTP_BYPASS_NUMBERS?.split(",").includes(cleanedMobile) &&
-        otp === process.env.OTP_BYPASS_CODE
-      ) {
-        user.isVerified = true;
-        user.verificationId = null;
-        user.verificationExpiry = null;
+  //     /* 2.1️⃣ Check Lock Status */
+  //     if (user.lockUntil && new Date(user.lockUntil) > new Date()) {
+  //       const waitMinutes = Math.ceil(
+  //         (new Date(user.lockUntil) - new Date()) / (60 * 1000)
+  //       );
+  //       return res.status(429).json({
+  //         success: false,
+  //         message: `Account locked due to too many failed attempts. Please try again in ${waitMinutes} minutes.`,
+  //       });
+  //     }
+  //     /* 3️⃣ OTP BYPASS (DEV / QA) */
+  //     if (
+  //       process.env.OTP_BYPASS_ENABLED === "true" &&
+  //       process.env.OTP_BYPASS_NUMBERS?.split(",").includes(cleanedMobile) &&
+  //       otp === process.env.OTP_BYPASS_CODE
+  //     ) {
+  //       user.isVerified = true;
+  //       user.verificationId = null;
+  //       user.verificationExpiry = null;
 
-        if (fcmToken) user.fcmToken = fcmToken;
+  //       if (fcmToken) user.fcmToken = fcmToken;
 
-        const token = signToken({
-          id: user._id,
-          mobileNumber: user.mobileNumber,
-          userType: user.userType,
-          isAdmin: !!user.isAdmin,
-        });
+  //       const token = signToken({
+  //         id: user._id,
+  //         mobileNumber: user.mobileNumber,
+  //         userType: user.userType,
+  //         isAdmin: !!user.isAdmin,
+  //       });
 
-        user.token = token;
-        await user.save();
+  //       user.token = token;
+  //       await user.save();
 
-        res.cookie("token", token, {
-          httpOnly: true,
-          secure: process.env.NODE_ENV === "production",
-          sameSite: "strict",
-          maxAge: 7 * 24 * 60 * 60 * 1000,
-        });
+  //       res.cookie("token", token, {
+  //         httpOnly: true,
+  //         secure: process.env.NODE_ENV === "production",
+  //         sameSite: "strict",
+  //         maxAge: 7 * 24 * 60 * 60 * 1000,
+  //       });
 
-        return res.status(200).json({
-          success: true,
-          message: "OTP verified successfully (bypass)",
-          token
-        });
-      }
+  //       return res.status(200).json({
+  //         success: true,
+  //         message: "OTP verified successfully (bypass)",
+  //         token
+  //       });
+  //     }
 
-      /* 4️⃣ Ensure OTP request exists */
-      if (!user.verificationId) {
-        return res.status(400).json({
-          success: false,
-          message: "No OTP request found. Please resend OTP.",
-        });
-      }
+  //     /* 4️⃣ Ensure OTP request exists */
+  //     if (!user.verificationId) {
+  //       return res.status(400).json({
+  //         success: false,
+  //         message: "No OTP request found. Please resend OTP.",
+  //       });
+  //     }
 
-      /* 5️⃣ Expiry check */
-      if (
-        !user.verificationExpiry ||
-        new Date() > new Date(user.verificationExpiry)
-      ) {
-        user.verificationId = null;
-        user.verificationExpiry = null;
-        await user.save();
+  //     /* 5️⃣ Expiry check */
+  //     if (
+  //       !user.verificationExpiry ||
+  //       new Date() > new Date(user.verificationExpiry)
+  //     ) {
+  //       user.verificationId = null;
+  //       user.verificationExpiry = null;
+  //       await user.save();
 
-        return res.status(400).json({
-          success: false,
-          message: "OTP expired. Please resend OTP.",
-        });
-      }
+  //       return res.status(400).json({
+  //         success: false,
+  //         message: "OTP expired. Please resend OTP.",
+  //       });
+  //     }
 
-      /* 7️⃣ VERIFY OTP */
-      let response;
+  //     /* 7️⃣ VERIFY OTP */
+  //     let response;
 
-      try {
-        response = await verifyMessageCentral(user.verificationId, otp);
-      } catch (err) {
-        console.error("❌ MessageCentral VERIFY error:");
+  //     try {
+  //       response = await verifyMessageCentral(user.verificationId, otp);
+  //     } catch (err) {
+  //       console.error("❌ MessageCentral VERIFY error:");
 
-        // 🔹 Timeout
-        if (err.code === "ECONNABORTED") {
-          return res.status(503).json({
-            success: false,
-            message: "OTP verification service timeout. Please try again.",
-          });
-        }
+  //       // 🔹 Timeout
+  //       if (err.code === "ECONNABORTED") {
+  //         return res.status(503).json({
+  //           success: false,
+  //           message: "OTP verification service timeout. Please try again.",
+  //         });
+  //       }
 
-        // 🔹 Network / DNS error
-        if (!err.response) {
-          return res.status(503).json({
-            success: false,
-            message:
-              "Unable to reach OTP verification service. Please try again later.",
-          });
-        }
+  //       // 🔹 Network / DNS error
+  //       if (!err.response) {
+  //         return res.status(503).json({
+  //           success: false,
+  //           message:
+  //             "Unable to reach OTP verification service. Please try again later.",
+  //         });
+  //       }
 
-        // 🔹 Provider responded with error
-        const providerData = err.response?.data || {};
-        const providerCode =
-          providerData?.responseCode ||
-          providerData?.data?.responseCode ||
-          err.response?.status;
+  //       // 🔹 Provider responded with error
+  //       const providerData = err.response?.data || {};
+  //       const providerCode =
+  //         providerData?.responseCode ||
+  //         providerData?.data?.responseCode ||
+  //         err.response?.status;
 
-        console.error("Provider Status:", err.response?.status);
-        console.error("Provider Response:", providerData);
+  //       console.error("Provider Status:", err.response?.status);
+  //       console.error("Provider Response:", providerData);
 
-        const mappedError = PROVIDER_MESSAGES[providerCode] || {
-          message: "Invalid or expired OTP",
-          status: 400,
-        };
+  //       const mappedError = PROVIDER_MESSAGES[providerCode] || {
+  //         message: "Invalid or expired OTP",
+  //         status: 400,
+  //       };
 
-        return res.status(mappedError.status).json({
-          success: false,
-          message: mappedError.message,
-          providerCode,
-        });
-      }
+  //       return res.status(mappedError.status).json({
+  //         success: false,
+  //         message: mappedError.message,
+  //         providerCode,
+  //       });
+  //     }
 
-      /* 8️⃣ Validate provider success response */
-      const data = response?.data || {};
+  //     /* 8️⃣ Validate provider success response */
+  //     const data = response?.data || {};
 
-      const providerCode = Number(
-        data?.responseCode ||
-        data?.data?.responseCode ||
-        0
-      );
+  //     const providerCode = Number(
+  //       data?.responseCode ||
+  //       data?.data?.responseCode ||
+  //       0
+  //     );
 
-      if (response.status !== 200 || providerCode !== 200) {
-        // Handle specific failure cases
-        if (providerCode === 702) {
-          // WRONG_OTP_PROVIDED
-          user.otpAttempts = (user.otpAttempts || 0) + 1;
-          if (user.otpAttempts >= OTP_MAX_ATTEMPTS) {
-            user.lockUntil = new Date(
-              Date.now() + OTP_LOCK_MINUTES * 60 * 1000
-            );
-            user.otpAttempts = 0; // Reset attempts after locking
-            await user.save();
-            return res.status(403).json({
-              success: false,
-              message: `Maximum verification attempts exceeded. Account locked for ${OTP_LOCK_MINUTES} minutes.`,
-              code: "ACCOUNT_LOCKED",
-            });
-          }
-          await user.save();
-          return res.status(400).json({
-            success: false,
-            message: `Wrong OTP entered. You have ${OTP_MAX_ATTEMPTS - user.otpAttempts
-              } attempts remaining.`,
-            providerCode,
-          });
-        }
+  //     if (response.status !== 200 || providerCode !== 200) {
+  //       // Handle specific failure cases
+  //       if (providerCode === 702) {
+  //         // WRONG_OTP_PROVIDED
+  //         user.otpAttempts = (user.otpAttempts || 0) + 1;
+  //         if (user.otpAttempts >= OTP_MAX_ATTEMPTS) {
+  //           user.lockUntil = new Date(
+  //             Date.now() + OTP_LOCK_MINUTES * 60 * 1000
+  //           );
+  //           user.otpAttempts = 0; // Reset attempts after locking
+  //           await user.save();
+  //           return res.status(403).json({
+  //             success: false,
+  //             message: `Maximum verification attempts exceeded. Account locked for ${OTP_LOCK_MINUTES} minutes.`,
+  //             code: "ACCOUNT_LOCKED",
+  //           });
+  //         }
+  //         await user.save();
+  //         return res.status(400).json({
+  //           success: false,
+  //           message: `Wrong OTP entered. You have ${OTP_MAX_ATTEMPTS - user.otpAttempts
+  //             } attempts remaining.`,
+  //           providerCode,
+  //         });
+  //       }
 
-        const mappedError = PROVIDER_MESSAGES[providerCode] || {
-          message: "Invalid or expired OTP",
-          status: 400,
-        };
+  //       const mappedError = PROVIDER_MESSAGES[providerCode] || {
+  //         message: "Invalid or expired OTP",
+  //         status: 400,
+  //       };
 
-        return res.status(mappedError.status).json({
-          success: false,
-          message: mappedError.message,
-          providerCode,
-        });
-      }
+  //       return res.status(mappedError.status).json({
+  //         success: false,
+  //         message: mappedError.message,
+  //         providerCode,
+  //       });
+  //     }
 
-      /* 9️⃣ SUCCESS — finalize login */
-      user.isVerified = true;
-      user.verificationId = null;
-      user.verificationExpiry = null;
-      user.otpAttempts = 0;
-      user.lockUntil = null;
+  //     /* 9️⃣ SUCCESS — finalize login */
+  //     user.isVerified = true;
+  //     user.verificationId = null;
+  //     user.verificationExpiry = null;
+  //     user.otpAttempts = 0;
+  //     user.lockUntil = null;
 
-      if (fcmToken) user.fcmToken = fcmToken;
+  //     if (fcmToken) user.fcmToken = fcmToken;
 
-      const token = signToken({
-        id: user._id,
-        mobileNumber: user.mobileNumber,
-        userType: user.userType,
-        isAdmin: !!user.isAdmin,
-      });
+  //     const token = signToken({
+  //       id: user._id,
+  //       mobileNumber: user.mobileNumber,
+  //       userType: user.userType,
+  //       isAdmin: !!user.isAdmin,
+  //     });
 
-      user.token = token;
-      await user.save();
+  //     user.token = token;
+  //     await user.save();
 
-      return res.status(200).json({
-        success: true,
-        message: "OTP verified successfully",
-        token,
-        user,
-      });
+  //     return res.status(200).json({
+  //       success: true,
+  //       message: "OTP verified successfully",
+  //       token,
+  //       user,
+  //     });
 
-    } catch (error) {
-      console.error("❌ verifyOTP internal error:", error);
-      return res.status(500).json({
-        success: false,
-        message: "Internal server error",
-      });
-    }
-  }
+  //   } catch (error) {
+  //     console.error("❌ verifyOTP internal error:", error);
+  //     return res.status(500).json({
+  //       success: false,
+  //       message: "Internal server error",
+  //     });
+  //   }
+  // }
 
 
   // Developement Routes
@@ -528,133 +528,133 @@ class AuthController {
 
   //static 1234 OTP And Verify Code
 
-  // async sendOTP(req, res, next) {
-  //   try {
-  //     const { mobileNumber, role } = req.body;
-  //     /* 1️⃣ Validate mobile */
-  //     if (!mobileNumber) {
-  //       return res.status(400).json({
-  //         success: false,
-  //         message: "Mobile number is required",
-  //       });
-  //     }
-  //     if (!roleModelMap[role]) {
-  //       return res.status(400).json({
-  //         success: false,
-  //         message: "Invalid role",
-  //       });
-  //     }
+  async sendOTP(req, res, next) {
+    try {
+      const { mobileNumber, role } = req.body;
+      /* 1️⃣ Validate mobile */
+      if (!mobileNumber) {
+        return res.status(400).json({
+          success: false,
+          message: "Mobile number is required",
+        });
+      }
+      if (!roleModelMap[role]) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid role",
+        });
+      }
 
-  //     const cleanedMobile = mobileNumber.toString().replace(/\D/g, "");
-  //     if (!/^[6-9]\d{9}$/.test(cleanedMobile)) {
-  //       return res.status(400).json({
-  //         success: false,
-  //         message: "Invalid Indian mobile number",
-  //       });
-  //     }
+      const cleanedMobile = mobileNumber.toString().replace(/\D/g, "");
+      if (!/^[6-9]\d{9}$/.test(cleanedMobile)) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid Indian mobile number",
+        });
+      }
 
-  //     const Model = roleModelMap[role];
+      const Model = roleModelMap[role];
 
-  //     const alreadyExistedUser = await Model.findOne({
-  //       mobileNumber: cleanedMobile,
-  //     });
-  //     if (alreadyExistedUser) {
-  //       return res.status(200).json({
-  //         success: true,
-  //         message: "YOUR OTP IS 1234",
-  //       })
-  //     }
+      const alreadyExistedUser = await Model.findOne({
+        mobileNumber: cleanedMobile,
+      });
+      if (alreadyExistedUser) {
+        return res.status(200).json({
+          success: true,
+          message: "YOUR OTP IS 1234",
+        })
+      }
 
-  //     const newUserData = {
-  //       mobileNumber: cleanedMobile,
-  //       userType: "user",
-  //       verificationId: "1234",
-  //     };
-  //     const user = await Model.create(newUserData);
-  //     console.log(user);
-  //     if (user) {
-  //       return res.status(200).json({
-  //         success: true,
-  //         message: "YOUR OTP IS 1234",
-  //       });
-  //     }
-  //     res.status(400).json({
-  //       success: false,
-  //       message: "Failed to send OTP",
-  //     });
-  //   } catch (error) {
-  //     console.error("❌ Send OTP error:", error.message);
-  //     return res.status(500).json({
-  //       success: false,
-  //       message: error.message || "Internal server error",
-  //     });
-  //   }
-  // }
+      const newUserData = {
+        mobileNumber: cleanedMobile,
+        userType: "user",
+        verificationId: "1234",
+      };
+      const user = await Model.create(newUserData);
+      console.log(user);
+      if (user) {
+        return res.status(200).json({
+          success: true,
+          message: "YOUR OTP IS 1234",
+        });
+      }
+      res.status(400).json({
+        success: false,
+        message: "Failed to send OTP",
+      });
+    } catch (error) {
+      console.error("❌ Send OTP error:", error.message);
+      return res.status(500).json({
+        success: false,
+        message: error.message || "Internal server error",
+      });
+    }
+  }
 
   /* =======================
    VERIFY OTP
 ======================= */
-  // async verifyOTP(req, res) {
-  //   try {
-  //     const { mobileNumber, otp, role } = req.body;
+  async verifyOTP(req, res) {
+    try {
+      const { mobileNumber, otp, role } = req.body;
 
 
-  //     /* 1️⃣ Validate input */
-  //     if (!mobileNumber || !otp) {
-  //       return res.status(400).json({
-  //         success: false,
-  //         message: "Mobile number and OTP are required",
-  //       });
-  //     }
+      /* 1️⃣ Validate input */
+      if (!mobileNumber || !otp) {
+        return res.status(400).json({
+          success: false,
+          message: "Mobile number and OTP are required",
+        });
+      }
 
-  //     const cleanedMobile = mobileNumber.toString().replace(/\D/g, "");
-  //     if (!/^[6-9]\d{9}$/.test(cleanedMobile)) {
-  //       return res.status(400).json({
-  //         success: false,
-  //         message: "Invalid Indian mobile number",
-  //       });
-  //     }
-  //     console.log(cleanedMobile, otp, role);
+      const cleanedMobile = mobileNumber.toString().replace(/\D/g, "");
+      if (!/^[6-9]\d{9}$/.test(cleanedMobile)) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid Indian mobile number",
+        });
+      }
+      console.log(cleanedMobile, otp, role);
 
-  //     const Model = roleModelMap[role];
-  //     /* 2️⃣ Find user */
-  //     const user = await Model.findOne({
-  //       mobileNumber: cleanedMobile,
-  //     });
-  //     if (!user) {
-  //       return res.status(404).json({
-  //         success: false,
-  //         message: "User not found",
-  //       });
-  //     }
+      const Model = roleModelMap[role];
+      /* 2️⃣ Find user */
+      const user = await Model.findOne({
+        mobileNumber: cleanedMobile,
+      });
+      if (!user) {
+        return res.status(404).json({
+          success: false,
+          message: "User not found",
+        });
+      }
 
-  //     if (otp === "1234") {
-  //       const token = signToken({
-  //         id: user._id,
-  //         mobileNumber: user.mobileNumber,
-  //         userType: user.userType,
-  //       });
-  //       await user.save();
-  //       console.log("token Created", token);
-  //       return res.status(200).json({
-  //         success: true,
-  //         message: "OTP verified successfully",
-  //         token: token,
-  //         id: user._id,
-  //       });
-  //     } else {
-  //       return res.status(400).json({
-  //         success: false,
-  //         message: "Invalid OTP",
-  //       });
-  //     }
-  //   } catch (error) {
-  //     return res.status(500).json({
-  //       success: false,
-  //       message: error.message || "Internal server error",
-  //     });
-  //   }
-  // }
+      if (otp === "1234") {
+        const token = signToken({
+          id: user._id,
+          mobileNumber: user.mobileNumber,
+          userType: user.userType,
+        });
+        await user.save();
+        console.log("token Created", token);
+        return res.status(200).json({
+          success: true,
+          message: "OTP verified successfully",
+          token: token,
+          id: user._id,
+        });
+      } else {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid OTP",
+        });
+      }
+    } catch (error) {
+      return res.status(500).json({
+        success: false,
+        message: error.message || "Internal server error",
+      });
+    }
+  }
 
 
   //static 1234 OTP And Verify Code Ends
