@@ -74,6 +74,7 @@ router.delete("/payouts/:id", (req, res, next) => PayoutController.delete(req, r
 
 // --- Bookings ---
 router.get("/bookings", (req, res, next) => BookingController.getAllBookings(req, res, next));
+router.get("/bookings/all", (req, res, next) => BookingController.getAllMyBookings(req, res, next));
 router.get("/bookings/pending", (req, res, next) => BookingController.getPendingBookings(req, res, next));
 router.get("/bookings/accepted", (req, res, next) => BookingController.getAcceptedBookings(req, res, next));
 router.get("/bookings/rejected", (req, res, next) => BookingController.getRejectedBookings(req, res, next));

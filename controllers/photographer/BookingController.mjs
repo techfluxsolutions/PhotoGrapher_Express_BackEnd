@@ -273,6 +273,69 @@ class BookingController {
             return sendErrorResponse(res, error, 500);
         }
     }
+    
+    // Get ALL bookings for the photographer (Assignments + Invitations, No date limits)
+    async getAllMyBookings(req, res) {
+        try {
+            const page = Math.max(1, parseInt(req.query.page) || 1);
+            const limit = Math.max(1, parseInt(req.query.limit) || 20);
+            const skip = (page - 1) * limit;
+
+            const myId = req.user?.id;
+            if (!myId) {
+                return sendErrorResponse(res, "Unauthorized: Photographer account required", 401);
+            }
+            const photographerId = new mongoose.Types.ObjectId(myId);
+
+            const filter = {
+                $or: [
+                    { photographer_id: photographerId },
+                    { photographerIds: { $in: [photographerId] } }
+                ]
+            };
+
+            const [bookings, total] = await Promise.all([
+                ServiceBooking.find(filter)
+                    .select("-gallery -images")
+                    .populate("client_id", "username email mobileNumber avatar city")
+                    .populate("service_id", "serviceName")
+                    .populate("photographer_id", "username")
+                    .sort({ createdAt: -1 })
+                    .skip(skip)
+                    .limit(limit),
+                ServiceBooking.countDocuments(filter),
+            ]);
+
+            const formattedBookings = bookings.map(booking => {
+                const ist = this.formatIST(booking.bookingDate, booking.startDate || booking.eventDate);
+                return {
+                    _id: booking._id,
+                    bookingId: booking.veroaBookingId,
+                    clientName: booking.client_id?.username || "N/A",
+                    clientAvatar: booking.client_id?.avatar || null,
+                    eventType: booking.service_id?.serviceName || "N/A",
+                    date: ist.date,
+                    time: ist.time,
+                    fromDate: this.formatDMY(booking.startDate || booking.eventDate || booking.bookingDate),
+                    toDate: this.formatDMY(booking.endDate || booking.startDate || booking.eventDate || booking.bookingDate),
+                    city: booking.city,
+                    address: booking.address || booking.location || "",
+                    status: booking.status,
+                    bookingStatus: booking.bookingStatus,
+                    galleryStatus: booking.galleryStatus || "Upload Pending",
+                    photographerAmount: booking.photographerAmount || 0,
+                    totalAmount: booking.totalAmount
+                };
+            });
+
+            return sendSuccessResponse(res, {
+                bookings: formattedBookings,
+                meta: { total, page, limit },
+            }, "All bookings fetched successfully");
+        } catch (error) {
+            return sendErrorResponse(res, error, 500);
+        }
+    }
 
     // Get booking by ID
     async getBookingById(req, res) {
