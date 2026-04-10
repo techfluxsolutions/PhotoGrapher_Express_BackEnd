@@ -91,6 +91,41 @@ class PhotographerController {
         };
     }
 
+    // Helper to validate profile completeness
+    _validateProfileCompleteness(p) {
+        const missingFields = [];
+
+        // 1. Personal Info (Basic Info)
+        if (!p.basicInfo?.fullName) missingFields.push("Full Name");
+        if (!p.basicInfo?.displayName) missingFields.push("Display Name");
+        if (!p.basicInfo?.phone) missingFields.push("Phone in Basic Info");
+
+        // 2. Professional Details
+        if (!p.professionalDetails?.photographerType) missingFields.push("Photographer Type");
+        if (!p.professionalDetails?.expertiseLevel) missingFields.push("Expertise Level");
+        if (!p.professionalDetails?.yearsOfExperience) missingFields.push("Years of Experience");
+        if (!p.professionalDetails?.primaryLocation) missingFields.push("Primary Location");
+
+        // 3. Bank Details
+        if (!p.bank_account_holder) missingFields.push("Bank Account Holder");
+        if (!p.bank_name) missingFields.push("Bank Name");
+        if (!p.bank_account_number) missingFields.push("Bank Account Number");
+        if (!p.bank_ifsc) missingFields.push("IFSC Code");
+        if (!p.account_type) missingFields.push("Account Type");
+
+        // 4. Services and Styles
+        const services = p.servicesAndStyles?.services;
+        const styles = p.servicesAndStyles?.styles;
+
+        const hasService = services ? Object.values(services.toObject ? services.toObject() : services).some(val => val === true) : false;
+        const hasStyle = styles ? Object.values(styles.toObject ? styles.toObject() : styles).some(val => val === true) : false;
+
+        if (!hasService) missingFields.push("At least one service selected");
+        if (!hasStyle) missingFields.push("At least one style selected");
+
+        return missingFields;
+    }
+
     // Get photographer status only
     async getPhotographerStatus(req, res) {
         try {
@@ -374,6 +409,16 @@ class PhotographerController {
 
             if (!photographer) {
                 return res.status(404).json({ message: "Photographer not found" });
+            }
+
+            // Check for profile completeness before sending OTP
+            const missing = this._validateProfileCompleteness(photographer);
+            if (missing.length > 0) {
+                return res.status(200).json({
+                    success: false,
+                    message: "Cannot send OTP. Photographer profile is incomplete.",
+                    missingFields: missing
+                });
             }
 
             const response = await sendMessageCentral(cleanedMobile);
