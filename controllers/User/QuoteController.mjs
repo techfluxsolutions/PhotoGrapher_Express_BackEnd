@@ -1,6 +1,7 @@
 import Quote from "../../models/Quote.mjs";
 import ServiceBooking from "../../models/ServiceBookings.mjs";
 import Counter from "../../models/Counter.mjs";
+import Conversation from "../../models/Conversation.mjs";
 class QuoteController {
   async create(req, res, next) {
     try {
@@ -302,6 +303,17 @@ class QuoteController {
         quote.quoteStatus = "awaiting-payment";
         quote.bStatus = "accepted";
         await quote.save();
+
+        // 🔄 Step 4: Link existing conversation to the new booking
+        try {
+          await Conversation.findOneAndUpdate(
+            { quoteId: quote._id },
+            { $set: { bookingId: booking._id } }
+          );
+          console.log(`✅ Conversation for quote ${quote._id} linked to booking ${booking._id}`);
+        } catch (convError) {
+          console.error("Error linking conversation to booking:", convError);
+        }
       }
 
       return res.status(201).json({

@@ -795,15 +795,19 @@ class BookingController {
     async getBookingCount(req, res, next) {
         try {
             const myId = new mongoose.Types.ObjectId(req.user.id);
-            const todaysDate = new Date();
+            const now = new Date();
+            const istNow = new Date(now.getTime() + (5.5 * 60 * 60 * 1000));
+            const todayStr = istNow.toISOString().split("T")[0];
+            const todayStartIST = new Date(`${todayStr}T00:00:00.000+05:30`);
+
             const upcommingBookingCount = await ServiceBooking.countDocuments({
                 photographer_id: myId,
                 bookingStatus: "accepted",
                 status: { $nin: ["completed", "canceled"] },
                 paymentStatus: { $in: ["partially paid", "fully paid"] },
                 $or: [
-                    { bookingDate: { $gte: todaysDate } },
-                    { startDate: { $gte: todaysDate.toISOString().split("T")[0] } }
+                    { bookingDate: { $gte: todayStartIST } },
+                    { startDate: { $gte: todayStr } }
                 ]
             });
             const completedBookingCount = await ServiceBooking.countDocuments({
@@ -813,7 +817,9 @@ class BookingController {
             });
             const uploadPending = await ServiceBooking.countDocuments({
                 photographer_id: myId,
-                galleryStatus: "Upload Pending"
+                bookingStatus: "accepted",
+                status: { $ne: "canceled" },
+                galleryStatus: { $ne: "Photos Uploaded" }
             })
             const data = {
                 upcommingBookingCount,
@@ -833,16 +839,20 @@ class BookingController {
             const skip = req.query.skip || 0;
             console.log(myId)
 
-            const today = new Date().toISOString().split("T")[0]; // "2026-03-25"
+            const now = new Date();
+            const istNow = new Date(now.getTime() + (5.5 * 60 * 60 * 1000));
+            const todayStr = istNow.toISOString().split("T")[0];
+
+            const todayStartIST = new Date(`${todayStr}T00:00:00.000+05:30`);
+            const tomorrowStartIST = new Date(todayStartIST.getTime() + 86400000);
 
             const bookings = await ServiceBooking.find({
                 photographer_id: myId,
                 bookingStatus: "accepted",
+                status: { $ne: "canceled" },
                 $or: [
-                    { startDate: { $lte: today }, endDate: { $gte: today } },
-                    { bookingDate: { $gte: new Date(today), $lt: new Date(new Date(today).getTime() + 86400000) } },
-                    { startDate: today },
-                    { endDate: today }
+                    { bookingDate: { $gte: todayStartIST, $lt: tomorrowStartIST } },
+                    { startDate: todayStr }
                 ]
             })
                 .sort({ startDate: 1, bookingDate: 1, createdAt: 1 }) // Primary sort: startDate ASC
@@ -910,7 +920,7 @@ class BookingController {
                 status: { $nin: ["completed", "canceled"] }
             };
 
-            // 1. Todays & Upcoming: (Today + Future)
+            // 1. Todays & Upcoming Dashboard Value: (Today + Future)
             const activeCount = await ServiceBooking.countDocuments({
                 ...acceptedBase,
                 $or: [
@@ -1085,25 +1095,13 @@ class BookingController {
 
             const myId = new mongoose.Types.ObjectId(req.user.id);
 
-            const todayMidnight = new Date();
-            todayMidnight.setUTCHours(0, 0, 0, 0);
-            const todayStr = todayMidnight.toISOString().split("T")[0];
-
-            // Filter for this photographer, only accepted bookings, excluding future dates, 
-            // and excluding those already uploaded
+            // Filter for this photographer, only accepted bookings,
+            // excluding canceled ones, and excluding those already uploaded.
             const filter = {
                 photographer_id: myId,
                 bookingStatus: "accepted",
-                galleryStatus: { $ne: "Photos Uploaded" },
-                $and: [
-                    {
-                        $or: [
-                            { status: "completed" },
-                            { bookingDate: { $lt: todayMidnight } },
-                            { startDate: { $lt: todayStr } }
-                        ]
-                    }
-                ]
+                status: { $ne: "canceled" },
+                galleryStatus: { $ne: "Photos Uploaded" }
             };
 
             // Search Filter (Client Name or Veroa ID)
@@ -1120,6 +1118,7 @@ class BookingController {
                     searchOr.push({ client_id: { $in: clientIds } });
                 }
 
+                filter.$and = [];
                 filter.$and.push({ $or: searchOr });
             }
 
