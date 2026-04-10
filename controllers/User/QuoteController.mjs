@@ -302,6 +302,8 @@ class QuoteController {
       if (booking) {
         quote.quoteStatus = "awaiting-payment";
         quote.bStatus = "accepted";
+        quote.isQuoteFinal = true;
+        quote.finalizeAt = new Date();
         await quote.save();
 
         // 🔄 Step 4: Link existing conversation to the new booking
