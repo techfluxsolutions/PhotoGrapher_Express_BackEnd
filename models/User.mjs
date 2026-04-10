@@ -5,12 +5,29 @@ const userSchema = new mongoose.Schema(
     username: {
       type: String,
       trim: true,
+      required: [true, "Full Name is required"],
+      validate: {
+                validator: function (v) {
+                    if (!v) return true; // optional field
+                    return /^[A-Za-z\s]+$/.test(v); // only letters + spaces
+                },
+                message: () =>
+                    `Special letters and numeric value not allowed`,
+            }
     },
 
     mobileNumber: {
       type: String,
-      required: true,
+      required: [true, "Mobile number is required"],
       unique: true,
+      validate: {
+                validator: function (v) {
+                    if (!v) return true; // optional field
+                    return /^\d{10}$/.test(v); // only 10 digits
+                },
+                message: props => `Mobile number should be 10 digits!`
+            }
+
     },
     avatar: {
       type: String,
@@ -31,15 +48,41 @@ const userSchema = new mongoose.Schema(
       type: String,
       unique: true,  // Enforce uniqueness
       sparse: true,  // Allow multiple docs to skip this field (null/missing)
+      required: [true, "Email is required"],
+      validate: {
+                validator: function (v) {
+                    if (!v) return true; // optional field
+                    return /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/.test(v);
+                },
+                message: props => `Given email is not valid!`
+            }
 
     },
     state: {
       type: String,
-      default: ""
+      default: "",
+      required: [true, "State is required"],
+      validate: {
+                validator: function (v) {
+                    if (!v) return true; // optional field
+                    return /^[A-Za-z\s]+$/.test(v); // only letters + spaces
+                },
+                message: () =>
+                    `Special letters and numeric value not allowed`,
+            }
     },
     city: {
       type: String,
-      default: ""
+      default: "",
+      required: [true, "City is required"],
+      validate: {
+                validator: function (v) {
+                    if (!v) return true; // optional field
+                    return /^[A-Za-z\s]+$/.test(v); // only letters + spaces.
+                },
+                message: () =>
+                    `Special letters and numeric value not allowed`,
+            }
     },
     otpExpiresAt: {
       type: Date,

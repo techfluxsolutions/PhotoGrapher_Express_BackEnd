@@ -4,6 +4,14 @@ const ContactUsSchema = new mongoose.Schema(
     {
         fullName: {
             type: String,
+            validate: {
+                validator: function (v) {
+                    if (!v) return true; // optional field
+                    return /^[A-Za-z\s]+$/.test(v); // only letters + spaces
+                },
+                message: () =>
+                    `Special letters and numeric value not allowed`,
+            },
         },
         email: {
             type: String,
