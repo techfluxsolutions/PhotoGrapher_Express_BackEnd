@@ -178,7 +178,7 @@ class UserController {
 
         return res.status(400).json({
           success: false,
-          message: `${field}: ${firstError.message}`,
+          message: `${field} ${firstError.message}`,
         });
       }
 
