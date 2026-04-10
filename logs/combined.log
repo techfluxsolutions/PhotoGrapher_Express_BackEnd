@@ -872,3 +872,6 @@
 {"level":"info","message":"::1 - - [10/Apr/2026:10:56:03 +0000] \"GET /api/photographers/bookings/all HTTP/1.1\" 200 - \"-\" \"PostmanRuntime/7.53.0\"","timestamp":"2026-04-10 16:26:03"}
 {"level":"info","message":"::1 - - [10/Apr/2026:10:56:27 +0000] \"GET /api/photographers/bookings/accepted HTTP/1.1\" 403 54 \"-\" \"PostmanRuntime/7.53.0\"","timestamp":"2026-04-10 16:26:27"}
 {"level":"info","message":"::1 - - [10/Apr/2026:10:56:37 +0000] \"GET /api/photographers/bookings/accepted HTTP/1.1\" 200 - \"-\" \"PostmanRuntime/7.53.0\"","timestamp":"2026-04-10 16:26:37"}
+{"level":"info","message":"::1 - - [10/Apr/2026:12:42:16 +0000] \"POST /api/admins/customers HTTP/1.1\" 200 58 \"-\" \"PostmanRuntime/7.53.0\"","timestamp":"2026-04-10 18:12:16"}
+{"level":"info","message":"::1 - - [10/Apr/2026:12:42:23 +0000] \"POST /api/admins/customers HTTP/1.1\" 400 46 \"-\" \"PostmanRuntime/7.53.0\"","timestamp":"2026-04-10 18:12:23"}
+{"level":"info","message":"::1 - - [10/Apr/2026:12:42:35 +0000] \"POST /api/admins/customers HTTP/1.1\" 400 46 \"-\" \"PostmanRuntime/7.53.0\"","timestamp":"2026-04-10 18:12:35"}

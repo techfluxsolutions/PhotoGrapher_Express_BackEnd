@@ -496,6 +496,39 @@ class PhotographerController {
                 return res.status(404).json({ message: "Photographer not found" });
             }
 
+            // --- Mandatory Details Validation ---
+            const mandatoryFields = [
+                "bank_account_holder",
+                "bank_name",
+                "bank_account_number",
+                "bank_ifsc",
+                "account_type"
+            ];
+
+            for (const field of mandatoryFields) {
+                if (!profileData[field] || String(profileData[field]).trim() === "") {
+                    const label = field.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+                    return res.status(400).json({
+                        success: false,
+                        message: `Please fill mandatory details: ${label}`
+                    });
+                }
+            }
+
+            // Validate nested basic info if provided
+            if (profileData.basicInfo) {
+                const basicFields = ["fullName", "phone", "email"];
+                for (const bf of basicFields) {
+                    if (profileData.basicInfo[bf] === "" || profileData.basicInfo[bf] === null) {
+                        const label = bf.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
+                        return res.status(400).json({
+                            success: false,
+                            message: `Please fill mandatory details: ${label}`
+                        });
+                    }
+                }
+            }
+
             // 1. Map Expertise Level (Beginner -> INITIO, etc.)
             if (profileData.professionalDetails?.expertiseLevel) {
                 const levelMap = {
@@ -614,16 +647,28 @@ class PhotographerController {
 
             let updateData = { ...req.body };
             for (const [key, value] of Object.entries(updateData)) {
+                // Check for empty values in provided fields
                 if (value === "" || value === null || value === undefined) {
-
-                    const capitalizedKey = key.charAt(0).toUpperCase() + key.slice(1);
-
+                    const label = key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
                     return res.status(400).json({
                         success: false,
-            message: `${capitalizedKey} cannot be empty`,
-        });
-    }
-}
+                        message: `Please fill mandatory details: ${label}`,
+                    });
+                }
+                
+                // If it's an object (like basicInfo), check its children if they are strings
+                if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
+                    for (const [subKey, subValue] of Object.entries(value)) {
+                        if (subValue === "" || subValue === null) {
+                            const label = subKey.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
+                            return res.status(400).json({
+                                success: false,
+                                message: `Please fill mandatory details: ${label}`,
+                            });
+                        }
+                    }
+                }
+            }
 
             // 1. Map Expertise Level
             if (updateData.professionalDetails?.expertiseLevel) {
