@@ -102,7 +102,7 @@ class NotificationController {
         }
     }
 
-    // Mark notification as read
+    // Mark notification as read...
     async markAsRead(req, res) {
         try {
             const { id } = req.params;
