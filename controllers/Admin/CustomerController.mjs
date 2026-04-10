@@ -9,6 +9,9 @@ class CustomerController {
   async create(req, res, next) {
     try {
       const payload = req.body;
+      const validators = {
+        email: /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+      };
 
       // Parse date of birth if provided in DD-MM-YYYY format
       if (payload.dateOfBirth && typeof payload.dateOfBirth === 'string') {
@@ -39,6 +42,16 @@ class CustomerController {
           return res.status(200).json({
             success: false,
             message: "Email already exists",
+          });
+        }
+      }
+
+      // Validate all fields
+      for (const [key, regex] of Object.entries(validators)) {
+        if (payload[key] && !regex.test(payload[key])) {
+          return res.status(400).json({
+            success: false,
+            message: `${key} is invalid`,
           });
         }
       }
