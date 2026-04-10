@@ -313,8 +313,10 @@ class ChatController {
             const refId = finalBookingId || finalQuoteId;
 
             // Allow empty message for non-text types (like paymentCard)
-            if (!refId || (!finalMessage && finalMessageType === 'text')) {
-                return res.status(400).json({ success: false, message: "bookingId/quoteId and message are required" });
+            // Validate message content for text types
+            if (!refId || (finalMessageType === 'text' && (!finalMessage || finalMessage.trim() === ""))) {
+                console.log("🚫 Rejecting empty text message or missing refId");
+                return res.status(400).json({ success: false, message: "Invalid message data" });
             }
 
             // Find the conversation

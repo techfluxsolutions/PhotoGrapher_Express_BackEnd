@@ -155,6 +155,11 @@ export const initSocket = (server) => {
                 let finalEventType = eventType;
                 let finalQuoteId = quoteId;
                 let finalBookingId = bookingId;
+                let finalFlatOrHouseNo = flatOrHouseNo;
+                let finalStreetName = streetName;
+                let finalCity = city;
+                let finalState = state;
+                let finalPostalCode = postalCode;
 
                 if (typeof message === "object" && message !== null) {
                     finalMessage = message.message || finalMessage;
@@ -178,6 +183,12 @@ export const initSocket = (server) => {
 
                 if (!refId) {
                     return socket.emit("error", "No Booking or Quote ID provided");
+                }
+
+                // [FIX] Prevent empty text messages
+                if (finalMessageType === 'text' && (!finalMessage || finalMessage.trim() === "")) {
+                  console.log("🚫 Rejecting empty text message from socket");
+                  return socket.emit("error", "Cannot send an empty text message");
                 }
 
                 const roomName = `booking_${refId}`;

@@ -308,11 +308,31 @@ class QuoteController {
 
         // 🔄 Step 4: Link existing conversation to the new booking
         try {
-          await Conversation.findOneAndUpdate(
+          // Check if a "ghost" conversation was already created for this booking (race condition protection)
+          const ghostConversation = await Conversation.findOne({ 
+            bookingId: booking._id,
+            quoteId: { $ne: quote._id } // Not the one we're about to link
+          });
+
+          if (ghostConversation) {
+            console.log(`⚠️ Ghost conversation ${ghostConversation._id} found for booking ${booking._id}. Cleaning up.`);
+            // If it's empty (likely a race during join/send), we can just remove it. 
+            // Better yet, we could merge messages, but usually ghost ones are empty.
+            await Conversation.deleteOne({ _id: ghostConversation._id });
+          }
+
+          // Link the quote conversation to the booking
+          const linkedConv = await Conversation.findOneAndUpdate(
             { quoteId: quote._id },
-            { $set: { bookingId: booking._id } }
+            { $set: { bookingId: booking._id } },
+            { new: true }
           );
-          console.log(`✅ Conversation for quote ${quote._id} linked to booking ${booking._id}`);
+
+          if (linkedConv) {
+            console.log(`✅ Conversation ${linkedConv._id} for quote ${quote._id} linked to booking ${booking._id}`);
+          } else {
+            console.log(`ℹ️ No existing conversation found for quote ${quote._id} to link.`);
+          }
         } catch (convError) {
           console.error("Error linking conversation to booking:", convError);
         }
