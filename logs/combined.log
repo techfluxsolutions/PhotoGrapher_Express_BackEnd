@@ -852,3 +852,5 @@
 {"level":"info","message":"::1 - - [10/Apr/2026:10:16:35 +0000] \"GET /api/users/quotes HTTP/1.1\" 200 - \"-\" \"PostmanRuntime/7.53.0\"","timestamp":"2026-04-10 15:46:35"}
 {"level":"info","message":"::1 - - [10/Apr/2026:10:19:29 +0000] \"GET /api/users/quotes HTTP/1.1\" 200 - \"-\" \"PostmanRuntime/7.53.0\"","timestamp":"2026-04-10 15:49:29"}
 {"level":"info","message":"::1 - - [10/Apr/2026:10:20:20 +0000] \"GET /api/users/quotes HTTP/1.1\" 200 - \"-\" \"PostmanRuntime/7.53.0\"","timestamp":"2026-04-10 15:50:20"}
+{"level":"info","message":"::1 - - [10/Apr/2026:10:23:53 +0000] \"GET /api/photographers/bookings/today-upcoming HTTP/1.1\" 200 627 \"-\" \"PostmanRuntime/7.53.0\"","timestamp":"2026-04-10 15:53:53"}
+{"level":"info","message":"::1 - - [10/Apr/2026:10:26:32 +0000] \"GET /api/photographers/bookings/summary-counts HTTP/1.1\" 200 136 \"-\" \"PostmanRuntime/7.53.0\"","timestamp":"2026-04-10 15:56:32"}
