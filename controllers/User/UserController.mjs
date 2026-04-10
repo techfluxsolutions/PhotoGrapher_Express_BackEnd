@@ -171,14 +171,14 @@ class UserController {
       });
     } catch (err) {
       if (err.name === "ValidationError") {
-        const errors = Object.values(err.errors).map(e => {
-          const field = e.path.charAt(0).toUpperCase() + e.path.slice(1);
-          return `${field}: ${e.message}`;
-        });
+        // Get first error only
+        const firstError = Object.values(err.errors)[0];
+
+        const field = firstError.path.charAt(0).toUpperCase() + firstError.path.slice(1);
 
         return res.status(400).json({
           success: false,
-          message: errors.join(", "),
+          message: `${field}: ${firstError.message}`,
         });
       }
 
