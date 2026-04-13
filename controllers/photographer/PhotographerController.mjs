@@ -694,6 +694,17 @@ class PhotographerController {
 
             let updateData = { ...req.body };
 
+            // 0. Handle 'data' wrapper if sent via FormData (common in frontend)
+            if (updateData.data && typeof updateData.data === 'string') {
+                try {
+                    const parsedData = JSON.parse(updateData.data);
+                    updateData = { ...updateData, ...parsedData };
+                    delete updateData.data;
+                } catch (e) {
+                    console.error("Failed to parse 'data' field:", e.message);
+                }
+            }
+
             // 1. Basic validation: ensure provided fields are not empty strings/nulls
             for (const [key, value] of Object.entries(updateData)) {
                 if ((value === "" || value === null || value === undefined) && key !== "aboutYou") {
