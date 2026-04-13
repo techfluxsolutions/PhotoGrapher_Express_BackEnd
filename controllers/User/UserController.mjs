@@ -245,8 +245,11 @@ class UserController {
 
           // ✅ Empty check
           if (!value) {
-            // If email is optional and empty, we skip updating it to avoid collision with sparse unique index
+            // If email is optional and empty, we UNSET it to allow clearing the field 
+            // while avoiding collision with the sparse unique index
             if (field === "email") {
+              if (!updates.$unset) updates.$unset = {};
+              updates.$unset.email = 1;
               continue; 
             }
 
