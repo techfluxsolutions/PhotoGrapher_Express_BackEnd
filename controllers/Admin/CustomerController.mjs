@@ -10,7 +10,9 @@ class CustomerController {
     try {
       const payload = req.body;
       const validators = {
-        email: /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+        email: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
+        //username no numerical value
+        username: /^[a-zA-Z]+$/,
       };
 
       // Parse date of birth if provided in DD-MM-YYYY format
