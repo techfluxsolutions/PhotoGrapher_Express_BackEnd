@@ -677,6 +677,9 @@ class PhotographerController {
     // update photographer (Supports Admin via :id, or Self via Auth)
     async updatePhotographer(req, res) {
         try {
+            console.log("Update Photographer Request Body:", JSON.stringify(req.body, null, 2));
+            if (req.file) console.log("Update Photographer Request File:", req.file.fieldname);
+
             // Priority: Params ID (Admin) -> Auth User ID (Self, 'id' from token) -> Auth Photographer ID
             const id = req.params.id || req.user?.id || req.user?._id || req.photographer?._id;
 
@@ -777,9 +780,13 @@ class PhotographerController {
             };
 
             const flatUpdateData = flatten(updateData);
-            
+            console.log("Applying updates to photographer:", JSON.stringify(flatUpdateData, null, 2));
+
             // Use set for partial updates on the document object to allow validation
-            photographer.set(flatUpdateData);
+            // We iterate to ensure dot-notation paths are handled correctly by the document instance
+            Object.keys(flatUpdateData).forEach((path) => {
+                photographer.set(path, flatUpdateData[path]);
+            });
 
             // 9. Profile Completeness Validation (Only for self-updates /me)
             if (!req.params.id) {
