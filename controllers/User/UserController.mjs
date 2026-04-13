@@ -230,6 +230,7 @@ class UserController {
         city: /^[A-Za-z\s]{2,50}$/,
       };
 
+      //email is optional
       for (const field of allowedFields) {
         if (req.body[field] !== undefined) {
           let value = req.body[field];
@@ -241,8 +242,13 @@ class UserController {
 
           // ✅ Empty check
           if (!value) {
-            let message = "";
+            // If email is optional and empty, we skip the error and the validator
+            if (field === "email") {
+              updates[field] = ""; // or null if you prefer, but schema default is empty string in some places
+              continue; 
+            }
 
+            let message = "";
             switch (field) {
               case "username":
                 message = "Full Name cannot be empty";

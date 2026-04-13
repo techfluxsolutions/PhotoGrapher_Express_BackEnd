@@ -40,7 +40,7 @@ const userSchema = new mongoose.Schema(
       type: String,
       unique: true,  // Enforce uniqueness
       sparse: true,  // Allow multiple docs to skip this field (null/missing)
-
+      optional:true
 
     },
     state: {

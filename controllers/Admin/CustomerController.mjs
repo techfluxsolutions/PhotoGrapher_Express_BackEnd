@@ -9,10 +9,25 @@ class CustomerController {
   async create(req, res, next) {
     try {
       const payload = req.body;
+
+      // Validate Username (Full Name)
+      if (!payload.username || payload.username.trim() === "") {
+        return res.status(200).json({
+          success: false,
+          message: "Full Name cannot be empty",
+        });
+      }
+
+      // Check if username contains numerical values
+      if (/\d/.test(payload.username)) {
+        return res.status(200).json({
+          success: false,
+          message: "Full Name must not contain numerical values",
+        });
+      }
+
       const validators = {
         email: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
-        //username no numerical value
-        username: /^[a-zA-Z]+$/,
       };
 
       // Parse date of birth if provided in DD-MM-YYYY format
