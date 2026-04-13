@@ -241,23 +241,39 @@ class UserController {
 
           // ✅ Empty check
           if (!value) {
-            const label =
-              field === "username"
-                ? "Full Name"
-                : field.charAt(0).toUpperCase() + field.slice(1);
+            let message = "";
+
+            switch (field) {
+              case "username":
+                message = "Full Name cannot be empty";
+                break;
+
+              case "email":
+                message = "Email cannot be empty";
+                break;
+
+              case "mobileNumber":
+                message = "Mobile Number cannot be empty";
+                break;
+
+              case "state":
+                message = "State cannot be empty";
+                break;
+
+              case "city":
+                message = "City cannot be empty";
+                break;
+
+              default:
+                message = `${field} cannot be empty`;
+            }
 
             return res.status(400).json({
               success: false,
-              message: `${label} cannot be empty`,
+              message,
             });
           }
           //mobile number cannot be empty
-          if(field === "mobileNumber" && !value){
-            return res.status(400).json({
-              success: false,
-              message: "Mobile number cannot be empty",
-            });
-          }
 
           // ✅ Regex validation
           if (validators[field] && !validators[field].test(value)) {
