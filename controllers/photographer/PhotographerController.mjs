@@ -824,7 +824,17 @@ class PhotographerController {
             res.status(200).json({ success: true, message: "Photographer updated successfully", photographer: photographerObj });
         } catch (error) {
             console.error("Update Photographer Error:", error);
-            res.status(500).json({ message: "Failed to update photographer", error: error.message });
+            
+            // Determine status code (use 400 for validation errors, 500 otherwise)
+            const statusCode = error.name === "ValidationError" || error.message.includes("validation failed") ? 400 : 500;
+            
+            // Construct a concise, professional message incorporating the technical error
+            const professionalMessage = `Profile update failed: ${error.message}. Please check your details and try again.`;
+
+            res.status(statusCode).json({ 
+                success: false, 
+                message: professionalMessage 
+            });
         }
     }
 

@@ -578,7 +578,6 @@ class AuthController {
 
 
   //static 1234 OTP And Verify Code
-
   async sendOTP(req, res, next) {
     try {
       const { mobileNumber, role } = req.body;
@@ -606,33 +605,74 @@ class AuthController {
 
       const Model = roleModelMap[role];
 
-      const alreadyExistedUser = await Model.findOne({
+      let user = await Model.findOne({
         mobileNumber: cleanedMobile,
       });
-      if (alreadyExistedUser) {
-        return res.status(200).json({
-          success: true,
-          message: "YOUR OTP IS 1234",
-        })
+
+      // Special check for Photographer account status
+      if (role === "photographer" && user && user.status !== "active") {
+        return res.status(403).json({
+          success: false,
+          message: "Your account is unverified. Please contact the admin.",
+        });
       }
 
-      const newUserData = {
-        mobileNumber: cleanedMobile,
-        userType: "user",
-        verificationId: "1234",
-      };
-      const user = await Model.create(newUserData);
-      console.log(user);
-      if (user) {
+      // Hardcoded static OTP numbers for testing/bypass
+      const staticOtpNumbers = ["9322046187", "9325983803", "9096698947"];
+
+      if (staticOtpNumbers.includes(cleanedMobile)) {
+        if (!user) {
+          user = await Model.create({
+            mobileNumber: cleanedMobile,
+            userType: role || "user",
+            verificationId: "1234", // Dummy ID for bypass
+          });
+        }
         return res.status(200).json({
           success: true,
           message: "YOUR OTP IS 1234",
         });
       }
-      res.status(400).json({
-        success: false,
-        message: "Failed to send OTP",
-      });
+
+      // OTHERWISE: Send real OTP via MessageCentral
+      if (!user) {
+        if (role === "photographer") {
+          return res.status(404).json({
+            success: false,
+            message: "Account not found. Please contact admin.",
+          });
+        }
+        user = await Model.create({
+          mobileNumber: cleanedMobile,
+          userType: role || "user",
+        });
+      }
+
+      try {
+        const response = await sendMessageCentral(cleanedMobile);
+        const data = response.data;
+        const verificationId = data?.verificationId || data?.data?.verificationId || data?.id || null;
+
+        if (response.status === 200 && verificationId) {
+          user.verificationId = verificationId;
+          user.verificationExpiry = new Date(Date.now() + OTP_VALIDITY_MINUTES * 60 * 1000);
+          user.lastOtpSentAt = new Date();
+          await user.save();
+
+          return res.status(200).json({
+            success: true,
+            message: "OTP sent successfully",
+          });
+        } else {
+          throw new Error("Invalid response from SMS provider");
+        }
+      } catch (smsErr) {
+        console.error("SMS SEND FAILED:", smsErr.message);
+        return res.status(502).json({
+          success: false,
+          message: "Failed to send OTP via SMS. Please try again later.",
+        });
+      }
     } catch (error) {
       console.error("❌ Send OTP error:", error.message);
       return res.status(500).json({
@@ -647,8 +687,7 @@ class AuthController {
 ======================= */
   async verifyOTP(req, res) {
     try {
-      const { mobileNumber, otp, role ,fcmToken} = req.body;
-
+      const { mobileNumber, otp, role, fcmToken } = req.body;
 
       /* 1️⃣ Validate input */
       if (!mobileNumber || !otp) {
@@ -665,7 +704,6 @@ class AuthController {
           message: "Invalid Indian mobile number",
         });
       }
-      console.log(cleanedMobile, otp, role);
 
       const Model = roleModelMap[role];
       /* 2️⃣ Find user */
@@ -679,7 +717,39 @@ class AuthController {
         });
       }
 
-      if (otp === "1234") {
+      const staticOtpNumbers = ["9322046187", "9325983803", "9096698947"];
+      let isVerified = false;
+
+      // Check for static OTP bypass for specific numbers
+      if (otp === "1234" && staticOtpNumbers.includes(cleanedMobile)) {
+        isVerified = true;
+      } else {
+        // PRODUCTION LOGIC: Verify via MessageCentral
+        if (!user.verificationId) {
+          return res.status(400).json({
+            success: false,
+            message: "No active OTP found. Please request a new one.",
+          });
+        }
+
+        try {
+          const response = await verifyMessageCentral(user.verificationId, otp);
+          const responseData = response?.data || {};
+          const providerCode = Number(responseData.responseCode || responseData.data?.responseCode || 0);
+
+          if (response.status === 200 && providerCode === 200) {
+            isVerified = true;
+          }
+        } catch (err) {
+          console.error("OTP verification service failed:", err.message);
+          return res.status(502).json({
+            success: false,
+            message: "OTP service unavailable. Please try again later.",
+          });
+        }
+      }
+
+      if (isVerified) {
         const token = signToken({
           id: user._id,
           mobileNumber: user.mobileNumber,
@@ -710,8 +780,9 @@ class AuthController {
           console.error("Error creating welcome notification:", notificationError);
         }
 
+        user.verificationId = null; // Clear OTP after success
         await user.save();
-        console.log("token Created", token);
+
         return res.status(200).json({
           success: true,
           message: "OTP verified successfully",
