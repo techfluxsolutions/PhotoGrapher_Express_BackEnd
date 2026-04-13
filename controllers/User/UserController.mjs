@@ -248,10 +248,6 @@ class UserController {
                 message = "Full Name cannot be empty";
                 break;
 
-              case "email":
-                message = "Email cannot be empty";
-                break;
-
               case "mobileNumber":
                 message = "Mobile Number cannot be empty";
                 break;
