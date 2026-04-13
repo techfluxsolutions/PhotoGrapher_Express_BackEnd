@@ -12,17 +12,7 @@ const logFormat = winston.format.combine(
 const logger = winston.createLogger({
   level: process.env.NODE_ENV === "development" ? "debug" : "info",
   format: logFormat,
-  transports: [
-    // Write all logs with importance level of `error` or less to `error.log`
-    new winston.transports.File({ 
-      filename: path.resolve("logs/error.log"), 
-      level: "error" 
-    }),
-    // Write all logs with importance level of `info` or less to `combined.log`
-    new winston.transports.File({ 
-      filename: path.resolve("logs/combined.log") 
-    }),
-  ],
+  transports: [],
 });
 
 // If we're not in production then log to the `console` as well
