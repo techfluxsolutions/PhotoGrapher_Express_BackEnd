@@ -100,7 +100,7 @@ class PhotographerController {
         // 1. Personal Info (Basic Info)
         if (!p.basicInfo?.fullName) missingFields.push("Full Name");
         if (!p.basicInfo?.displayName) missingFields.push("Display Name");
-        if (!p.basicInfo?.phone) missingFields.push("Phone in Basic Info");
+        if (!p.basicInfo?.phone) missingFields.push("Mobile Number");
 
         // 2. Professional Details
         if (!p.professionalDetails?.photographerType) missingFields.push("Photographer Type");
@@ -108,11 +108,11 @@ class PhotographerController {
         if (!p.professionalDetails?.yearsOfExperience) missingFields.push("Years of Experience");
         if (!p.professionalDetails?.primaryLocation) missingFields.push("Primary Location");
 
-        // 3. Bank Details
-        if (!p.bank_account_holder) missingFields.push("Bank Account Holder");
+        // 3. Bank Information
+        if (!p.bank_account_holder) missingFields.push("Bank Account Holder Name");
         if (!p.bank_name) missingFields.push("Bank Name");
-        if (!p.bank_account_number) missingFields.push("Bank Account Number");
-        if (!p.bank_ifsc) missingFields.push("IFSC Code");
+        if (!p.bank_account_number) missingFields.push("Account Number");
+        if (!p.bank_ifsc) missingFields.push("Bank IFSC Code");
         if (!p.account_type) missingFields.push("Account Type");
 
         // 4. Services
@@ -708,7 +708,8 @@ class PhotographerController {
             // 1. Basic validation: ensure provided fields are not empty strings/nulls
             for (const [key, value] of Object.entries(updateData)) {
                 if ((value === "" || value === null || value === undefined) && key !== "aboutYou") {
-                    const capitalizedKey = key.charAt(0).toUpperCase() + key.slice(1);
+                    const cleanKey = key.replace(/_/g, ' ');
+                    const capitalizedKey = cleanKey.charAt(0).toUpperCase() + cleanKey.slice(1);
                     return res.status(400).json({
                         success: false,
                         message: `${capitalizedKey} cannot be empty`,
@@ -805,7 +806,7 @@ class PhotographerController {
                 if (missing.length > 0) {
                     return res.status(200).json({
                         success: false,
-                        message: "Cannot update profile. Some required fields are missing.",
+                        message: `Profile update failed. The following required fields are missing: ${missing.join(", ")}`,
                         missingFields: missing
                     });
                 }
