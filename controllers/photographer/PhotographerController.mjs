@@ -7,6 +7,7 @@ import bcrypt from "bcrypt";
 import mongoose from "mongoose";
 import { sendMessageCentral, verifyMessageCentral } from "../../utils/messageCentral.mjs";
 import razorpayInstance from "../../Config/razorpay.mjs";
+import Notification from "../../models/Notification.mjs";
 
 class PhotographerController {
     // Get All Photographers (Unified endpoint with filtering)
@@ -519,6 +520,26 @@ class PhotographerController {
             // } catch (emailError) {
             //     console.error("Error sending welcome email during verification:", emailError);
             // }
+
+            // Add welcome notification
+            try {
+                const welcomeMessage = "Welcome to Veroa Studios";
+                const query = { 
+                    photographer_id: photographer._id, 
+                    notification_message: welcomeMessage 
+                };
+
+                const existingNotification = await Notification.findOne(query);
+
+                if (!existingNotification) {
+                    await Notification.create({
+                        ...query,
+                        notification_type: "system",
+                    });
+                }
+            } catch (notificationError) {
+                console.error("Error creating welcome notification:", notificationError);
+            }
 
             res.status(200).json({
                 success: true,

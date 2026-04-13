@@ -1,6 +1,7 @@
 import { signToken } from "../../utils/jwt.mjs";
 import roleModelMap from "../../utils/roleModelMap.mjs";
 import User from "../../models/User.mjs";
+import Notification from "../../models/Notification.mjs";
 // import axios from "axios";
 import { verifyToken } from "../../utils/jwt.mjs";
 import { sendMessageCentral, verifyMessageCentral } from "../../utils/messageCentral.mjs";
@@ -291,6 +292,31 @@ class AuthController {
   //       });
 
   //       user.token = token;
+  //
+  //       // Add welcome notification
+  //       try {
+  //         const welcomeMessage = "Welcome to Veroa Studios";
+  //         const query = { notification_message: welcomeMessage };
+  //         if (role === "photographer") {
+  //           query.photographer_id = user._id;
+  //         } else if (role === "admin") {
+  //           query.admin_id = user._id;
+  //         } else {
+  //           query.user_id = user._id;
+  //         }
+  //
+  //         const existingNotification = await Notification.findOne(query);
+  //
+  //         if (!existingNotification) {
+  //           await Notification.create({
+  //             ...query,
+  //             notification_type: "system",
+  //           });
+  //         }
+  //       } catch (notificationError) {
+  //         console.error("Error creating welcome notification:", notificationError);
+  //       }
+  //
   //       await user.save();
 
   //       res.cookie("token", token, {
@@ -441,6 +467,31 @@ class AuthController {
   //     });
 
   //     user.token = token;
+  //
+  //     // Add welcome notification
+  //     try {
+  //       const welcomeMessage = "Welcome to Veroa Studios";
+  //       const query = { notification_message: welcomeMessage };
+  //       if (role === "photographer") {
+  //         query.photographer_id = user._id;
+  //       } else if (role === "admin") {
+  //         query.admin_id = user._id;
+  //       } else {
+  //         query.user_id = user._id;
+  //       }
+  //
+  //       const existingNotification = await Notification.findOne(query);
+  //
+  //       if (!existingNotification) {
+  //         await Notification.create({
+  //           ...query,
+  //           notification_type: "system",
+  //         });
+  //       }
+  //     } catch (notificationError) {
+  //       console.error("Error creating welcome notification:", notificationError);
+  //     }
+  //
   //     await user.save();
 
   //     return res.status(200).json({
@@ -634,6 +685,31 @@ class AuthController {
           mobileNumber: user.mobileNumber,
           userType: user.userType,
         });
+
+        // Add welcome notification
+        try {
+          const welcomeMessage = "Welcome to Veroa Studios";
+          const query = { notification_message: welcomeMessage };
+          if (role === "photographer") {
+            query.photographer_id = user._id;
+          } else if (role === "admin") {
+            query.admin_id = user._id;
+          } else {
+            query.user_id = user._id;
+          }
+
+          const existingNotification = await Notification.findOne(query);
+
+          if (!existingNotification) {
+            await Notification.create({
+              ...query,
+              notification_type: "system",
+            });
+          }
+        } catch (notificationError) {
+          console.error("Error creating welcome notification:", notificationError);
+        }
+
         await user.save();
         console.log("token Created", token);
         return res.status(200).json({
