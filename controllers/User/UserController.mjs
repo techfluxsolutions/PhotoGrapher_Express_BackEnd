@@ -12,11 +12,14 @@ class UserController {
       const payload = req.body;
 
       // Optional: prevent duplicate email
-      if (payload.email) {
+      if (payload.email && payload.email.trim() !== "") {
         const existingUser = await User.findOne({ email: payload.email });
         if (existingUser) {
           return sendErrorResponse(res, 409, "User already exists");
         }
+      } else {
+        // Remove empty email string to avoid collision with sparse unique index
+        delete payload.email;
       }
 
       if (req.file) {
@@ -242,9 +245,8 @@ class UserController {
 
           // ✅ Empty check
           if (!value) {
-            // If email is optional and empty, we skip the error and the validator
+            // If email is optional and empty, we skip updating it to avoid collision with sparse unique index
             if (field === "email") {
-              updates[field] = ""; // or null if you prefer, but schema default is empty string in some places
               continue; 
             }
 
