@@ -596,7 +596,7 @@ class AuthController {
 ======================= */
   async verifyOTP(req, res) {
     try {
-      const { mobileNumber, otp, role } = req.body;
+      const { mobileNumber, otp, role ,fcmToken} = req.body;
 
 
       /* 1️⃣ Validate input */
@@ -640,6 +640,7 @@ class AuthController {
           success: true,
           message: "OTP verified successfully",
           token: token,
+          fcmToken: fcmToken,
           id: user._id,
         });
       } else {
