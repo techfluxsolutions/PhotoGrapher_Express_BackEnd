@@ -187,7 +187,7 @@ export const generateInvoicePDF = async (invoice, stream) => {
     doc.rect(LEFT_COL_X, tableTop+20, PAGE_WIDTH - LEFT_COL_X, 20).fill("#f7f7f7");
     doc.fillColor("black").font("Helvetica-Bold").fontSize(10);
     doc.text("Items", LEFT_COL_X + 5, tableTop + 28);
-    doc.text("Taxable Value", PAGE_WIDTH - 100, tableTop + 28, { align: "right" });
+    doc.text("Convenience Fees", PAGE_WIDTH - 100, tableTop + 28, { align: "right" });
 
     let yPos = tableTop + 50;
 
@@ -207,7 +207,7 @@ export const generateInvoicePDF = async (invoice, stream) => {
         doc.text(`- Rs. ${(item.discount || 0).toFixed(2)}`, amountX - 40, yPos, { align: "right" });
         yPos += 40;
 
-        doc.text("Taxable Value", valueX, yPos);
+        doc.text("Convenience Fees", valueX, yPos);
         doc.text(`Rs. ${item.taxableValue.toFixed(2)}`, amountX - 40, yPos, { align: "right" });
         doc.font("Helvetica").fontSize(7).text(`(${invoice.taxableValueInWords || amountToWords(item.taxableValue)})`, valueX, doc.y + 2, { width: 150 });
         yPos += 40;
@@ -437,7 +437,7 @@ export const generatePartnerInvoicePDF = async (invoice, stream) => {
     doc.rect(LEFT_COL_X, tableTop+60, PAGE_WIDTH - LEFT_COL_X, 20).fill("#f7f7f7");
     doc.fillColor("black").font("Helvetica-Bold").fontSize(10);
     doc.text("Items", LEFT_COL_X + 5, tableTop + 65);
-    doc.text("Taxable Value", PAGE_WIDTH - 100, tableTop + 65, { align: "right" });
+    doc.text("Convenience Fees", PAGE_WIDTH - 100, tableTop + 65, { align: "right" });
 
     let yPos = tableTop + 85;
 
@@ -457,7 +457,7 @@ export const generatePartnerInvoicePDF = async (invoice, stream) => {
         doc.text(`- Rs. ${(item.discount || 0).toFixed(2)}`, amountX - 40, yPos, { align: "right" });
         yPos += 40;
 
-        doc.text("Taxable Value", valueX, yPos);
+        doc.text("Convenience Fees", valueX, yPos);
         doc.text(`Rs. ${item.taxableValue.toFixed(2)}`, amountX - 40, yPos, { align: "right" });
         doc.font("Helvetica").fontSize(7).text(`(${invoice.taxableValueInWords || amountToWords(item.taxableValue)})`, valueX, doc.y + 2, { width: 150 });
         yPos += 40;
