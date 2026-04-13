@@ -251,6 +251,13 @@ class UserController {
               message: `${label} cannot be empty`,
             });
           }
+          //mobile number cannot be empty
+          if(field === "mobileNumber" && !value){
+            return res.status(400).json({
+              success: false,
+              message: "Mobile number cannot be empty",
+            });
+          }
 
           // ✅ Regex validation
           if (validators[field] && !validators[field].test(value)) {
