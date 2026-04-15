@@ -203,6 +203,7 @@ class BookingController {
                     .populate("client_id", "username email mobileNumber avatar state city isVerified")
                     .populate("service_id", "serviceName")
                     .populate("photographer_id", "username")
+                    .populate("quoteId", "requirements photographyRequirements")
                     .sort({ createdAt: -1 })
                     .skip(skip)
                     .limit(limit),
@@ -245,7 +246,7 @@ class BookingController {
                     clientAvatar: booking.client_id?.avatar || null,
                     client_id: booking.client_id, // Keep original client_id nested too for compatibility
                     eventType: booking.service_id?.serviceName || "N/A",
-                    requirements: booking.notes || "No requirements",
+                    requirements: booking.notes || (booking.quoteId?.requirements?.length > 0 ? booking.quoteId.requirements.join(", ") : booking.quoteId?.photographyRequirements) || "No requirements",
                     date: ist.date,
                     time: ist.time,
                     fromDate: this.formatDMY(booking.startDate || booking.eventDate || booking.bookingDate),
@@ -301,6 +302,7 @@ class BookingController {
                     .populate("client_id", "username email mobileNumber avatar city")
                     .populate("service_id", "serviceName")
                     .populate("photographer_id", "username")
+                    .populate("quoteId", "requirements photographyRequirements")
                     .sort({ createdAt: -1 })
                     .skip(skip)
                     .limit(limit),
@@ -314,6 +316,7 @@ class BookingController {
                     bookingId: booking.veroaBookingId,
                     clientName: booking.client_id?.username || "N/A",
                     clientAvatar: booking.client_id?.avatar || null,
+                    requirements: booking.notes || (booking.quoteId?.requirements?.length > 0 ? booking.quoteId.requirements.join(", ") : booking.quoteId?.photographyRequirements) || "No requirements",
                     eventType: booking.service_id?.serviceName || "N/A",
                     date: ist.date,
                     time: ist.time,
@@ -924,6 +927,7 @@ class BookingController {
                 .sort({ startDate: 1, bookingDate: 1, createdAt: 1 }) // Primary sort: startDate ASC
                 .populate("client_id", "username email mobileNumber avatar")
                 .populate("service_id", "serviceName")
+                .populate("quoteId", "requirements photographyRequirements")
                 .skip(skip)
                 .limit(limit);
 
@@ -940,7 +944,7 @@ class BookingController {
                     clientAvatar: booking.client_id?.avatar || null,
                     mobileNumber: booking.client_id?.mobileNumber || "N/A",
                     eventType: booking.service_id?.serviceName || "N/A",
-                    requirements: booking.notes || "No requirements",
+                    requirements: booking.notes || (booking.quoteId?.requirements?.length > 0 ? booking.quoteId.requirements.join(", ") : booking.quoteId?.photographyRequirements) || "No requirements",
                     date: ist.date,
                     time: ist.time,
                     fromDate: this.formatDMY(booking.startDate || booking.eventDate || booking.bookingDate),
@@ -1107,6 +1111,7 @@ class BookingController {
                     .sort({ startDate: 1, bookingDate: 1, createdAt: 1 }) // Sort earliest first
                     .populate("client_id", "username email mobileNumber avatar city")
                     .populate("service_id", "serviceName")
+                    .populate("quoteId", "requirements photographyRequirements")
                     .skip(skip)
                     .limit(limit),
                 ServiceBooking.countDocuments(query)
@@ -1126,6 +1131,7 @@ class BookingController {
                     bookingId: booking.veroaBookingId,
                     clientName: booking.client_id?.username || "N/A",
                     clientAvatar: booking.client_id?.avatar || null,
+                    requirements: booking.notes || (booking.quoteId?.requirements?.length > 0 ? booking.quoteId.requirements.join(", ") : booking.quoteId?.photographyRequirements) || "No requirements",
                     eventType: booking.service_id?.serviceName || "N/A",
                     date: ist.date,
                     time: ist.time,
