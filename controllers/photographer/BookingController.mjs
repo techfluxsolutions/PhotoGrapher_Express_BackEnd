@@ -1033,6 +1033,74 @@ class BookingController {
         }
     }
 
+    // Get consolidated dashboard counts for photographer
+    async getDashboardCounts(req, res) {
+        try {
+            const myId = new mongoose.Types.ObjectId(req.user.id);
+            const now = new Date();
+            const istTime = new Date(now.getTime() + (5.5 * 60 * 60 * 1000));
+            const todayStr = istTime.toISOString().split("T")[0];
+            const tomorrowIST = new Date(istTime.getTime() + (24 * 60 * 60 * 1000));
+            const tomorrowStr = tomorrowIST.toISOString().split("T")[0];
+
+            const todayStartIST = new Date(`${todayStr}T00:00:00.000+05:30`);
+            const tomorrowStartIST = new Date(`${tomorrowStr}T00:00:00.000+05:30`);
+
+            const acceptedBase = {
+                photographer_id: myId,
+                bookingStatus: "accepted",
+                status: { $nin: ["completed", "canceled"] },
+                paymentStatus: { $in: ["partially paid", "fully paid"] }
+            };
+
+            // 1. Today's Bookings
+            const todayCount = await ServiceBooking.countDocuments({
+                ...acceptedBase,
+                $or: [
+                    { bookingDate: { $gte: todayStartIST, $lt: tomorrowStartIST } },
+                    { startDate: todayStr }
+                ]
+            });
+
+            // 2. Upcoming Bookings (Tomorrow onwards)
+            const upcomingCount = await ServiceBooking.countDocuments({
+                ...acceptedBase,
+                $or: [
+                    { bookingDate: { $gte: tomorrowStartIST } },
+                    { startDate: { $gte: tomorrowStr } }
+                ]
+            });
+
+            // 3. Booking Requests (Pending Invitations/Assignments)
+            const requestsCount = await ServiceBooking.countDocuments({
+                $or: [
+                    { photographerIds: { $in: [myId] } },
+                    { photographer_id: myId, bookingStatus: "pending" }
+                ],
+                status: { $ne: "canceled" }
+            });
+
+            // 4. Pending Gallery Uploads
+            const uploadPendingCount = await ServiceBooking.countDocuments({
+                photographer_id: myId,
+                bookingStatus: "accepted",
+                status: { $ne: "canceled" },
+                galleryStatus: "Upload Pending"
+            });
+
+            const data = {
+                today: todayCount,
+                upcoming: upcomingCount,
+                requests: requestsCount,
+                uploadPending: uploadPendingCount
+            };
+
+            return sendSuccessResponse(res, data, "Dashboard counts fetched successfully");
+        } catch (error) {
+            return sendErrorResponse(res, error, 500);
+        }
+    }
+
     // Get Today and Upcoming Bookings List: show today's on top and then upcoming
     async getTodayAndUpcomingBookings(req, res) {
         try {

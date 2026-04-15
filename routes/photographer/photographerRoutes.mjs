@@ -87,6 +87,7 @@ router.post("/bookings/initialize-status", (req, res, next) => BookingController
 
 // get booking counts 
 router.get("/bookings/summary-counts", (req, res, next) => BookingController.getSummaryCounts(req, res, next));
+router.get("/bookings/dashboard-counts", (req, res, next) => BookingController.getDashboardCounts(req, res, next));
 router.get("/bookings/today-upcoming", (req, res, next) => BookingController.getTodayAndUpcomingBookings(req, res, next));
 router.post("/bookings/:id/resend-otp", (req, res, next) => BookingController.resendBookingOtp(req, res, next));
 router.post("/bookings/:id/verify-otp", (req, res, next) => BookingController.verifyBookingOtp(req, res, next));
