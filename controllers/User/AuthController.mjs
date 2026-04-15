@@ -781,6 +781,9 @@ class AuthController {
         }
 
         user.verificationId = null; // Clear OTP after success
+        if (fcmToken) {
+          user.fcmToken = fcmToken;
+        }
         await user.save();
 
         return res.status(200).json({
