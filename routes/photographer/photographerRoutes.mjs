@@ -80,6 +80,7 @@ router.get("/bookings/accepted", (req, res, next) => BookingController.getAccept
 router.get("/bookings/rejected", (req, res, next) => BookingController.getRejectedBookings(req, res, next));
 router.get("/bookings/completed", (req, res, next) => BookingController.getCompletedBookings(req, res, next));
 router.get("/bookings/gallery-upload-list", (req, res, next) => BookingController.getBookingsForGalleryUpload(req, res, next));
+router.get("/bookings/upload-pending", (req, res, next) => BookingController.getUploadPendingBookings(req, res, next));
 router.patch("/bookings/:id/status", (req, res, next) => BookingController.updateBookingStatus(req, res, next));
 
 router.post("/bookings/initialize-status", (req, res, next) => BookingController.initializePreviousBookingsStatus(req, res, next));

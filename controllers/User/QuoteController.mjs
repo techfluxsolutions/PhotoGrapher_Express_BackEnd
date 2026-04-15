@@ -3,6 +3,7 @@ import ServiceBooking from "../../models/ServiceBookings.mjs";
 import Counter from "../../models/Counter.mjs";
 import Conversation from "../../models/Conversation.mjs";
 import Message from "../../models/Message.mjs";
+import Payment from "../../models/Payment.mjs";
 
 class QuoteController {
   async create(req, res, next) {
@@ -332,8 +333,16 @@ class QuoteController {
 
           if (linkedConv) {
             console.log(`✅ Conversation ${linkedConv._id} for quote ${quote._id} linked to booking ${booking._id}`);
-            // Commented out to prevent automatic deletion of payment cards before payment is completed
-            // await Message.deleteMany({ conversationId: linkedConv._id, messageType: "paymentCard" });
+            
+            // Check if the quote has already been paid
+            const existingPayment = await Payment.findOne({ quote_id: quote._id, payment_status: "paid" });
+            
+            if (existingPayment) {
+              console.log(`ℹ️ Payment already detected for quote ${quote._id}. Removing payment cards.`);
+              await Message.deleteMany({ conversationId: linkedConv._id, messageType: "paymentCard" });
+            } else {
+              console.log(`ℹ️ No payment detected for quote ${quote._id}. Keeping payment cards for booking phase.`);
+            }
           } else {
             console.log(`ℹ️ No existing conversation found for quote ${quote._id} to link.`);
           }

@@ -1238,6 +1238,11 @@ class BookingController {
         }
     }
 
+    // Get bookings specifically for gallery upload (filtered out "Photos Uploaded")
+    async getUploadPendingBookings(req, res) {
+        return this.getBookingsForGalleryUpload(req, res);
+    }
+
 
     // Resend Booking OTP for photographer
     async resendBookingOtp(req, res) {

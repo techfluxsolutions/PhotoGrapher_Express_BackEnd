@@ -3,6 +3,8 @@ import ServiceBooking from "../../models/ServiceBookings.mjs";
 import Quote from "../../models/Quote.mjs";
 import razorpayInstance from "../../Config/razorpay.mjs";
 import crypto from "crypto";
+import Message from "../../models/Message.mjs";
+import Conversation from "../../models/Conversation.mjs";
 
 class PaymentController {
   async createRazorpayOrder(req, res, next) {
@@ -180,6 +182,22 @@ class PaymentController {
         }
       }
 
+      // [NEW] Delete paymentCard messages from conversation after successful payment
+      try {
+        const linkedConv = await Conversation.findOne({ 
+          $or: [
+            { bookingId: booking._id },
+            { quoteId: booking.quoteId }
+          ]
+        });
+        if (linkedConv) {
+          await Message.deleteMany({ conversationId: linkedConv._id, messageType: "paymentCard" });
+          console.log(`✅ Payment cards deleted for conversation ${linkedConv._id} after successful payment.`);
+        }
+      } catch (msgDeleteErr) {
+        console.error("Error deleting payment cards after payment:", msgDeleteErr);
+      }
+
       return res.status(200).json({ success: true, message: "Payment verified successfully", payment });
     } catch (error) {
       console.error("Error verifying payment:", error);
@@ -289,6 +307,21 @@ class PaymentController {
       } catch (quoteUpdateErr) {
         console.error("Error updating quote via webhook:", quoteUpdateErr);
       }
+    }
+
+    // [NEW] Delete paymentCard messages via webhook flow
+    try {
+      const linkedConv = await Conversation.findOne({ 
+        $or: [
+          { bookingId: booking._id },
+          { quoteId: booking.quoteId }
+        ]
+      });
+      if (linkedConv) {
+        await Message.deleteMany({ conversationId: linkedConv._id, messageType: "paymentCard" });
+      }
+    } catch (msgDeleteErr) {
+      console.error("Error deleting payment cards via webhook:", msgDeleteErr);
     }
   }
 
