@@ -258,6 +258,7 @@ class BookingController {
                     bookingStatus: booking.bookingStatus,
                     galleryStatus: booking.galleryStatus || "Upload Pending",
                     photographerAmount: displayAmount,
+                    budget: displayAmount,
                     totalAmount: booking.totalAmount, // Optional
                     daysLeft: "Calculated Frontend"
                 };
@@ -324,6 +325,7 @@ class BookingController {
                     bookingStatus: booking.bookingStatus,
                     galleryStatus: booking.galleryStatus || "Upload Pending",
                     photographerAmount: booking.photographerAmount || 0,
+                    budget: booking.photographerAmount || 0,
                     totalAmount: booking.totalAmount
                 };
             });
@@ -433,6 +435,7 @@ class BookingController {
                 displayAmount = Math.round(booking.totalAmount * (1 - (myComm || 0) / 100));
             }
             bookingObj.photographerAmount = displayAmount;
+            bookingObj.budget = displayAmount;
 
             const ist = this.formatIST(booking.bookingDate, booking.startDate || booking.eventDate);
             bookingObj.date = ist.date;
@@ -951,6 +954,7 @@ class BookingController {
                     galleryStatus: booking.galleryStatus || "Upload Pending",
                     totalAmount: booking.totalAmount,
                     photographerAmount: booking.photographerAmount || 0,
+                    budget: booking.photographerAmount || 0,
                     IsVerified:booking.otpVerified
                 };
             });
@@ -1131,6 +1135,8 @@ class BookingController {
                     lat: booking.lat || null,
                     lng: booking.lng || null,
                     address: displayAddress,
+                    photographerAmount: booking.photographerAmount || 0,
+                    budget: booking.photographerAmount || 0,
                     otpVerified: booking.otpVerified
                 };
 
@@ -1217,6 +1223,8 @@ class BookingController {
                     lat: booking.lat || null,
                     lng: booking.lng || null,
                     address: displayAddress,
+                    photographerAmount: booking.photographerAmount || 0,
+                    budget: booking.photographerAmount || 0,
                     galleryStatus: booking.galleryStatus || "Upload Pending"
                 };
             });

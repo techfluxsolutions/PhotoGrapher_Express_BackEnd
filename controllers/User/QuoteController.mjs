@@ -234,8 +234,7 @@ class QuoteController {
         lat,
         lng,
         address,
-        totalAmount,
-        paymentStatus
+        totalAmount
       } = req.body;
 
       // 🔎 Step 1: Find quote by _id AND clientId
@@ -272,22 +271,6 @@ class QuoteController {
         }
       };
 
-      let finalTotalAmount = isNaN(Number(totalAmount)) ? 0 : Number(totalAmount);
-      let outStandingAmount = finalTotalAmount;
-      let bookingPaymentStatus = "pending";
-      let partial_Payment = false;
-      let full_Payment = false;
-
-      if (paymentStatus === "full") {
-        bookingPaymentStatus = "fully paid";
-        full_Payment = true;
-        outStandingAmount = 0;
-      } else if (paymentStatus === "partial") {
-        bookingPaymentStatus = "partially paid";
-        partial_Payment = true;
-        outStandingAmount = finalTotalAmount / 2;
-      }
-
       // 🧠 Step 2: Create booking using quote details
       const booking = await ServiceBooking.create({
         veroaBookingId: veroaBookingId,
@@ -307,13 +290,10 @@ class QuoteController {
         lat: lat || quote.lat || null,
         lng: lng || quote.lng || null,
         address: address || quote.address || "",
-        totalAmount: finalTotalAmount,
+        totalAmount: isNaN(Number(totalAmount)) ? 0 : Number(totalAmount),
         quoteId: quote._id,
         bookingSource: "quote",
-        outStandingAmount: outStandingAmount,
-        paymentStatus: bookingPaymentStatus,
-        partial_Payment: partial_Payment,
-        full_Payment: full_Payment
+        outStandingAmount: isNaN(Number(totalAmount)) ? 0 : Number(totalAmount),
       });
 
       // 🔄 Step 3: Update quote status
@@ -322,7 +302,7 @@ class QuoteController {
 
       let deletedQuote;
       if (booking) {
-        quote.quoteStatus = (paymentStatus === "full" || paymentStatus === "partial") ? "upcommingBookings" : "awaiting-payment";
+        quote.quoteStatus = "awaiting-payment";
         quote.bStatus = "accepted";
         quote.isQuoteFinal = true;
         quote.finalizeAt = new Date();
@@ -352,8 +332,8 @@ class QuoteController {
 
           if (linkedConv) {
             console.log(`✅ Conversation ${linkedConv._id} for quote ${quote._id} linked to booking ${booking._id}`);
-            // Remove the auto paymentCard message which appears as an empty message after conversion
-            await Message.deleteMany({ conversationId: linkedConv._id, messageType: "paymentCard" });
+            // Commented out to prevent automatic deletion of payment cards before payment is completed
+            // await Message.deleteMany({ conversationId: linkedConv._id, messageType: "paymentCard" });
           } else {
             console.log(`ℹ️ No existing conversation found for quote ${quote._id} to link.`);
           }
