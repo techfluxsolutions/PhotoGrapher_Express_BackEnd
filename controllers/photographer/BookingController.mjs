@@ -15,6 +15,23 @@ import { sendBookingSMS, sendMessageCentral, retryMessageCentral, verifyMessageC
 import { downloadInvoice, downloadPartnerInvoice } from "../../controllers/Admin/InvoiceController.mjs";
 
 class BookingController {
+    // Helper to calculate days left until the event
+    calculateDaysLeft(date) {
+        if (!date) return 0;
+        const targetDate = new Date(date);
+        const today = new Date();
+        
+        // Reset time parts to compare just dates
+        today.setHours(0, 0, 0, 0);
+        targetDate.setHours(0, 0, 0, 0);
+        
+        const diffTime = targetDate - today;
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        
+        // Return 0 if the date has passed or is today
+        return diffDays > 0 ? diffDays : 0;
+    }
+
     // Helper to format date to IST (Separate Date and Time)
     formatIST(date, fallbackDate = null) {
         let d = null;
@@ -261,7 +278,8 @@ class BookingController {
                     photographerAmount: displayAmount,
                     budget: displayAmount,
                     totalAmount: booking.totalAmount, // Optional
-                    daysLeft: "Calculated Frontend"
+                    daysLeft: this.calculateDaysLeft(booking.startDate || booking.eventDate || booking.bookingDate),
+                    daysRemaining: this.calculateDaysLeft(booking.startDate || booking.eventDate || booking.bookingDate)
                 };
             });
 
@@ -329,7 +347,9 @@ class BookingController {
                     galleryStatus: booking.galleryStatus || "Upload Pending",
                     photographerAmount: booking.photographerAmount || 0,
                     budget: booking.photographerAmount || 0,
-                    totalAmount: booking.totalAmount
+                    totalAmount: booking.totalAmount,
+                    daysLeft: this.calculateDaysLeft(booking.startDate || booking.eventDate || booking.bookingDate),
+                    daysRemaining: this.calculateDaysLeft(booking.startDate || booking.eventDate || booking.bookingDate)
                 };
             });
 
@@ -449,6 +469,8 @@ class BookingController {
 
             // Export eventDate explicitly for the UI
             bookingObj.eventDate = bookingObj.fromDate;
+            bookingObj.daysLeft = this.calculateDaysLeft(booking.startDate || booking.eventDate || booking.bookingDate);
+            bookingObj.daysRemaining = bookingObj.daysLeft;
 
 
 

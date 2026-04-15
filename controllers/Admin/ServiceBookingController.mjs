@@ -110,7 +110,7 @@ class ServiceBookingController {
           .skip(skip)
           .limit(limit)
           .sort({ createdAt: -1 })
-          .populate("service_id client_id photographer_id"),
+          .populate("service_id client_id photographer_id quoteId"),
         ServiceBooking.countDocuments(filter),
       ]);
 
@@ -136,6 +136,7 @@ class ServiceBookingController {
           lng: booking.lng || null,
           address: displayAddress,
           note: booking.notes || "",
+          requirements: booking.notes || (booking.quoteId?.requirements?.length > 0 ? booking.quoteId.requirements.join(", ") : booking.quoteId?.photographyRequirements) || "No requirements",
           status: booking.status,
           date: dateVal,
           time: t || "N/A",
@@ -337,7 +338,7 @@ class ServiceBookingController {
       }
 
       const [items, total] = await Promise.all([
-        ServiceBooking.find(filter).skip(skip).limit(limit).sort({ createdAt: -1 }).populate("service_id client_id photographer_id"),
+        ServiceBooking.find(filter).skip(skip).limit(limit).sort({ createdAt: -1 }).populate("service_id client_id photographer_id quoteId"),
         ServiceBooking.countDocuments(filter),
       ]);
 
@@ -363,6 +364,7 @@ class ServiceBookingController {
           lng: booking.lng || null,
           address: displayAddress,
           note: booking.notes || "",
+          requirements: booking.notes || (booking.quoteId?.requirements?.length > 0 ? booking.quoteId.requirements.join(", ") : booking.quoteId?.photographyRequirements) || "No requirements",
           status: booking.status,
           date: dateVal,
           time: t || "N/A",
@@ -489,7 +491,7 @@ class ServiceBookingController {
       }
 
       const [items, total] = await Promise.all([
-        ServiceBooking.find(filter).skip(skip).limit(limit).sort({ createdAt: -1 }).populate("service_id client_id photographer_id"),
+        ServiceBooking.find(filter).skip(skip).limit(limit).sort({ createdAt: -1 }).populate("service_id client_id photographer_id quoteId"),
         ServiceBooking.countDocuments(filter),
       ]);
 
@@ -515,6 +517,7 @@ class ServiceBookingController {
           lng: booking.lng || null,
           address: displayAddress,
           note: booking.notes || "",
+          requirements: booking.notes || (booking.quoteId?.requirements?.length > 0 ? booking.quoteId.requirements.join(", ") : booking.quoteId?.photographyRequirements) || "No requirements",
           status: booking.status,
           date: dateVal,
           time: t || "N/A",
@@ -545,7 +548,7 @@ class ServiceBookingController {
       const { id } = req.params;
 
       const booking = await ServiceBooking.findById(id)
-        .populate("service_id client_id photographer_id");
+        .populate("service_id client_id photographer_id quoteId");
 
       if (!booking) {
         return res.status(404).json({

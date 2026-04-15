@@ -1,6 +1,7 @@
 import Notification from "../../models/Notification.mjs";
 import { sendSuccessResponse, sendErrorResponse } from "../../utils/handleResponce.mjs";
 import mongoose from "mongoose";
+import admin from "../../utils/firebaseAdmin.mjs";
 
 class NotificationController {
     // Get notifications for the authenticated photographer
@@ -132,6 +133,32 @@ class NotificationController {
 
             return sendSuccessResponse(res, notification, "Notification marked as read");
         } catch (error) {
+            return sendErrorResponse(res, error, 500);
+        }
+    }
+
+    // Send a test notification using an FCM token
+    async sendTestNotification(req, res) {
+        try {
+            const { fcmToken, title, body, data } = req.body;
+
+            if (!fcmToken) {
+                return sendErrorResponse(res, "FCM Token is required", 400);
+            }
+
+            const message = {
+                notification: {
+                    title: title || "Test Notification",
+                    body: body || "This is a test notification from PhotoGrapher Express",
+                },
+                data: data || {},
+                token: fcmToken,
+            };
+
+            const response = await admin.messaging().send(message);
+            return sendSuccessResponse(res, { messageId: response }, "Test notification sent successfully");
+        } catch (error) {
+            console.error("FCM Test Error:", error);
             return sendErrorResponse(res, error, 500);
         }
     }

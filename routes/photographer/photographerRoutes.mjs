@@ -32,6 +32,9 @@ router.get("/status/:id", (req, res, next) => PhotographerController.getPhotogra
 router.put("/status/:id", (req, res, next) => PhotographerController.updatePhotographerStatus(req, res, next));
 router.post("/status/:id", (req, res, next) => PhotographerController.updatePhotographerStatus(req, res, next));
 
+// --- Test Notification ---
+router.post("/notifications/test", (req, res, next) => NotificationController.sendTestNotification(req, res, next));
+
 // Apply Auth and Photographer check for subsequent routes
 router.use(authMiddleware, isPhotographer);
 

@@ -20,6 +20,7 @@
     "express-rate-limit": "^8.3.1",
     "express-validate": "^0.0.8",
     "express-validator": "^7.0.1",
+    "firebase-admin": "^13.8.0",
     "google-auth-library": "^10.5.0",
     "helmet": "^8.1.0",
     "jsonwebtoken": "^9.0.3",
