@@ -60,11 +60,22 @@ class NotificationController {
             };
 
             // Combine real data with demo data (real data first)
+            const EVENT_LABELS = {
+                booking_assigned      : "Booking Assigned",
+                booking_invite        : "Booking Invitation",
+                booking_status_update : "Booking Status Update",
+                job_update            : "Job Update",
+                payment               : "Payment",
+                review                : "Review",
+                system                : "System",
+                reminder              : "Reminder",
+            };
+
             const formattedReal = realNotifications.map(n => {
                 const ist = formatIST(n.createdAt);
                 return {
                     _id: n._id,
-                    event: n.notification_type.replace("_", " ").toUpperCase(),
+                    event: EVENT_LABELS[n.notification_type] || n.notification_type.replace(/_/g, " ").toUpperCase(),
                     message: n.notification_message,
                     date: ist.date,
                     time: ist.time,

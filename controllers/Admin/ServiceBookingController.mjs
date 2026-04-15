@@ -7,6 +7,7 @@ import { sendBookingSMS, sendMessageCentral, retryMessageCentral } from "../../u
 import mongoose from "mongoose";
 import Message from "../../models/Message.mjs";
 import Counter from "../../models/Counter.mjs";
+import Notification from "../../models/Notification.mjs";
 
 const parseDDMMYYYY = (dateStr) => {
   if (!dateStr || dateStr instanceof Date) return dateStr;
@@ -610,6 +611,9 @@ class ServiceBookingController {
           payload.bookingOtp = null;
       }
 
+      // 📸 Snapshot the old booking BEFORE update (so we can detect changes)
+      const oldBooking = await ServiceBooking.findById(id).lean();
+
       const booking = await ServiceBooking.findByIdAndUpdate(id, payload, {
         new: true,
         runValidators: true,
@@ -621,6 +625,45 @@ class ServiceBookingController {
           message: "ServiceBooking not found"
         });
       }
+
+      // ─── Notify photographer on status change (non-blocking) ──────────────
+      if (oldBooking) {
+        const assignedPhotographerId = oldBooking.photographer_id; // before cancel clears it
+        const photographerIdToNotify = assignedPhotographerId || booking.photographer_id?._id;
+
+        const statusChanged      = payload.status        && oldBooking.status        !== payload.status;
+        const bookingStatusChanged = payload.bookingStatus && oldBooking.bookingStatus !== payload.bookingStatus;
+
+        if (photographerIdToNotify && (statusChanged || bookingStatusChanged)) {
+          const bookingRef = booking.veroaBookingId || booking._id.toString();
+          const eventName  = booking.service_id?.serviceName || "your booking";
+
+          // Human-readable messages per status
+          const STATUS_MESSAGES = {
+            confirmed  : `Great news! Booking ${bookingRef} (${eventName}) has been confirmed by the admin.`,
+            completed  : `Booking ${bookingRef} (${eventName}) has been marked as completed. Well done!`,
+            canceled   : `Booking ${bookingRef} (${eventName}) has been canceled by the admin.`,
+            pending    : `Booking ${bookingRef} (${eventName}) has been moved back to pending status.`,
+          };
+          const BOOKING_STATUS_MESSAGES = {
+            accepted   : `Your assignment for booking ${bookingRef} (${eventName}) has been accepted.`,
+            rejected   : `Your assignment for booking ${bookingRef} (${eventName}) has been rejected.`,
+            pending    : `Booking ${bookingRef} (${eventName}) is awaiting confirmation.`,
+          };
+
+          const message =
+            (statusChanged      && STATUS_MESSAGES[payload.status])         ||
+            (bookingStatusChanged && BOOKING_STATUS_MESSAGES[payload.bookingStatus]) ||
+            `The status of booking ${bookingRef} (${eventName}) has been updated by the admin.`;
+
+          Notification.create({
+            photographer_id     : new mongoose.Types.ObjectId(photographerIdToNotify.toString()),
+            notification_type   : "booking_status_update",
+            notification_message: message,
+          }).catch((err) => console.error("[Notification] booking_status_update error:", err.message));
+        }
+      }
+      // ─────────────────────────────────────────────────────────────────────
 
       return res.json({
         success: true,
@@ -824,7 +867,7 @@ class ServiceBookingController {
         finalBookingId,
         updateData,
         { new: true }
-      ).populate("photographer_id");
+      ).populate("service_id photographer_id");
 
       if (!booking) {
         return res.status(404).json({
@@ -832,6 +875,32 @@ class ServiceBookingController {
           message: "Booking not found"
         });
       }
+
+      // ─── Send Notifications (non-blocking) ────────────────────────────────
+      const bookingRef = booking.veroaBookingId || booking._id.toString();
+      const eventName  = booking.service_id?.serviceName || "your booking";
+
+      // Case 1: Direct assignment — notify the single assigned photographer
+      if (finalPhotographerId) {
+        Notification.create({
+          photographer_id : new mongoose.Types.ObjectId(finalPhotographerId),
+          notification_type   : "booking_assigned",
+          notification_message: `You have been assigned to booking ${bookingRef} — ${eventName}. Please check your schedule.`,
+        }).catch((err) => console.error("[Notification] booking_assigned error:", err.message));
+      }
+
+      // Case 2: Broadcast invite — notify every invited photographer
+      if (photographerIds !== undefined && photographerIds.length > 0) {
+        const inviteNotifications = photographerIds.map((pid) => ({
+          photographer_id     : new mongoose.Types.ObjectId(pid),
+          notification_type   : "booking_invite",
+          notification_message: `Admin has invited you to booking ${bookingRef} — ${eventName}. Please accept or decline from your dashboard.`,
+        }));
+        Notification.insertMany(inviteNotifications).catch((err) =>
+          console.error("[Notification] booking_invite bulk error:", err.message)
+        );
+      }
+      // ─────────────────────────────────────────────────────────────────────
 
       return res.json({
         success: true,
