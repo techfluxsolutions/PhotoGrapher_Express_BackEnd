@@ -523,7 +523,7 @@ class PhotographerController {
 
             // Add welcome notification
             try {
-                const welcomeMessage = "Welcome to Veroa Studios! We are thrilled to have you as a partner. Please explore your dashboard to get started.";
+                const welcomeMessage = "Welcome to Veroa Studios! Explore your dashboard to start.";
                 const query = { 
                     photographer_id: photographer._id, 
                     notification_message: welcomeMessage 
@@ -857,7 +857,7 @@ class PhotographerController {
             await Notification.create({
                 photographer_id: photographer._id,
                 notification_type: "account_status",
-                notification_message: "Your account has been deactivated and moved to unverified status. Please contact admin if this was a mistake."
+                notification_message: "Account Deactivated. Status: Unverified."
             }).catch(err => console.error("Notification failed in deletePhotographer:", err.message));
 
             // 2. Only update status if NOT a static number
@@ -1280,7 +1280,7 @@ class PhotographerController {
             await Notification.create({
                 photographer_id: photographer._id,
                 notification_type: "account_status",
-                notification_message: "Your account has been deactivated as per your request. You can contact support to reactivate it."
+                notification_message: "Account Deactivated. Per your request."
             }).catch(err => console.error("Notification failed in deleteAccount:", err.message));
 
             // 2. Only update status if NOT a static number
