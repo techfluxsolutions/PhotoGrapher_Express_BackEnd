@@ -891,7 +891,7 @@ class ServiceBookingController {
         Notification.create({
           photographer_id : new mongoose.Types.ObjectId(finalPhotographerId),
           notification_type   : "booking_assigned",
-          notification_message: `New ${bookingRef} (${eventName}) has been assigned to you.`,
+          notification_message: `New ${bookingRef} booking (${eventName}) has been assigned to you.`,
         }).catch((err) => console.error("[Notification] booking_assigned error:", err.message));
       }
 
@@ -900,7 +900,7 @@ class ServiceBookingController {
         const inviteNotifications = photographerIds.map((pid) => ({
           photographer_id     : new mongoose.Types.ObjectId(pid),
           notification_type   : "booking_invite",
-          notification_message: `New ${bookingRef} (${eventName}) has been invited to you.`,
+          notification_message: `New ${bookingRef} booking (${eventName}) has been invited to you.`,
         }));
         Notification.insertMany(inviteNotifications).catch((err) =>
           console.error("[Notification] booking_invite bulk error:", err.message)
