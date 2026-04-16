@@ -209,7 +209,7 @@ class EditingController {
     }
     async getplanByPlanCategory(req, res) {
         try {
-            const plansDetails = await EditingPlan.find({ planCategory: "standard" }).select('numberOfVideos price');
+            const plansDetails = await EditingPlan.find({ planCategory: "standard" }).select('numberOfVideos price subtitle');
 
             if (!plansDetails) {
                 res.status(200).json({ success: true, message: "No plan found please contact admin", plansDetails: [] });
