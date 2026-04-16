@@ -14,12 +14,31 @@ class NotificationController {
                 return sendErrorResponse(res, "Unauthorized", 401);
             }
 
+            // Pagination parameters
+            const page = Math.max(1, parseInt(req.query.page) || 1);
+            const limit = Math.max(1, parseInt(req.query.limit) || 20);
+            const skip = (page - 1) * limit;
+
             // Fetch real notifications from DB (if any)
             let realNotifications = [];
+            let total = 0;
+
             if (photographer_id) {
-                realNotifications = await Notification.find({ photographer_id: new mongoose.Types.ObjectId(photographer_id) })
-                    .sort({ createdAt: -1 })
-                    .limit(20);
+                const query = {
+                    $or: [
+                        { photographer_id: new mongoose.Types.ObjectId(photographer_id) },
+                        { user_id: new mongoose.Types.ObjectId(photographer_id) },
+                        { admin_id: new mongoose.Types.ObjectId(photographer_id) }
+                    ]
+                };
+
+                [realNotifications, total] = await Promise.all([
+                    Notification.find(query)
+                        .sort({ createdAt: -1 })
+                        .skip(skip)
+                        .limit(limit),
+                    Notification.countDocuments(query)
+                ]);
             }
 
             const demoNotifications = []; // Removed confusing demo data
@@ -104,10 +123,25 @@ class NotificationController {
 
 
 
+            // Get real total unread count from DB (not just from the fetched page)
+            const totalUnreadCount = await Notification.countDocuments({
+                $or: [
+                    { photographer_id: new mongoose.Types.ObjectId(photographer_id) },
+                    { user_id: new mongoose.Types.ObjectId(photographer_id) },
+                    { admin_id: new mongoose.Types.ObjectId(photographer_id) }
+                ],
+                read_status: false
+            });
+
             return sendSuccessResponse(res, {
                 notifications: allNotifications,
-                count: allNotifications.length,
-                unreadCount: allNotifications.filter(n => !n.read_status).length
+                unreadCount: totalUnreadCount,
+                meta: {
+                    total,
+                    page,
+                    limit,
+                    totalPages: Math.ceil(total / limit)
+                }
             }, "Notifications fetched successfully");
 
         } catch (error) {
@@ -124,7 +158,14 @@ class NotificationController {
             }
 
             const notification = await Notification.findOneAndUpdate(
-                { _id: id, photographer_id: req.user?.id },
+                { 
+                    _id: id, 
+                    $or: [
+                        { photographer_id: req.user?.id },
+                        { user_id: req.user?.id },
+                        { admin_id: req.user?.id }
+                    ]
+                },
                 { read_status: true },
                 { new: true }
             );
@@ -177,7 +218,11 @@ class NotificationController {
             }
 
             const unreadCount = await Notification.countDocuments({
-                photographer_id: new mongoose.Types.ObjectId(photographer_id),
+                $or: [
+                    { photographer_id: new mongoose.Types.ObjectId(photographer_id) },
+                    { user_id: new mongoose.Types.ObjectId(photographer_id) },
+                    { admin_id: new mongoose.Types.ObjectId(photographer_id) }
+                ],
                 read_status: false
             });
 
