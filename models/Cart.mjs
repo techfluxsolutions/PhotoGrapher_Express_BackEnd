@@ -7,7 +7,7 @@ const cartItemSchema = new mongoose.Schema({
   },
   category: {
     type: String,
-    enum: ["service", "package", "duration"],
+    enum: ["service", "package", "duration", "editing"],
     required: true
   },
   price: {

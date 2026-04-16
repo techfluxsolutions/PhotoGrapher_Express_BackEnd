@@ -190,6 +190,11 @@ router.get("/editing-plans/:id", (req, res, next) => EditingController.getOne(re
 router.get("/photography-plans", (req, res, next) => PhotographyController.getAll(req, res, next));
 router.get("/photography-plans/:id", (req, res, next) => PhotographyController.getOne(req, res, next));
 
+// cart Apis
+
+router.post("/cart/add", (req, res, next) => EditingController.addToCart(req, res, next));
+router.get("/cart/my-cart", (req, res, next) => EditingController.getMyCart(req, res, next));
+router.post("/cart/updateQuantity", (req, res, next) => EditingController.updateQuantity(req, res, next));
 
 
 
