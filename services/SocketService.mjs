@@ -6,6 +6,7 @@ import ServiceBooking from "../models/ServiceBookings.mjs";
 import Quote from "../models/Quote.mjs";
 import User from "../models/User.mjs";
 import Admin from "../models/Admin.mjs";
+import Notification from "../models/Notification.mjs";
 import { socketAuthMiddleware } from "../middleware/socketAuthMiddleware.mjs";
 
 
@@ -296,6 +297,23 @@ export const initSocket = (server) => {
             socket.to(`booking_${bookingId}`).emit("stop_typing", { userId: socket.user.id });
         });
 
+        // Notification Count Request
+        socket.on("get_unread_notification_count", async () => {
+            try {
+                const count = await Notification.countDocuments({
+                    $or: [
+                        { user_id: socket.user.id },
+                        { photographer_id: socket.user.id },
+                        { admin_id: socket.user.id }
+                    ],
+                    read_status: false
+                });
+                socket.emit("unread_notification_count", { count });
+            } catch (error) {
+                console.error("Get Notification Count Error:", error);
+            }
+        });
+
         socket.on("disconnect", () => {
             console.log("User disconnected:", socket.user.id);
         });
@@ -309,4 +327,26 @@ export const getIO = () => {
         throw new Error("Socket.io not initialized!");
     }
     return io;
+};
+
+/**
+ * Utility to emit unread notification count to a specific user
+ * @param {string} userId - The ID of the user (Photographer, Admin, or Client)
+ */
+export const emitNotificationCount = async (userId) => {
+    try {
+        if (!io) return;
+        const count = await Notification.countDocuments({
+            $or: [
+                { user_id: userId },
+                { photographer_id: userId },
+                { admin_id: userId }
+            ],
+            read_status: false
+        });
+        io.to(`user_${userId}`).emit("unread_notification_count", { count });
+        console.log(`Pushed unread count (${count}) to user_${userId}`);
+    } catch (error) {
+        console.error("Emit Notification Count Error:", error);
+    }
 };

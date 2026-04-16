@@ -2,6 +2,7 @@ import Notification from "../../models/Notification.mjs";
 import { sendSuccessResponse, sendErrorResponse } from "../../utils/handleResponce.mjs";
 import mongoose from "mongoose";
 import admin from "../../utils/firebaseAdmin.mjs";
+import { emitNotificationCount } from "../../services/SocketService.mjs";
 
 class NotificationController {
     // Get notifications for the authenticated photographer
@@ -130,6 +131,9 @@ class NotificationController {
             if (!notification) {
                 return sendErrorResponse(res, { message: "Notification not found" }, 404);
             }
+
+            // Real-time Update via Socket
+            emitNotificationCount(req.user?.id);
 
             return sendSuccessResponse(res, notification, "Notification marked as read");
         } catch (error) {

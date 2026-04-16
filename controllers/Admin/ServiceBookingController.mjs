@@ -8,6 +8,7 @@ import mongoose from "mongoose";
 import Message from "../../models/Message.mjs";
 import Counter from "../../models/Counter.mjs";
 import Notification from "../../models/Notification.mjs";
+import { emitNotificationCount } from "../../services/SocketService.mjs";
 
 const parseDDMMYYYY = (dateStr) => {
   if (!dateStr || dateStr instanceof Date) return dateStr;
@@ -663,6 +664,8 @@ class ServiceBookingController {
             photographer_id     : new mongoose.Types.ObjectId(photographerIdToNotify.toString()),
             notification_type   : "booking_status_update",
             notification_message: message,
+          }).then(() => {
+            emitNotificationCount(photographerIdToNotify.toString());
           }).catch((err) => console.error("[Notification] booking_status_update error:", err.message));
         }
       }

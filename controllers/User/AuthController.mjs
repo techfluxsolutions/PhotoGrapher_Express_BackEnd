@@ -5,6 +5,7 @@ import Notification from "../../models/Notification.mjs";
 // import axios from "axios";
 import { verifyToken } from "../../utils/jwt.mjs";
 import { sendMessageCentral, verifyMessageCentral } from "../../utils/messageCentral.mjs";
+import { emitNotificationCount } from "../../services/SocketService.mjs";
 const OTP_BYPASS_ENABLED = process.env.OTP_BYPASS_ENABLED === "true";
 const OTP_BYPASS_NUMBERS = (process.env.OTP_BYPASS_NUMBERS || "")
   .split(",")
@@ -775,6 +776,7 @@ class AuthController {
               ...query,
               notification_type: "system",
             });
+            emitNotificationCount(user._id.toString());
           }
         } catch (notificationError) {
           console.error("Error creating welcome notification:", notificationError);

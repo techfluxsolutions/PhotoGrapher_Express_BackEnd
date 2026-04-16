@@ -8,6 +8,7 @@ import mongoose from "mongoose";
 import { sendMessageCentral, verifyMessageCentral } from "../../utils/messageCentral.mjs";
 import razorpayInstance from "../../Config/razorpay.mjs";
 import Notification from "../../models/Notification.mjs";
+import { emitNotificationCount } from "../../services/SocketService.mjs";
 
 class PhotographerController {
     // Get All Photographers (Unified endpoint with filtering)
@@ -536,6 +537,7 @@ class PhotographerController {
                         ...query,
                         notification_type: "system",
                     });
+                    emitNotificationCount(photographer._id.toString());
                 }
             } catch (notificationError) {
                 console.error("Error creating welcome notification:", notificationError);
