@@ -5,6 +5,10 @@ const editingPlanSchema = new mongoose.Schema({
         type: Number,
         required: true["Number of videos is required"]
     },
+    subtitle: {
+        type: String,
+        required: true
+    },
     planName: {
         type: String,
         required: true,

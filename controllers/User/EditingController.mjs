@@ -195,6 +195,30 @@ class EditingController {
             });
         }
     }
+    async getplanBynumberOfVideos(req, res) {
+        try {
+            const numberOfVideos = req.params.numberOfvideos;
+            const plans = await EditingPlan.find({ numberOfVideos: numberOfVideos });
+            if (!plans) {
+                return res.status(404).json({ success: false, message: "Editing plans not found" });
+            }
+            res.status(200).json({ success: true, message: "Editing plans fetched successfully", plans });
+        } catch (error) {
+            res.status(500).json({ success: false, message: error.message });
+        }
+    }
+    async getplanByPlanCategory(req, res) {
+        try {
+            const plansDetails = await EditingPlan.find({ planCategory: "standard" }).select('numberOfVideos price');
+
+            if (!plansDetails) {
+                res.status(200).json({ success: true, message: "No plan found please contact admin", plansDetails: [] });
+            }
+            res.status(200).json({ success: true, message: "Editing plans fetched successfully", plansDetails });
+        } catch (error) {
+            res.status(500).json({ success: false, message: error.message });
+        }
+    }
 }
 
 export default new EditingController();

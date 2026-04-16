@@ -185,10 +185,12 @@ router.delete("/cart/:id", (req, res, next) => CartController.delete(req, res, n
 //editing plans
 router.get("/editing-plans", (req, res, next) => EditingController.getAll(req, res, next));
 router.get("/editing-plans/:id", (req, res, next) => EditingController.getOne(req, res, next));
-
+router.get('/getplanBynumberOfVideos/:numberOfvideos', (req, res, next) => EditingController.getplanBynumberOfVideos(req, res, next));
+router.get('/getplanBynumberOfVideos', (req, res, next) => EditingController.getplanByPlanCategory(req, res, next));
 //photography plans
 router.get("/photography-plans", (req, res, next) => PhotographyController.getAll(req, res, next));
 router.get("/photography-plans/:id", (req, res, next) => PhotographyController.getOne(req, res, next));
+
 
 // cart Apis
 
