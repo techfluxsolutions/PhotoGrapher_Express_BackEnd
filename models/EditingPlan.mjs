@@ -1,21 +1,26 @@
 import mongoose from "mongoose";
 
 const editingPlanSchema = new mongoose.Schema({
-    planName:{
-        type:String,
-        required:true
+    numberOfVideos: {
+        type: Number,
+        required: true["Number of videos is required"]
     },
-    price:{
-        type:Number,
-        required:true
+    planName: {
+        type: String,
+        required: true,
+        trim: true,
     },
-    features:{
-        type:Array,
-        required:true
+    price: {
+        type: Number,
+        required: true
     },
-    planCategory:{
-        type:String,
-        required:true
+    features: {
+        type: Array,
+        required: true
+    },
+    planCategory: {
+        type: String,
+        required: true
     }
 });
 
