@@ -848,13 +848,27 @@ class PhotographerController {
                 return res.status(200).json({ success: false, message: "Photographer not found" });
             }
 
-            // Move to unverified status instead of deleting
-            photographer.status = "pending";
-            await photographer.save();
+            // Message and Notification content
+            const successMessage = "Photographer account successfully moved to unverified status. Data preserved.";
+            const staticOtpNumbers = ["9322046187", "9325983803", "9096698947"];
+            const isStatic = staticOtpNumbers.includes(photographer.mobileNumber);
+
+            // 1. Create a notification in the database
+            await Notification.create({
+                photographer_id: photographer._id,
+                notification_type: "account_status",
+                notification_message: "Your account has been deactivated and moved to unverified status. Please contact admin if this was a mistake."
+            }).catch(err => console.error("Notification failed in deletePhotographer:", err.message));
+
+            // 2. Only update status if NOT a static number
+            if (!isStatic) {
+                photographer.status = "pending";
+                await photographer.save();
+            }
 
             res.status(200).json({ 
                 success: true, 
-                message: "Photographer moved to unverified (pending) status successfully. Data preserved.", 
+                message: isStatic ? "Photographer account successfully moved to unverified status. Data preserved. (Static Protected)" : successMessage, 
                 photographer 
             });
         } catch (error) {
@@ -1257,13 +1271,27 @@ class PhotographerController {
                 return res.status(404).json({ success: false, message: "Photographer not found" });
             }
 
-            // Instead of deleting, we set status to 'pending' (Unverified)
-            photographer.status = "pending";
-            await photographer.save();
+            // Message and Notification content
+            const successMessage = "Account deactivated and moved to unverified status successfully";
+            const staticOtpNumbers = ["9322046187", "9325983803", "9096698947"];
+            const isStatic = staticOtpNumbers.includes(photographer.mobileNumber);
+
+            // 1. Create a notification in the database
+            await Notification.create({
+                photographer_id: photographer._id,
+                notification_type: "account_status",
+                notification_message: "Your account has been deactivated as per your request. You can contact support to reactivate it."
+            }).catch(err => console.error("Notification failed in deleteAccount:", err.message));
+
+            // 2. Only update status if NOT a static number
+            if (!isStatic) {
+                photographer.status = "pending";
+                await photographer.save();
+            }
 
             res.status(200).json({
                 success: true,
-                message: "Account deactivated and moved to unverified status successfully",
+                message: isStatic ? "Account deactivated successfully (Static Protected)" : successMessage,
             });
         } catch (error) {
             res.status(500).json({ success: false, message: "Failed to delete account", error: error.message });
