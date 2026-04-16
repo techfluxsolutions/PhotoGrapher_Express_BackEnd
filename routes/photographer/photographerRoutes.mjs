@@ -45,6 +45,7 @@ router.get("/status", (req, res, next) => PhotographerController.getPhotographer
 router.put("/status", (req, res, next) => PhotographerController.updatePhotographerStatus(req, res, next));
 router.post("/status", (req, res, next) => PhotographerController.updatePhotographerStatus(req, res, next));
 router.patch("/me", upload.single('profilePhoto'), (req, res, next) => PhotographerController.updatePhotographer(req, res, next));
+router.delete("/me", (req, res, next) => PhotographerController.deleteAccount(req, res, next));
 
 
 
@@ -118,6 +119,7 @@ router.get("/partner-invoice/:bookingId", (req, res, next) => BookingController.
 
 // --- Notifications ---
 router.get("/notifications", (req, res, next) => NotificationController.getNotifications(req, res, next));
+router.get("/notifications/unread-count", (req, res, next) => NotificationController.getUnreadCount(req, res, next));
 router.patch("/notifications/:id/read", (req, res, next) => NotificationController.markAsRead(req, res, next));
 
 // --- Services ---

@@ -643,15 +643,15 @@ class ServiceBookingController {
 
           // Human-readable messages per status
           const STATUS_MESSAGES = {
-            confirmed  : `Great news! Booking ${bookingRef} (${eventName}) has been confirmed by the admin.`,
-            completed  : `Booking ${bookingRef} (${eventName}) has been marked as completed. Well done!`,
-            canceled   : `Booking ${bookingRef} (${eventName}) has been canceled by the admin.`,
-            pending    : `Booking ${bookingRef} (${eventName}) has been moved back to pending status.`,
+            confirmed  : `Booking Confirmed: Booking ${bookingRef} (${eventName}) has been officially confirmed. Please check your dashboard for next steps.`,
+            completed  : `Job Completed: Booking ${bookingRef} (${eventName}) has been marked as completed. Thank you for your service!`,
+            canceled   : `Booking Canceled: Booking ${bookingRef} (${eventName}) has been canceled by the administrator.`,
+            pending    : `Status Update: Booking ${bookingRef} (${eventName}) has been moved back to pending status.`,
           };
           const BOOKING_STATUS_MESSAGES = {
-            accepted   : `Your assignment for booking ${bookingRef} (${eventName}) has been accepted.`,
-            rejected   : `Your assignment for booking ${bookingRef} (${eventName}) has been rejected.`,
-            pending    : `Booking ${bookingRef} (${eventName}) is awaiting confirmation.`,
+            accepted   : `Assignment Active: Your assignment for booking ${bookingRef} (${eventName}) has been accepted.`,
+            rejected   : `Assignment Rejected: Your assignment for booking ${bookingRef} (${eventName}) has been rejected.`,
+            pending    : `Action Required: Booking ${bookingRef} (${eventName}) is awaiting your confirmation.`,
           };
 
           const message =
@@ -888,7 +888,7 @@ class ServiceBookingController {
         Notification.create({
           photographer_id : new mongoose.Types.ObjectId(finalPhotographerId),
           notification_type   : "booking_assigned",
-          notification_message: `You have been assigned to booking ${bookingRef} — ${eventName}. Please check your schedule.`,
+          notification_message: `New Assignment: You have been assigned to booking ${bookingRef} (${eventName}). Please review your schedule details.`,
         }).catch((err) => console.error("[Notification] booking_assigned error:", err.message));
       }
 
@@ -897,7 +897,7 @@ class ServiceBookingController {
         const inviteNotifications = photographerIds.map((pid) => ({
           photographer_id     : new mongoose.Types.ObjectId(pid),
           notification_type   : "booking_invite",
-          notification_message: `Admin has invited you to booking ${bookingRef} — ${eventName}. Please accept or decline from your dashboard.`,
+          notification_message: `New Booking Invitation: You have been invited to booking ${bookingRef} (${eventName}). Please accept or decline via your dashboard.`,
         }));
         Notification.insertMany(inviteNotifications).catch((err) =>
           console.error("[Notification] booking_invite bulk error:", err.message)

@@ -523,7 +523,7 @@ class PhotographerController {
 
             // Add welcome notification
             try {
-                const welcomeMessage = "Welcome to Veroa Studios";
+                const welcomeMessage = "Welcome to Veroa Studios! We are thrilled to have you as a partner. Please explore your dashboard to get started.";
                 const query = { 
                     photographer_id: photographer._id, 
                     notification_message: welcomeMessage 
@@ -839,15 +839,24 @@ class PhotographerController {
     }
 
 
-    // delete photographer (Admin Only)
+    // delete photographer (Admin Only - moves to unverified instead of deleting)
     async deletePhotographer(req, res) {
         try {
             const { id } = req.params;
-            const photographer = await Photographer.findByIdAndDelete(id);
+            const photographer = await Photographer.findById(id);
             if (!photographer) {
-                return res.status(200).json({ message: "Photographer not found" });
+                return res.status(200).json({ success: false, message: "Photographer not found" });
             }
-            res.status(200).json({ success: true, message: "Photographer deleted successfully", photographer });
+
+            // Move to unverified status instead of deleting
+            photographer.status = "pending";
+            await photographer.save();
+
+            res.status(200).json({ 
+                success: true, 
+                message: "Photographer moved to unverified (pending) status successfully. Data preserved.", 
+                photographer 
+            });
         } catch (error) {
             res.status(500).json({ success: false, message: "Failed to delete photographer", error: error.message });
         }
@@ -1230,6 +1239,34 @@ class PhotographerController {
                 message: "Failed to sort photographers",
                 error: error.message
             });
+        }
+    }
+
+    // Delete Account (moves to unverified status instead of deleting)
+    async deleteAccount(req, res) {
+        try {
+            // Priority: Auth User ID (Self, 'id' from token) -> Auth Photographer ID
+            const id = req.user?.id || req.user?._id || req.photographer?._id;
+
+            if (!id) {
+                return res.status(400).json({ success: false, message: "Photographer ID required" });
+            }
+
+            const photographer = await Photographer.findById(id);
+            if (!photographer) {
+                return res.status(404).json({ success: false, message: "Photographer not found" });
+            }
+
+            // Instead of deleting, we set status to 'pending' (Unverified)
+            photographer.status = "pending";
+            await photographer.save();
+
+            res.status(200).json({
+                success: true,
+                message: "Account deactivated and moved to unverified status successfully",
+            });
+        } catch (error) {
+            res.status(500).json({ success: false, message: "Failed to delete account", error: error.message });
         }
     }
 }

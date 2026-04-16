@@ -162,6 +162,26 @@ class NotificationController {
             return sendErrorResponse(res, error, 500);
         }
     }
+
+    // Get unread notification count
+    async getUnreadCount(req, res) {
+        try {
+            const photographer_id = req.user?.id;
+
+            if (!photographer_id) {
+                return sendErrorResponse(res, "Unauthorized", 401);
+            }
+
+            const unreadCount = await Notification.countDocuments({
+                photographer_id: new mongoose.Types.ObjectId(photographer_id),
+                read_status: false
+            });
+
+            return sendSuccessResponse(res, { unreadCount }, "Unread notification count fetched successfully");
+        } catch (error) {
+            return sendErrorResponse(res, error, 500);
+        }
+    }
 }
 
 export default new NotificationController();
