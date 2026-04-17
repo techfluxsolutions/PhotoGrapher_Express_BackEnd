@@ -1,6 +1,6 @@
 
 import Role from '../../models/Role.mjs';
-
+import mongoose from 'mongoose';
 import AdminEmailAuth from '../../models/AdminEmailAuth.mjs';
 import bcrypt from 'bcrypt';
 
@@ -92,7 +92,13 @@ class RoleController {
     async getById(req, res, next) {
         try {
             const { id } = req.params;
-            const role = await Role.findById(id);
+            let role;
+            if (mongoose.Types.ObjectId.isValid(id)) {
+                role = await Role.findById(id);
+            } else {
+                role = await Role.findOne({ roleName: id });
+            }
+
             if (!role) {
                 return res.status(404).json({
                     success: false,

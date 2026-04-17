@@ -3,6 +3,7 @@ import AdminEmailAuth from '../../models/AdminEmailAuth.mjs';
 import Admin from '../../models/Admin.mjs';
 import Role from '../../models/Role.mjs';
 import bcrypt from 'bcrypt';
+import mongoose from 'mongoose';
 import { sendErrorResponse, sendSuccessResponse } from '../../utils/handleResponce.mjs';
 import { sendWelcomeEmail } from '../../utils/emailService.mjs';
 
@@ -20,11 +21,21 @@ class StaffController {
                 return sendErrorResponse(res, "Name, email, password, and role are required", 400);
             }
 
-            // 2. Check if role exists
-            const role = await Role.findById(roleId);
-            if (!role) {
-                return sendErrorResponse(res, "Role not found", 404);
+            // 2. Resolve Role
+            let role;
+            if (mongoose.Types.ObjectId.isValid(roleId)) {
+                role = await Role.findById(roleId);
+            } else {
+                // Try finding by roleName if roleId is not a valid ObjectId (e.g., "Manager")
+                role = await Role.findOne({ roleName: roleId });
             }
+
+            if (!role) {
+                return sendErrorResponse(res, `Role not found: ${roleId}`, 404);
+            }
+
+            // Use the actual role _id for storage
+            const actualRoleId = role._id;
 
             // 3. Check if email exists in AdminEmailAuth or Admin
             const existingAuth = await AdminEmailAuth.findOne({ email });
@@ -50,7 +61,7 @@ class StaffController {
             const newAuth = await AdminEmailAuth.create({
                 email,
                 password: hashedPassword,
-                role: roleId,
+                role: actualRoleId,
                 permissions: role.permissions, // Inherit permissions from role
                 isActive: true,
                 createdBy: req.user ? req.user.id : null
@@ -128,13 +139,19 @@ class StaffController {
 
             // Enhance with Role info from AdminEmailAuth
             const enhancedStaff = await Promise.all(staffProfiles.map(async (profile) => {
-                const auth = await AdminEmailAuth.findOne({ email: profile.email }).populate('role');
+                let auth;
+                try {
+                    auth = await AdminEmailAuth.findOne({ email: profile.email }).populate('role');
+                } catch (popError) {
+                    console.error(`Error populating role for ${profile.email}:`, popError.message);
+                    auth = await AdminEmailAuth.findOne({ email: profile.email });
+                }
                 return {
                     _id: profile._id,
                     name: profile.username,
                     email: profile.email,
                     mobileNumber: profile.mobileNumber,
-                    status: profile.status,
+                    status: profile.status === 'active' ? "Active" : "Inactive",
                     role: auth?.role?.roleName || 'No Role',
                     roleId: auth?.role?._id,
                     lastLogin: auth?.lastLogin,
@@ -196,7 +213,13 @@ class StaffController {
                 return sendErrorResponse(res, "Staff member not found", 404);
             }
 
-            const auth = await AdminEmailAuth.findOne({ email: profile.email }).populate('role');
+            let auth;
+            try {
+                auth = await AdminEmailAuth.findOne({ email: profile.email }).populate('role');
+            } catch (popError) {
+                console.error(`Error populating role for staff ${id}:`, popError.message);
+                auth = await AdminEmailAuth.findOne({ email: profile.email });
+            }
 
             const staffData = {
                 _id: profile._id,
@@ -261,9 +284,15 @@ class StaffController {
                 auth.password = await bcrypt.hash(password, 10);
             }
             if (roleId) {
-                const role = await Role.findById(roleId);
-                if (!role) return sendErrorResponse(res, "Role not found", 404);
-                auth.role = roleId;
+                let role;
+                if (mongoose.Types.ObjectId.isValid(roleId)) {
+                    role = await Role.findById(roleId);
+                } else {
+                    role = await Role.findOne({ roleName: roleId });
+                }
+                
+                if (!role) return sendErrorResponse(res, `Role not found: ${roleId}`, 404);
+                auth.role = role._id;
                 auth.permissions = role.permissions;
             }
 
