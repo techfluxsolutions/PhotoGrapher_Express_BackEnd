@@ -884,6 +884,7 @@ class PhotographerController {
 
             // --- Commission Validation ---
             const validate = (val, name) => {
+                if (val === "") return `${name} cannot be empty`;
                 if (val !== undefined) {
                     const num = Number(val);
                     if (isNaN(num)) return `${name} must be a number`;
