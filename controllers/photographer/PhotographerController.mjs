@@ -888,9 +888,8 @@ class PhotographerController {
                 const num = Number(val);
                 if (isNaN(num)) return `${name} must be a number`;
                 if (num < 0) return `${name} cannot be negative`;
-                if (num > 100) return `${name} cannot exceed 100`;
+                if (num > 100) return `${name} cannot more than 100`;
                 return null;
-                if (num === 0) return `${name} cannot be zero`;
             };
 
             const errors = [

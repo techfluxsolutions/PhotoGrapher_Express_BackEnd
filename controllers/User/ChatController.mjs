@@ -122,11 +122,24 @@ class ChatController {
                 .skip(skip)
                 .limit(limit)
                 .populate("senderId", "username avatar"); // To show sender details
+            // Identify the latest paymentCard message for the conversation (globally, not just this page)
+            const latestPaymentCard = await Message.findOne({ 
+                conversationId: conversation._id, 
+                messageType: 'paymentCard' 
+            }).sort({ createdAt: -1 }).select('_id');
+            const lastPaymentCardId = latestPaymentCard ? latestPaymentCard._id.toString() : null;
+
             const formattedMessages = messages.map(msg => {
                 const msgObj = msg.toObject();
                 if (msgObj.senderId && msgObj.senderId.avatar && !msgObj.senderId.avatar.startsWith("http")) {
                     msgObj.senderId.avatar = `${baseUrl}/${msgObj.senderId.avatar.replace(/\\/g, "/").replace(/^\//, "")}`;
                 }
+
+                // logic for isBudget: True only for the global latest paymentCard that isn't already accepted or rejected
+                msgObj.isBudget = (msgObj._id.toString() === lastPaymentCardId) && 
+                                  !msgObj.isQuoteFinal && 
+                                  !msgObj.isRejected;
+                                  
                 return msgObj;
             });
 
@@ -490,6 +503,11 @@ class ChatController {
             if (messageObj.senderId && messageObj.senderId.avatar && !messageObj.senderId.avatar.startsWith("http")) {
                 messageObj.senderId.avatar = `${baseUrl}/${messageObj.senderId.avatar.replace(/\\/g, "/").replace(/^\//, "")}`;
             }
+
+            // logic for isBudget: A newly sent paymentCard is always the active budget request
+            messageObj.isBudget = (messageObj.messageType === 'paymentCard') && 
+                                  !messageObj.isQuoteFinal && 
+                                  !messageObj.isRejected;
 
             // Notify others via socket
             try {
