@@ -110,11 +110,20 @@ class ChatController {
 
                 if (quoteData) {
                     pinedBookings = quoteData.toObject();
+                    // Fallback totalAmount to serviceCost for pinned quote summary
+                    if (pinedBookings.service_id && pinedBookings.service_id.serviceCost) {
+                        pinedBookings.totalAmount = pinedBookings.service_id.serviceCost;
+                    }
                     // Format client avatar if it's the client's profile image
                     if (pinedBookings.clientId && pinedBookings.clientId.avatar && !pinedBookings.clientId.avatar.startsWith("http")) {
                         pinedBookings.clientId.avatar = `${baseUrl}/${pinedBookings.clientId.avatar.replace(/\\/g, "/").replace(/^\//, "")}`;
                     }
                 }
+            }
+
+            // Ensure totalAmount exists for bookings as well if it's missing or needs to match serviceCost
+            if (pinedBookings && !pinedBookings.totalAmount && pinedBookings.service_id?.serviceCost) {
+                pinedBookings.totalAmount = pinedBookings.service_id.serviceCost;
             }
 
             const messages = await Message.find({ conversationId: conversation._id })
