@@ -6,10 +6,10 @@ class CartController {
         try {
             const { id: userId } = req.user;
             const { items } = req.body;
-            
+
             // Calculate totalAmount
             const totalAmount = items.reduce((total, item) => total + (item.price * (item.quantity || 1)), 0);
-            
+
             const cart = new Cart({ userId, items, totalAmount });
             await cart.save();
             res.status(201).json({ success: true, data: cart });
@@ -47,7 +47,7 @@ class CartController {
             const { id: userId } = req.user;
             const { id } = req.params;
             const { items, status } = req.body;
-            
+
             // Recalculate totalAmount if items are provided
             let totalAmount;
             if (items) {
@@ -56,11 +56,11 @@ class CartController {
 
             // FIXED: Use findOneAndUpdate for multiple filters
             const cart = await Cart.findOneAndUpdate(
-                { _id: id, userId }, 
-                { items, totalAmount, status }, 
+                { _id: id, userId },
+                { items, totalAmount, status },
                 { new: true, runValidators: true }
             );
-            
+
             if (!cart) return res.status(404).json({ success: false, message: "Cart not found" });
             res.status(200).json({ success: true, data: cart });
         } catch (error) {
@@ -85,17 +85,17 @@ class CartController {
         try {
             const { id: userId } = req.user;
             const { name, category, price, quantity } = req.body;
-            
+
             // Calculate total for this specific item
             const totalAmount = price * (quantity || 1);
-            
+
             // Create a new cart entry as per user requirement to keep them separate
-            const cart = new Cart({ 
-                userId, 
+            const cart = new Cart({
+                userId,
                 items: [{ name, category, price, quantity: quantity || 1 }],
                 totalAmount
             });
-            
+
             await cart.save();
             res.status(201).json({ success: true, data: cart });
         } catch (error) {
@@ -108,6 +108,9 @@ class CartController {
             const { id: userId } = req.user;
             // Find most recent active cart
             const cart = await Cart.findOne({ userId, status: "active" }).sort({ createdAt: -1 });
+            if (!cart) {
+                res.status(200).json({ success: true, message: "Your Cart Has No Items", data: [] });
+            }
             res.status(200).json({ success: true, data: cart });
         } catch (error) {
             next(error);
