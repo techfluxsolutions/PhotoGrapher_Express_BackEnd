@@ -149,6 +149,10 @@ class ChatController {
                 msgObj.isBudget = (msgObj._id.toString() === lastPaymentCardId) && 
                                   !msgObj.isQuoteFinal && 
                                   !msgObj.isRejected;
+                
+                // New flag: True if this specific budget proposal has been accepted or rejected
+                msgObj.IsuserAcceptOrReject = (msgObj.messageType === 'paymentCard') && 
+                                              (msgObj.isQuoteFinal || msgObj.isRejected);
                                   
                 return msgObj;
             });
@@ -522,6 +526,9 @@ class ChatController {
             messageObj.isBudget = (messageObj.messageType === 'paymentCard') && 
                                   !messageObj.isQuoteFinal && 
                                   !messageObj.isRejected;
+
+            // For a new message, it hasn't been accepted or rejected yet
+            messageObj.IsuserAcceptOrReject = false;
 
             // Notify others via socket
             try {
