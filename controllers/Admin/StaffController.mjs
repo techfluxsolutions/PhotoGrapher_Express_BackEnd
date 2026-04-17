@@ -99,7 +99,7 @@ class StaffController {
                         email: newProfile.email,
                         role: role.roleName,
                         roleId: role._id,
-                        status: newProfile.status
+                        status: newProfile.status === 'active' ? 'Active' : 'Inactive'
                     }
                 }, "Staff member created successfully", 201);
 
@@ -226,7 +226,7 @@ class StaffController {
                 name: profile.username,
                 email: profile.email,
                 mobileNumber: profile.mobileNumber,
-                status: profile.status,
+                status: profile.status === 'active' ? "Active" : "Inactive",
                 role: auth?.role?.roleName || 'No Role',
                 roleId: auth?.role?._id,
                 lastLogin: auth?.lastLogin,
@@ -275,7 +275,14 @@ class StaffController {
 
             // Update Profile Fields
             if (name) profile.username = name;
-            if (status && ["active", "inactive"].includes(status)) profile.status = status;
+            
+            if (status) {
+                const normalizedStatus = status.toLowerCase();
+                if (["active", "inactive"].includes(normalizedStatus)) {
+                    profile.status = normalizedStatus;
+                    auth.isActive = normalizedStatus === 'active';
+                }
+            }
 
             await profile.save();
 
@@ -297,9 +304,6 @@ class StaffController {
             }
 
             // Sync active status with auth if needed, though status is mainly on profile
-            if (status) {
-                auth.isActive = status === 'active';
-            }
 
             await auth.save();
 
@@ -311,7 +315,7 @@ class StaffController {
                 email: profile.email,
                 role: updatedRole?.roleName,
                 roleId: updatedRole?._id,
-                status: profile.status
+                status: profile.status === 'active' ? 'Active' : 'Inactive'
             }, "Staff updated successfully", 200);
 
         } catch (error) {
