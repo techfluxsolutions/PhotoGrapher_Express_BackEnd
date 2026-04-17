@@ -890,6 +890,7 @@ class PhotographerController {
                 if (num < 0) return `${name} cannot be negative`;
                 if (num > 100) return `${name} cannot exceed 100`;
                 return null;
+                if (num === 0) return `${name} cannot be zero`;
             };
 
             const errors = [
