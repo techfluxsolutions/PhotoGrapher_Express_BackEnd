@@ -884,13 +884,11 @@ class PhotographerController {
 
             // --- Commission Validation ---
             const validate = (val, name) => {
-                if (val === "") return `${name} cannot be empty`;
-                if (val !== undefined) {
-                    const num = Number(val);
-                    if (isNaN(num)) return `${name} must be a number`;
-                    if (num < 0) return `${name} cannot be negative`;
-                    if (num > 100) return `${name} cannot exceed 100`;
-                }
+                if (val === "" || val === undefined || val === null) return `${name} cannot be empty`;
+                const num = Number(val);
+                if (isNaN(num)) return `${name} must be a number`;
+                if (num < 0) return `${name} cannot be negative`;
+                if (num > 100) return `${name} cannot exceed 100`;
                 return null;
             };
 
