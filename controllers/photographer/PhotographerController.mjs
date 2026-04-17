@@ -882,6 +882,28 @@ class PhotographerController {
         try {
             const { initio, elite, pro } = req.body;
 
+            // --- Commission Validation ---
+            const validate = (val, name) => {
+                if (val !== undefined) {
+                    const num = Number(val);
+                    if (isNaN(num)) return `${name} must be a number`;
+                    if (num < 0) return `${name} cannot be negative`;
+                    if (num > 100) return `${name} cannot exceed 100`;
+                }
+                return null;
+            };
+
+            const errors = [
+                validate(initio, "Initio commission"),
+                validate(elite, "Elite commission"),
+                validate(pro, "Pro commission")
+            ].filter(Boolean);
+
+            if (errors.length > 0) {
+                return res.status(400).json({ success: false, message: errors[0] });
+            }
+            // -----------------------------
+
             const updates = [];
 
             if (initio !== undefined) {
