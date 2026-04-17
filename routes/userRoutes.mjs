@@ -179,9 +179,7 @@ router.get("/datalinks/:id", (req, res, next) => DataLinksController.getById(req
 router.post("/cart", (req, res, next) => CartController.addToCart(req, res, next));
 router.get("/cart", (req, res, next) => CartController.getMyCart(req, res, next));
 router.get("/cart/all", (req, res, next) => CartController.getAll(req, res, next));
-router.get("/cart/:id", (req, res, next) => CartController.getOne(req, res, next));
-router.put("/cart/:id", (req, res, next) => CartController.update(req, res, next));
-router.delete("/cart/:id", (req, res, next) => CartController.delete(req, res, next));
+// Moving /cart/:id routes to the bottom of the file to prevent catching exact routes
 
 //editing plans
 router.get("/editing-plans", (req, res, next) => EditingController.getAll(req, res, next));
@@ -196,10 +194,14 @@ router.get("/photography-plans/:id", (req, res, next) => PhotographyController.g
 // cart Apis
 
 router.post("/cart/add", (req, res, next) => EditingController.addToCart(req, res, next));
-router.get("/cart/my-cart", (req, res, next) => EditingController.getMyCart(req, res, next));
+router.get("/cart/mycart", (req, res, next) => EditingController.getMyCart(req, res, next));
 router.post("/cart/updateQuantity", (req, res, next) => EditingController.updateQuantity(req, res, next));
 router.get("/get-mycart", (req, res, next) => CartController.getMyCart(req, res, next));
 
+// Generic cart routes (MUST BE DECLARED AFTER ALL OTHER /cart/ ROUTES)
+router.get("/cart/:id", (req, res, next) => CartController.getOne(req, res, next));
+router.put("/cart/:id", (req, res, next) => CartController.update(req, res, next));
+router.delete("/cart/:id", (req, res, next) => CartController.delete(req, res, next));
 // team shoot Apis
 router.get("/team-shoots/:type", (req, res, next) => TeamShootController.getPlans(req, res, next));
 router.post("/cart/team-shoots", (req, res, next) => TeamShootController.addTeamToCart(req, res, next));
