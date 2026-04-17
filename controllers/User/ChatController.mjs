@@ -136,7 +136,7 @@ class ChatController {
             const latestPaymentCard = await Message.findOne({ 
                 conversationId: conversation._id, 
                 messageType: 'paymentCard' 
-            }).sort({ createdAt: -1 }).select('_id');
+            }).sort({ createdAt: -1 });
             const lastPaymentCardId = latestPaymentCard ? latestPaymentCard._id.toString() : null;
 
             const formattedMessages = messages.map(msg => {
@@ -144,16 +144,6 @@ class ChatController {
                 if (msgObj.senderId && msgObj.senderId.avatar && !msgObj.senderId.avatar.startsWith("http")) {
                     msgObj.senderId.avatar = `${baseUrl}/${msgObj.senderId.avatar.replace(/\\/g, "/").replace(/^\//, "")}`;
                 }
-
-                // logic for isBudget: True only for the global latest paymentCard that isn't already accepted or rejected
-                msgObj.isBudget = (msgObj._id.toString() === lastPaymentCardId) && 
-                                  !msgObj.isQuoteFinal && 
-                                  !msgObj.isRejected;
-                
-                // New flag: True if this specific budget proposal has been accepted or rejected
-                msgObj.IsuserAcceptOrReject = (msgObj.messageType === 'paymentCard') && 
-                                              (msgObj.isQuoteFinal || msgObj.isRejected);
-                                  
                 return msgObj;
             });
 
@@ -166,6 +156,9 @@ class ChatController {
                 pinned: pinedBookings ? {
                     _id: pinedBookings._id,
                     totalAmount: pinedBookings.totalAmount,
+                    // conversation-wide budget flags moved here
+                    isBudget: latestPaymentCard && !latestPaymentCard.isQuoteFinal && !latestPaymentCard.isRejected ? true : false,
+                    IsuserAcceptOrReject: latestPaymentCard && (latestPaymentCard.isQuoteFinal || latestPaymentCard.isRejected) ? true : false,
                     ...pinedBookings
                 } : null,
                 data: formattedMessages.reverse(), // Client usually expects chronological order for chat
@@ -521,14 +514,6 @@ class ChatController {
             if (messageObj.senderId && messageObj.senderId.avatar && !messageObj.senderId.avatar.startsWith("http")) {
                 messageObj.senderId.avatar = `${baseUrl}/${messageObj.senderId.avatar.replace(/\\/g, "/").replace(/^\//, "")}`;
             }
-
-            // logic for isBudget: A newly sent paymentCard is always the active budget request
-            messageObj.isBudget = (messageObj.messageType === 'paymentCard') && 
-                                  !messageObj.isQuoteFinal && 
-                                  !messageObj.isRejected;
-
-            // For a new message, it hasn't been accepted or rejected yet
-            messageObj.IsuserAcceptOrReject = false;
 
             // Notify others via socket
             try {
