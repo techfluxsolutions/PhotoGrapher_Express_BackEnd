@@ -110,6 +110,10 @@ class ChatController {
 
                 if (quoteData) {
                     pinedBookings = quoteData.toObject();
+                    // Fallback totalAmount to serviceCost for pinned quote summary
+                    if (pinedBookings.service_id && pinedBookings.service_id.serviceCost) {
+                        pinedBookings.totalAmount = pinedBookings.service_id.serviceCost;
+                    }
                     // Format client avatar if it's the client's profile image
                     if (pinedBookings.clientId && pinedBookings.clientId.avatar && !pinedBookings.clientId.avatar.startsWith("http")) {
                         pinedBookings.clientId.avatar = `${baseUrl}/${pinedBookings.clientId.avatar.replace(/\\/g, "/").replace(/^\//, "")}`;
@@ -117,16 +121,34 @@ class ChatController {
                 }
             }
 
+            // Ensure totalAmount exists for bookings as well if it's missing or needs to match serviceCost
+            if (pinedBookings && !pinedBookings.totalAmount && pinedBookings.service_id?.serviceCost) {
+                pinedBookings.totalAmount = pinedBookings.service_id.serviceCost;
+            }
+
             const messages = await Message.find({ conversationId: conversation._id })
                 .sort({ createdAt: -1 }) // Get latest first
                 .skip(skip)
                 .limit(limit)
                 .populate("senderId", "username avatar"); // To show sender details
+            // Identify the latest paymentCard message for the conversation (globally, not just this page)
+            const latestPaymentCard = await Message.findOne({ 
+                conversationId: conversation._id, 
+                messageType: 'paymentCard' 
+            }).sort({ createdAt: -1 }).select('_id');
+            const lastPaymentCardId = latestPaymentCard ? latestPaymentCard._id.toString() : null;
+
             const formattedMessages = messages.map(msg => {
                 const msgObj = msg.toObject();
                 if (msgObj.senderId && msgObj.senderId.avatar && !msgObj.senderId.avatar.startsWith("http")) {
                     msgObj.senderId.avatar = `${baseUrl}/${msgObj.senderId.avatar.replace(/\\/g, "/").replace(/^\//, "")}`;
                 }
+
+                // logic for isBudget: True only for the global latest paymentCard that isn't already accepted or rejected
+                msgObj.isBudget = (msgObj._id.toString() === lastPaymentCardId) && 
+                                  !msgObj.isQuoteFinal && 
+                                  !msgObj.isRejected;
+                                  
                 return msgObj;
             });
 
@@ -490,6 +512,11 @@ class ChatController {
             if (messageObj.senderId && messageObj.senderId.avatar && !messageObj.senderId.avatar.startsWith("http")) {
                 messageObj.senderId.avatar = `${baseUrl}/${messageObj.senderId.avatar.replace(/\\/g, "/").replace(/^\//, "")}`;
             }
+
+            // logic for isBudget: A newly sent paymentCard is always the active budget request
+            messageObj.isBudget = (messageObj.messageType === 'paymentCard') && 
+                                  !messageObj.isQuoteFinal && 
+                                  !messageObj.isRejected;
 
             // Notify others via socket
             try {

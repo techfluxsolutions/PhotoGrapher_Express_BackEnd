@@ -85,7 +85,8 @@ class ServiceBookingController {
           {
             $or: [
               { bookingDate: { $gte: todayStartIST } },
-              { startDate: { $gte: todayStr } }
+              { startDate: { $gte: todayStr } },
+              { status: "canceled" }
             ]
           }
         ]
@@ -104,7 +105,14 @@ class ServiceBookingController {
         const doc = item.toObject();
         doc.eventType = item.shootType || item.service_id?.serviceName || "";
         doc.bookingStatus = item.bookingStatus || "pending";
-        doc.status = item.status || "pending";
+
+        let displayStatus = item.status || "pending";
+        if (displayStatus === "canceled") {
+          displayStatus = "Cancelled";
+        } else {
+          displayStatus = displayStatus.charAt(0).toUpperCase() + displayStatus.slice(1);
+        }
+        doc.status = displayStatus;
         return doc;
       });
 
