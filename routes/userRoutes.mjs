@@ -22,6 +22,7 @@ import CloudPlanController from "../controllers/Admin/CloudPlanController.mjs";
 import CartController from "../controllers/User/CartController.mjs";
 import EditingController from "../controllers/User/EditingController.mjs";
 import PhotographyController from "../controllers/User/PhotographyController.mjs";
+import TeamShootController from "../controllers/User/TeamShootController.mjs";
 
 const router = express.Router();
 import { uploadController } from "../controllers/uploadController.js";
@@ -197,11 +198,10 @@ router.get("/photography-plans/:id", (req, res, next) => PhotographyController.g
 router.post("/cart/add", (req, res, next) => EditingController.addToCart(req, res, next));
 router.get("/cart/my-cart", (req, res, next) => EditingController.getMyCart(req, res, next));
 router.post("/cart/updateQuantity", (req, res, next) => EditingController.updateQuantity(req, res, next));
+router.get("/get-mycart", (req, res, next) => CartController.getMyCart(req, res, next));
 
-
-
-
-
-
+// team shoot Apis
+router.get("/team-shoots/:type", (req, res, next) => TeamShootController.getPlans(req, res, next));
+router.post("/cart/team-shoots", (req, res, next) => TeamShootController.addTeamToCart(req, res, next));
 
 export default router;

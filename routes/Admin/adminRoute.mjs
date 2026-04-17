@@ -27,6 +27,7 @@ import CloudPlanController from "../../controllers/Admin/CloudPlanController.mjs
 import EditingController from "../../controllers/Admin/EditingPlanController.mjs";
 import PhotographyPlanController from "../../controllers/Admin/PhotographyPlanController.mjs";
 import AdminRevenueController from "../../controllers/Admin/AdminRevenueController.mjs";
+import AdminTeamShootController from "../../controllers/Admin/AdminTeamShootController.mjs";
 
 const router = express.Router();
 import { uploadController } from "../../controllers/uploadController.js";
@@ -268,6 +269,12 @@ router.put("/photography-plans/:id", (req, res, next) => PhotographyPlanControll
 router.delete("/photography-plans/:id", (req, res, next) => PhotographyPlanController.delete(req, res, next));
 
 
+// --- Team Shoot Plan Management ---
+router.post("/team-shoot-plans", (req, res, next) => AdminTeamShootController.create(req, res, next));
+router.get("/team-shoot-plans", (req, res, next) => AdminTeamShootController.getAll(req, res, next));
+router.get("/team-shoot-plans/:id", (req, res, next) => AdminTeamShootController.getById(req, res, next));
+router.put("/team-shoot-plans/:id", (req, res, next) => AdminTeamShootController.update(req, res, next));
+router.delete("/team-shoot-plans/:id", (req, res, next) => AdminTeamShootController.delete(req, res, next));
 
 // --- Admin Management (MUST BE LAST - generic /:id routes) ---
 router.post("/", upload.single("avatar"), (req, res, next) => AdminController.create(req, res, next));
