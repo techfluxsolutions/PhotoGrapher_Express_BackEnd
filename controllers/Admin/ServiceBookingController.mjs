@@ -1104,6 +1104,7 @@ class ServiceBookingController {
                 ]
               },
               "bookingAmount": "$totalAmount",
+              "totalAmount": "$totalAmount",
               "photographerAmount": { $ifNull: ["$photographerAmount", 0] },
               "paymentMode": "$paymentMode",
               "bookingStatus": "$status",

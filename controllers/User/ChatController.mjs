@@ -107,23 +107,24 @@ class ChatController {
                         options: { strictPopulate: false }
                     })
                     .populate('clientId', 'username avatar');
+                
 
                 if (quoteData) {
                     pinedBookings = quoteData.toObject();
-                    // Fallback totalAmount to serviceCost for pinned quote summary
-                    if (pinedBookings.service_id && pinedBookings.service_id.serviceCost) {
-                        pinedBookings.totalAmount = pinedBookings.service_id.serviceCost;
-                    }
+                    // Set totalAmount to the budget specified by the user
+                    pinedBookings.totalAmount = pinedBookings.currentBudget || pinedBookings.budget || 0;
+                    
                     // Format client avatar if it's the client's profile image
                     if (pinedBookings.clientId && pinedBookings.clientId.avatar && !pinedBookings.clientId.avatar.startsWith("http")) {
                         pinedBookings.clientId.avatar = `${baseUrl}/${pinedBookings.clientId.avatar.replace(/\\/g, "/").replace(/^\//, "")}`;
                     }
                 }
             }
-
-            // Ensure totalAmount exists for bookings as well if it's missing or needs to match serviceCost
-            if (pinedBookings && !pinedBookings.totalAmount && pinedBookings.service_id?.serviceCost) {
-                pinedBookings.totalAmount = pinedBookings.service_id.serviceCost;
+            
+            // For bookings, we keep the existing totalAmount from the database.
+            // If it's missing for some reason, we ensure it's at least 0.
+            if (pinedBookings && pinedBookings.totalAmount === undefined) {
+                pinedBookings.totalAmount = 0;
             }
 
             const messages = await Message.find({ conversationId: conversation._id })
@@ -158,7 +159,11 @@ class ChatController {
                 success: true,
                 userName: clientData?.username || pinedBookings?.clientName || "Unknown User",
                 profileImage: clientData?.avatar || null,
-                pinned: pinedBookings,
+                pinned: pinedBookings ? {
+                    _id: pinedBookings._id,
+                    totalAmount: pinedBookings.totalAmount,
+                    ...pinedBookings
+                } : null,
                 data: formattedMessages.reverse(), // Client usually expects chronological order for chat
                 meta: { total, page, limit },
             });
