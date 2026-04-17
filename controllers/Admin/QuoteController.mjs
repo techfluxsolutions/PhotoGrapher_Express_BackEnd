@@ -644,6 +644,13 @@ class QuoteController {
               lat: { $ifNull: ["$lat", null] },
               lng: { $ifNull: ["$lng", null] },
               address: { $ifNull: ["$address", ""] },
+              totalAmount: {
+                $cond: {
+                  if: { $or: [{ $eq: ["$currentBudget", ""] }, { $not: ["$currentBudget"] }] },
+                  then: { $ifNull: ["$budget", "0"] },
+                  else: "$currentBudget"
+                }
+              },
               bStatus: { $ifNull: ["$bStatus", "pending"] },
             },
           },
