@@ -177,8 +177,7 @@ router.get("/datalinks/:id", (req, res, next) => DataLinksController.getById(req
 
 // --- Cart ---
 router.post("/cart", (req, res, next) => CartController.addToCart(req, res, next));
-router.get("/cart", (req, res, next) => CartController.getMyCart(req, res, next));
-router.get("/cart/all", (req, res, next) => CartController.getAll(req, res, next));
+router.get("/getcart", (req, res, next) => CartController.getMyCart(req, res, next));
 // Moving /cart/:id routes to the bottom of the file to prevent catching exact routes
 
 //editing plans
@@ -205,5 +204,6 @@ router.delete("/cart/:id", (req, res, next) => CartController.delete(req, res, n
 // team shoot Apis
 router.get("/team-shoots/:type", (req, res, next) => TeamShootController.getPlans(req, res, next));
 router.post("/cart/team-shoots", (req, res, next) => TeamShootController.addTeamToCart(req, res, next));
+router.post("/cart/update-quantity", (req, res, next) => CartController.updateItemQuantity(req, res, next));
 
 export default router;

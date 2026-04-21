@@ -17,6 +17,12 @@ const cartItemSchema = new mongoose.Schema({
   quantity: {
     type: Number,
     default: 1
+  },
+  planId: {
+    type: mongoose.Schema.Types.ObjectId,
+  },
+  selectedroleId: {
+    type: mongoose.Schema.Types.ObjectId,
   }
 });
 

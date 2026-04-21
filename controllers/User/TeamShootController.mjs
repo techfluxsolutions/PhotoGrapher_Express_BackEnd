@@ -49,25 +49,28 @@ class TeamShootController {
                 let itemName = plan.role;
 
                 if (plan.pricingType === "duration_based") {
-                    // Find matching duration price
-                    const durationOption = plan.pricingOptions.find(opt => opt.durationValue === selection.durationValue);
+                    // Find matching pricing option by ID
+                    const durationOption = plan.pricingOptions.find(opt => opt._id.toString() === selection.selectedroleId);
 
                     if (!durationOption) {
                         return res.status(400).json({
                             success: false,
-                            message: `Invalid duration ${selection.durationValue} for ${plan.role}`
+                            message: `Invalid selection for ${plan.role}`
                         });
                     }
                     itemPrice = durationOption.price;
-                    itemName = `${plan.role} (${selection.durationValue}hr)`;
+                    itemName = `${plan.role} (${durationOption.durationText})`;
                 } else if (plan.pricingType === "fixed") {
                     itemPrice = plan.fixedPrice;
                 }
 
-                // Check if already in cart
-                const existingItemIndex = cart.items.findIndex(
-                    item => item.name === itemName && item.category === "shoot_team"
-                );
+                // Check if already in cart by planId and selectedroleId (or just name if fixed)
+                const existingItemIndex = cart.items.findIndex(item => {
+                    if (plan.pricingType === "duration_based") {
+                        return item.planId?.toString() === selection.planId && item.selectedroleId === selection.selectedroleId;
+                    }
+                    return item.name === itemName && item.category === "shoot_team";
+                });
 
                 if (existingItemIndex !== -1) {
                     cart.items[existingItemIndex].quantity += (selection.quantity || 1);
@@ -76,7 +79,9 @@ class TeamShootController {
                         name: itemName,
                         category: "shoot_team",
                         price: itemPrice,
-                        quantity: selection.quantity || 1
+                        quantity: selection.quantity || 1,
+                        planId: selection.planId,
+                        selectedroleId: selection.selectedroleId
                     });
                 }
             }

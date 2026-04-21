@@ -63,7 +63,7 @@ class EditingController {
 
             // ✅ Find Item Index
             const itemIndex = cart.items.findIndex(
-                (i) => i.name === planName && i.category === "editing"
+                (i) => (editingPlanId ? i.planId?.toString() === editingPlanId : i.name === planName) && i.category === "editing"
             );
 
             if (itemIndex === -1) {
@@ -117,7 +117,7 @@ class EditingController {
     async addToCart(req, res) {
         try {
             const userId = req.user.id;
-            const { editingPlanId, quantity = 1 } = req.body;
+            const { editingPlanId, quantity = 1, selectedRoleId } = req.body;
             console.log("Editing")
             // ✅ Find Editing Plan
             const plan = await EditingPlan.findById(editingPlanId);
@@ -142,11 +142,10 @@ class EditingController {
                 });
             }
 
-            // ✅ Check existing item by name (since model doesn't have editingPlan ref)
+            // ✅ Check existing item by planId
             const existingItem = cart.items.find(
-                (item) => item.name === plan.planName && item.category === "editing"
+                (item) => item.planId?.toString() === editingPlanId && item.category === "editing"
             );
-
             if (existingItem) {
                 existingItem.quantity += quantity;
             } else {
@@ -155,6 +154,9 @@ class EditingController {
                     category: "editing",
                     price: plan.price,
                     quantity,
+                    planId: editingPlanId,
+                    selectedroleId: selectedRoleId
+
                 });
             }
 

@@ -18,16 +18,7 @@ class CartController {
         }
     }
 
-    async getAll(req, res, next) {
-        try {
-            // By default, only get the user's carts if this is a user endpoint
-            const { id: userId } = req.user;
-            const carts = await Cart.find({ userId });
-            res.status(200).json({ success: true, data: carts });
-        } catch (error) {
-            next(error);
-        }
-    }
+
 
     async getOne(req, res, next) {
         try {
@@ -107,10 +98,52 @@ class CartController {
         try {
             const { id: userId } = req.user;
             // Find most recent active cart
-            const cart = await Cart.findOne({ userId, status: "active" }).sort({ createdAt: -1 });
+            const cart = await Cart.findOne({ userId, status: "active" }).sort({ createdAt: -1 }).populate({ path: "userId", select: "username mobileNumber" });
             if (!cart) {
                 res.status(200).json({ success: true, message: "Your Cart Has No Items", data: [] });
             }
+            res.status(200).json({ success: true, data: cart });
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    async updateItemQuantity(req, res, next) {
+        try {
+            const userId = req.user.id;
+            const { itemId, action } = req.body;
+
+            if (!["increase", "decrease"].includes(action)) {
+                return res.status(400).json({ success: false, message: "Invalid action" });
+            }
+
+            const cart = await Cart.findOne({ userId, status: "active" });
+
+            if (!cart) {
+                return res.status(404).json({ success: false, message: "Cart not found" });
+            }
+
+            const itemIndex = cart.items.findIndex(item => item._id.toString() === itemId);
+
+            if (itemIndex === -1) {
+                return res.status(404).json({ success: false, message: "Item not found in cart" });
+            }
+
+            const item = cart.items[itemIndex];
+
+            if (action === "increase") {
+                item.quantity += 1;
+            } else if (action === "decrease") {
+                if (item.quantity > 1) {
+                    item.quantity -= 1;
+                } else {
+                    cart.items.splice(itemIndex, 1);
+                }
+            }
+
+            cart.totalAmount = cart.items.reduce((total, item) => total + (item.price * item.quantity), 0);
+            await cart.save();
+
             res.status(200).json({ success: true, data: cart });
         } catch (error) {
             next(error);
