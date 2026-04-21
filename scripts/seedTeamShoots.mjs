@@ -15,9 +15,9 @@ const seedData = [
         role: "Photographer",
         pricingType: "duration_based",
         pricingOptions: [
-            { durationText: "0-3 Hours", durationValue: 3, price: 3999 },
-            { durationText: "5 Hours", durationValue: 5, price: 5999 },
-            { durationText: "8 Hours", durationValue: 8, price: 8999 }
+            { durationText: "0-3 Hours", durationValue: 3, price: 3999, subtitle: "Short & Focused Sessions" },
+            { durationText: "5 Hours", durationValue: 5, price: 5999, subtitle: "Balanced & Versatile Shoot" },
+            { durationText: "8 Hours", durationValue: 8, price: 8999, subtitle: "Full Day Coverage" }
         ],
         features: [
             "Trained Photographer",
@@ -33,9 +33,9 @@ const seedData = [
         role: "Videographer",
         pricingType: "duration_based",
         pricingOptions: [
-            { durationText: "0-3 Hours", durationValue: 3, price: 4999 },
-            { durationText: "5 Hours", durationValue: 5, price: 6999 },
-            { durationText: "8 Hours", durationValue: 8, price: 9999 }
+            { durationText: "0-3 Hours", durationValue: 3, price: 3999, subtitle: "Short & Focused Sessions" },
+            { durationText: "5 Hours", durationValue: 5, price: 5999, subtitle: "Balanced & Versatile Shoot" },
+            { durationText: "8 Hours", durationValue: 8, price: 8999, subtitle: "Full Day Coverage" }
         ],
         features: [
             "Trained Videographer",
@@ -52,8 +52,14 @@ const seedData = [
         pricingType: "fixed",
         fixedPrice: 1999,
         features: [
-            "Professional Setup",
-            "Ambient Lighting"
+            "Professional Cinematographer",
+            "Unlimited Videos and Clips",
+            "All Raw Data delivered",
+            "Digital Cloud Based Delivery",
+            "Express Delivery (2-3 Days)"
+
+
+
         ],
         isBaseIncluded: false
     },
@@ -63,8 +69,16 @@ const seedData = [
         pricingType: "fixed",
         fixedPrice: 1199,
         features: [
-            "Basic Editing",
-            "Color Correction"
+            "Professional trimming and clean cuts",
+            "Background music integration",
+            "Basic color correction",
+            "Text overlay (titles, caption, names)",
+            "Final export in HD (1080p)",
+            "2 minor revision rounds "
+
+
+
+
         ],
         isBaseIncluded: false
     },
@@ -75,9 +89,9 @@ const seedData = [
         role: "Photographer",
         pricingType: "duration_based",
         pricingOptions: [
-            { durationText: "0-3 Hours", durationValue: 3, price: 4999 },
-            { durationText: "5 Hours", durationValue: 5, price: 7999 },
-            { durationText: "8 Hours", durationValue: 8, price: 9999 }
+            { durationText: "0-3 Hours", durationValue: 3, price: 4999, subtitle: "Short & Focused Sessions" },
+            { durationText: "5 Hours", durationValue: 5, price: 7999, subtitle: "Balanced & Versatile Shoot" },
+            { durationText: "8 Hours", durationValue: 8, price: 9999, subtitle: "Full Day Coverage" }
         ],
         features: [
             "Professional Photographer",
@@ -93,13 +107,13 @@ const seedData = [
         role: "Cinematographer",
         pricingType: "duration_based",
         pricingOptions: [
-            { durationText: "0-3 Hours", durationValue: 3, price: 5999 },
-            { durationText: "5 Hours", durationValue: 5, price: 8999 },
-            { durationText: "8 Hours", durationValue: 8, price: 11999 }
+            { durationText: "0-3 Hours", durationValue: 3, price: 4999, subtitle: "Short & Focused Sessions" },
+            { durationText: "5 Hours", durationValue: 5, price: 7999, subtitle: "Balanced & Versatile Shoot" },
+            { durationText: "8 Hours", durationValue: 8, price: 9999, subtitle: "Full Day Coverage" }
         ],
         features: [
             "Professional Cinematographer",
-            "Unlimited 1080p (HD) Videos and Clips",
+            "Unlimited Videos and Clips",
             "All Raw Data delivered",
             "Digital Cloud Based Delivery",
             "Instant Delivery (0-1 Days)"
@@ -112,8 +126,11 @@ const seedData = [
         pricingType: "fixed",
         fixedPrice: 1999,
         features: [
-            "Professional Lighting Team",
-            "Studio level Setup"
+            "Professional Cinematographer",
+            "Unlimited Videos and Clips",
+            "All Raw Data delivered",
+            "Digital Cloud Based Delivery",
+            "Express Delivery (2-3 Days)",
         ],
         isBaseIncluded: false
     },
@@ -123,8 +140,12 @@ const seedData = [
         pricingType: "fixed",
         fixedPrice: 1499,
         features: [
-            "Advanced Editing",
-            "Detailed Color Grading"
+            "Advanced cinematic cuts &storytelling flow",
+            "Professional color grading ",
+            "Motion graphics & animated text ",
+            "4K export (if footage supports it)",
+            "3-4 revision rounds"
+
         ],
         isBaseIncluded: false
     }
