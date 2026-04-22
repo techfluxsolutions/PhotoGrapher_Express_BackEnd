@@ -98,22 +98,19 @@ class BookingController {
                 };
             } else if (statusToFilter === "accepted") {
                 // Shows bookings specifically assigned to me and explicitly accepted/confirmed
-                // ONLY for FUTURE dates (Tomorrow onwards), as requested.
-                // AND only if PAID.
+                // ONLY for FUTURE dates (Today onwards), as requested.
                 const now = new Date();
-                const istTime = new Date(now.getTime() + (5.5 * 60 * 60 * 1000));
-                const tomorrowIST = new Date(istTime.getTime() + (24 * 60 * 60 * 1000));
-                const tomorrowStr = tomorrowIST.toISOString().split("T")[0];
-                const tomorrowStartIST = new Date(`${tomorrowStr}T00:00:00.000+05:30`);
+                const todayStr = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' }).format(now);
+                const todayStartIST = new Date(`${todayStr}T00:00:00.000+05:30`);
 
                 filter = {
                     photographer_id: photographerId,
                     bookingStatus: "accepted",
                     status: { $nin: ["completed", "canceled"] },
-                    paymentStatus: { $in: ["partially paid", "fully paid"] },
+                    // Removed paymentStatus filter to ensure all accepted bookings are visible
                     $or: [
-                        { bookingDate: { $gte: tomorrowStartIST } },
-                        { startDate: { $gte: tomorrowStr } }
+                        { bookingDate: { $gte: todayStartIST } },
+                        { startDate: { $gte: todayStr } }
                     ]
                 };
             } else {
@@ -991,40 +988,38 @@ class BookingController {
         }
     }
 
-    // Get summary counts: todays bookings (today+upcoming), upcoming bookings (future only), and completed
+    // Get summary counts: todays bookings (today), upcoming bookings (future), and completed (history)
     async getSummaryCounts(req, res) {
         try {
             const myId = new mongoose.Types.ObjectId(req.user.id);
             const now = new Date();
-            // Adjust to IST (UTC+5:30)
-            const istTime = new Date(now.getTime() + (5.5 * 60 * 60 * 1000));
-            const todayStr = istTime.toISOString().split("T")[0];
+            // Get IST date string reliably
+            const todayStr = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' }).format(now); // "YYYY-MM-DD"
+            
+            const istTime = new Date(now.toLocaleString("en-US", { timeZone: "Asia/Kolkata" }));
+            const tomorrowIST = new Date(istTime);
+            tomorrowIST.setDate(tomorrowIST.getDate() + 1);
+            const tomorrowStr = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' }).format(tomorrowIST);
 
-            const tomorrowIST = new Date(istTime.getTime() + (24 * 60 * 60 * 1000));
-            const tomorrowStr = tomorrowIST.toISOString().split("T")[0];
-
-            // Convert to UTC Date for comparison (Start of Today IST in UTC)
             const todayStartIST = new Date(`${todayStr}T00:00:00.000+05:30`);
             const tomorrowStartIST = new Date(`${tomorrowStr}T00:00:00.000+05:30`);
 
-            const acceptedBase = {
+            // 1. Today's Bookings: All accepted bookings for today (including completed)
+            const todayCount = await ServiceBooking.countDocuments({
                 photographer_id: myId,
                 bookingStatus: "accepted",
-                status: { $nin: ["completed", "canceled"] }
-            };
-
-            // 1. Todays Bookings: Strictly Today (IST)
-            const todayCount = await ServiceBooking.countDocuments({
-                ...acceptedBase,
+                status: { $ne: "canceled" }, // Include completed
                 $or: [
                     { bookingDate: { $gte: todayStartIST, $lt: tomorrowStartIST } },
                     { startDate: todayStr }
                 ]
             });
 
-            // 2. Upcoming: Strictly Tomorrow onwards
+            // 2. Upcoming: Strictly Tomorrow onwards, not completed
             const futureOnlyCount = await ServiceBooking.countDocuments({
-                ...acceptedBase,
+                photographer_id: myId,
+                bookingStatus: "accepted",
+                status: { $nin: ["completed", "canceled"] },
                 $or: [
                     { bookingDate: { $gte: tomorrowStartIST } },
                     { startDate: { $gte: tomorrowStr } }
@@ -1045,12 +1040,14 @@ class BookingController {
 
             const data = {
                 todaysBookings: todayCount,
-                upcommingBooking: futureOnlyCount,
+                upcomingBooking: futureOnlyCount, // Fixed typo
+                upcommingBooking: futureOnlyCount, // Keep for backward compatibility if needed
                 completed: completedCount
             };
 
             return sendSuccessResponse(res, data, "Booking summary counts fetched successfully");
         } catch (error) {
+            console.error("Error in getSummaryCounts:", error);
             return sendErrorResponse(res, error, 500);
         }
     }
@@ -1060,10 +1057,12 @@ class BookingController {
         try {
             const myId = new mongoose.Types.ObjectId(req.user.id);
             const now = new Date();
-            const istTime = new Date(now.getTime() + (5.5 * 60 * 60 * 1000));
-            const todayStr = istTime.toISOString().split("T")[0];
-            const tomorrowIST = new Date(istTime.getTime() + (24 * 60 * 60 * 1000));
-            const tomorrowStr = tomorrowIST.toISOString().split("T")[0];
+            const todayStr = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' }).format(now);
+            
+            const istTime = new Date(now.toLocaleString("en-US", { timeZone: "Asia/Kolkata" }));
+            const tomorrowIST = new Date(istTime);
+            tomorrowIST.setDate(tomorrowIST.getDate() + 1);
+            const tomorrowStr = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' }).format(tomorrowIST);
 
             const todayStartIST = new Date(`${todayStr}T00:00:00.000+05:30`);
             const tomorrowStartIST = new Date(`${tomorrowStr}T00:00:00.000+05:30`);
@@ -1072,12 +1071,14 @@ class BookingController {
                 photographer_id: myId,
                 bookingStatus: "accepted",
                 status: { $nin: ["completed", "canceled"] },
-                paymentStatus: { $in: ["partially paid", "fully paid"] }
+                // Removed paymentStatus filter to show ALL accepted bookings as requested/implied by "wrong data"
             };
 
             // 1. Today's Bookings
             const todayCount = await ServiceBooking.countDocuments({
-                ...acceptedBase,
+                photographer_id: myId,
+                bookingStatus: "accepted",
+                status: { $ne: "canceled" }, // Include today's even if completed in the dashboard total if happened today
                 $or: [
                     { bookingDate: { $gte: todayStartIST, $lt: tomorrowStartIST } },
                     { startDate: todayStr }
@@ -1102,7 +1103,7 @@ class BookingController {
                 status: { $ne: "canceled" }
             });
 
-            // 4. Pending Gallery Uploads
+            // 4. Pending Gallery Uploads (Must be accepted and completed or today)
             const uploadPendingCount = await ServiceBooking.countDocuments({
                 photographer_id: myId,
                 bookingStatus: "accepted",
@@ -1119,6 +1120,7 @@ class BookingController {
 
             return sendSuccessResponse(res, data, "Dashboard counts fetched successfully");
         } catch (error) {
+            console.error("Error in getDashboardCounts:", error);
             return sendErrorResponse(res, error, 500);
         }
     }

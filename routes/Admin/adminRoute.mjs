@@ -33,6 +33,9 @@ const router = express.Router();
 import { uploadController } from "../../controllers/uploadController.js";
 // --- Debug ---
 router.get("/photographers/sorted", (req, res, next) => PhotographerController.getSortedPhotographers(req, res, next));
+router.get("/photographers/videographers", (req, res, next) => PhotographerController.getSortedVideographers(req, res, next));
+router.get("/photographers/lighting-setups", (req, res, next) => PhotographerController.getSortedLightingSetups(req, res, next));
+router.get("/photographers/cinematographers", (req, res, next) => PhotographerController.getSortedCinematographers(req, res, next));
 
 //sorting photographers
 router.get("/photographers/sort", (req, res, next) => PhotographerController.getSortPhotographers(req, res, next));
