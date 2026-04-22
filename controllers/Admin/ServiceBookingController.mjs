@@ -1161,6 +1161,132 @@ class ServiceBookingController {
       return next(err);
     }
   }
+
+  /**
+   * Get all hourly bookings
+   * GET /api/admins/hourly-bookings
+   */
+  async getHourlyBookings(req, res, next) {
+    try {
+      const page = Math.max(1, parseInt(req.query.page) || 1);
+      const limit = Math.max(1, parseInt(req.query.limit) || 20);
+      const skip = (page - 1) * limit;
+
+      const [items, total] = await Promise.all([
+        ServiceBooking.find({
+          hourlyPackages: { $exists: true, $not: { $size: 0 } }
+        })
+          .populate("client_id", "username")
+          .populate("photographer_id", "basicInfo.fullName")
+          .sort({ createdAt: -1 })
+          .skip(skip)
+          .limit(limit),
+        ServiceBooking.countDocuments({
+          hourlyPackages: { $exists: true, $not: { $size: 0 } }
+        })
+      ]);
+
+      const formattedBookings = items.map(booking => {
+        const addressParts = [
+          booking.flatOrHouseNo,
+          booking.streetName,
+          booking.city,
+          booking.state
+        ].filter(Boolean);
+
+        const eventAddress = addressParts.join(", ") + (booking.postalCode ? ` - ${booking.postalCode}` : "");
+
+        return {
+          bookingId: booking.veroaBookingId || booking._id,
+          clientName: booking.client_id?.username || "Unknown",
+          eventDate: booking.bookingDate ? new Date(booking.bookingDate).toISOString().split('T')[0] : "N/A",
+          eventTime: booking.bookingDate ? new Date(booking.bookingDate).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true }) : "N/A",
+          eventAddress: eventAddress || "N/A",
+          assignedPhotographer: booking.photographer_id?.basicInfo?.fullName || "",
+          galleryUpload: booking.galleryStatus === "Photos Uploaded",
+          galleryStatus: booking.galleryStatus || "pending",
+          bookingStatus: booking.status || "pending",
+          hourlyPackages: booking.hourlyPackages,
+          subtotal: (booking.hourlyPackages || []).reduce((sum, pkg) => {
+            const pkgPrice = parseFloat(pkg.price) || 0;
+            const servicesSum = (pkg.services || []).reduce((pSum, svc) => pSum + (parseFloat(svc.price) || 0), 0);
+            return sum + pkgPrice + servicesSum;
+          }, 0)
+        };
+      });
+
+      return res.status(200).json({
+        success: true,
+        data: formattedBookings,
+        meta: { total, page, limit }
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Get all editing bookings
+   * GET /api/admins/editing-bookings
+   */
+  async getEditingBookings(req, res, next) {
+    try {
+      const page = Math.max(1, parseInt(req.query.page) || 1);
+      const limit = Math.max(1, parseInt(req.query.limit) || 20);
+      const skip = (page - 1) * limit;
+
+      const [items, total] = await Promise.all([
+        ServiceBooking.find({
+          editingPackages: { $exists: true, $not: { $size: 0 } }
+        })
+          .populate("client_id", "username")
+          .populate("photographer_id", "basicInfo.fullName")
+          .sort({ createdAt: -1 })
+          .skip(skip)
+          .limit(limit),
+        ServiceBooking.countDocuments({
+          editingPackages: { $exists: true, $not: { $size: 0 } }
+        })
+      ]);
+
+      const formattedBookings = items.map(booking => {
+        const addressParts = [
+          booking.flatOrHouseNo,
+          booking.streetName,
+          booking.city,
+          booking.state
+        ].filter(Boolean);
+
+        const eventAddress = addressParts.join(", ") + (booking.postalCode ? ` - ${booking.postalCode}` : "");
+
+        return {
+          bookingId: booking.veroaBookingId || booking._id,
+          clientName: booking.client_id?.username || "Unknown",
+          eventDate: booking.bookingDate ? new Date(booking.bookingDate).toISOString().split('T')[0] : "N/A",
+          eventTime: booking.bookingDate ? new Date(booking.bookingDate).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true }) : "N/A",
+          eventAddress: eventAddress || "N/A",
+          assignedPhotographer: booking.photographer_id?.basicInfo?.fullName || "",
+          galleryUpload: booking.galleryStatus === "Photos Uploaded",
+          galleryStatus: booking.galleryStatus || "pending",
+          bookingStatus: booking.status || "pending",
+          editingPackages: booking.editingPackages,
+          subtotal: (booking.editingPackages || []).reduce((sum, pkg) => {
+            const pkgPrice = parseFloat(pkg.price) || 0;
+            const servicesSum = (pkg.services || []).reduce((pSum, svc) => pSum + (parseFloat(svc.price) || 0), 0);
+            return sum + pkgPrice + servicesSum;
+          }, 0)
+        };
+      });
+
+      return res.status(200).json({
+        success: true,
+        data: formattedBookings,
+        meta: { total, page, limit }
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
 }
 
 export default new ServiceBookingController();

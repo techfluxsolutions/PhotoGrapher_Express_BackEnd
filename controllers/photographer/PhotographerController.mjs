@@ -82,6 +82,7 @@ class PhotographerController {
             commissionPercentage: p.commissionPercentage || 0,
             team_studio: p.professionalDetails?.team_studio || "",
             expertiseLevel: p.professionalDetails?.expertiseLevel || "N/A",
+            photographerType: p.professionalDetails?.photographerType || "",
             categories: p.servicesAndStyles?.services ?
                 Object.keys(p.servicesAndStyles.services).filter(key => p.servicesAndStyles.services[key] === true) : [],
             isAbleToVerify: (
@@ -233,7 +234,7 @@ class PhotographerController {
     // Add Unverified Photographer (Status: Pending)
     async addUnverifiedPhotographer(req, res) {
         try {
-            const { name, email, phone, experience, city, startUpDate, signUpDate } = req.body;
+            const { name, email, phone, experience, city, startUpDate, signUpDate, photographerType } = req.body;
 
             // 1. Mandatory Validations
             const required = { name, email, phone, experience, city };
@@ -281,6 +282,7 @@ class PhotographerController {
                     phone: phone
                 },
                 professionalDetails: {
+                    photographerType: photographerType || "",
                     yearsOfExperience: experience,
                     primaryLocation: city,
                     startUpDate: startUpDate || signUpDate,
@@ -301,6 +303,7 @@ class PhotographerController {
                     phone: newPhotographer.mobileNumber,
                     experience: newPhotographer.professionalDetails.yearsOfExperience,
                     city: newPhotographer.professionalDetails.primaryLocation,
+                    photographerType: newPhotographer.professionalDetails.photographerType || "",
                     status: newPhotographer.status,
                     createdAt: newPhotographer.createdAt,
                     signUpDate: newPhotographer.professionalDetails.startUpDate || `${String(newPhotographer.createdAt.getDate()).padStart(2, '0')}/${String(newPhotographer.createdAt.getMonth() + 1).padStart(2, '0')}/${newPhotographer.createdAt.getFullYear()}`
@@ -391,6 +394,7 @@ class PhotographerController {
                     phone: photographer.mobileNumber,
                     experience: photographer.professionalDetails.yearsOfExperience,
                     city: photographer.professionalDetails.primaryLocation,
+                    photographerType: photographer.professionalDetails.photographerType || "",
                     status: photographer.status,
                     signUpDate: photographer.professionalDetails.startUpDate || `${String(photographer.createdAt.getDate()).padStart(2, '0')}/${String(photographer.createdAt.getMonth() + 1).padStart(2, '0')}/${photographer.createdAt.getFullYear()}`,
                     team_studio: photographer.professionalDetails.team_studio || "",
@@ -968,152 +972,172 @@ class PhotographerController {
         }
     }
 
-    async getSortedPhotographers(req, res) {
-        try {
-            const { bookingId } = req.query; // New Param
-            const page = Math.max(1, parseInt(req.query.page) || 1);
-            const limit = Math.max(1, parseInt(req.query.limit) || 10);
-            const skip = (page - 1) * limit;
+  async getSortedPhotographers(req, res, next) {
+    return this._getSortedPhotographersInternal(req, res, null);
+  }
 
-            const pipeline = [
-                { $match: { status: "active" } },
-                {
-                    $lookup: {
-                        from: "photographerratingsgivenbyadminandusers",
-                        localField: "_id",
-                        foreignField: "photographerId",
-                        as: "ratings"
-                    }
+  async getSortedVideographers(req, res, next) {
+    return this._getSortedPhotographersInternal(req, res, "Videographer");
+  }
+
+  async getSortedLightingSetups(req, res, next) {
+    return this._getSortedPhotographersInternal(req, res, "Lighting Setup");
+  }
+
+  async getSortedCinematographers(req, res, next) {
+    return this._getSortedPhotographersInternal(req, res, "Cinematographer");
+  }
+
+  async _getSortedPhotographersInternal(req, res, typeFilter) {
+    try {
+      const { bookingId } = req.query;
+      const page = Math.max(1, parseInt(req.query.page) || 1);
+      const limit = Math.max(1, parseInt(req.query.limit) || 10);
+      const skip = (page - 1) * limit;
+
+      const matchStage = { status: "active" };
+      if (typeFilter) {
+        matchStage["professionalDetails.photographerType"] = typeFilter;
+      }
+
+      const pipeline = [
+        { $match: matchStage },
+        {
+          $lookup: {
+            from: "photographerratingsgivenbyadminandusers",
+            localField: "_id",
+            foreignField: "photographerId",
+            as: "ratings"
+          }
+        },
+        {
+          $addFields: {
+            avgRating: { $ifNull: [{ $avg: "$ratings.rating" }, 0] },
+            extractedCategories: {
+              $map: {
+                input: {
+                  $filter: {
+                    input: { $objectToArray: { $ifNull: ["$servicesAndStyles.services", {}] } },
+                    as: "item",
+                    cond: { $eq: ["$$item.v", true] }
+                  }
                 },
-                {
-                    $addFields: {
-                        avgRating: { $ifNull: [{ $avg: "$ratings.rating" }, 0] },
-                        // Extract category names (keys) where value is true
-                        extractedCategories: {
-                            $map: {
-                                input: {
-                                    $filter: {
-                                        input: { $objectToArray: { $ifNull: ["$servicesAndStyles.services", {}] } },
-                                        as: "item",
-                                        cond: { $eq: ["$$item.v", true] }
-                                    }
-                                },
-                                as: "c",
-                                in: "$$c.k"
-                            }
-                        }
-                    }
-                },
-                {
-                    $project: {
-                        _id: 1,
-                        "basicInfo.fullName": 1,
-                        "basicInfo.profilePhoto": 1,
-                        "professionalDetails.expertiseLevel": 1,
-                        "servicesAndStyles.services": 1,
-                        commissionPercentage: 1,
-                        avgRating: 1,
-                        categories: { $ifNull: ["$extractedCategories", []] },
-                        createdAt: 1
-                    }
-                }
-            ];
-
-            const [photographersAgg, settings] = await Promise.all([
-                Photographer.aggregate(pipeline),
-                PlatformSettings.findOne({ type: "commissions" })
-            ]);
-
-            const globalCommissions = settings || { initio: 0, elite: 0, pro: 0 };
-            const levelOrder = { "INITIO": 1, "ELITE": 2, "PRO": 3 };
-
-            // Fetch booking assignment details if bookingId is provided
-            let assignedPhotographerId = null;
-            let bookingStatus = null;
-            if (bookingId) {
-                const booking = await ServiceBooking.findById(bookingId)
-                    .select("photographer_id bookingStatus status");
-                if (booking) {
-                    // Only treat as assigned if booking is NOT canceled
-                    if (booking.status !== "canceled") {
-                        assignedPhotographerId = booking.photographer_id?.toString();
-                        bookingStatus = booking.bookingStatus;
-                    }
-                }
+                as: "c",
+                in: "$$c.k"
+              }
             }
-
-            // --- Custom Sort Logic for priority ---
-            let sortedPhotographers = photographersAgg;
-            if (assignedPhotographerId && bookingStatus === "accepted") {
-                sortedPhotographers = photographersAgg.sort((a, b) => {
-                    const isAssignedA = a._id.toString() === assignedPhotographerId;
-                    const isAssignedB = b._id.toString() === assignedPhotographerId;
-                    if (isAssignedA) return -1;
-                    if (isAssignedB) return 1;
-
-                    const levelA = levelOrder[a.professionalDetails?.expertiseLevel] || 99;
-                    const levelB = levelOrder[b.professionalDetails?.expertiseLevel] || 99;
-                    return levelA - levelB || b.createdAt - a.createdAt;
-                });
-            } else {
-                sortedPhotographers = photographersAgg.sort((a, b) => {
-                    const levelA = levelOrder[a.professionalDetails?.expertiseLevel] || 99;
-                    const levelB = levelOrder[b.professionalDetails?.expertiseLevel] || 99;
-                    return levelA - levelB || b.createdAt - a.createdAt;
-                });
-            }
-
-            const total = sortedPhotographers.length;
-            const paginatedItems = sortedPhotographers.slice(skip, skip + limit);
-
-            const result = paginatedItems.map(p => {
-                const level = p.professionalDetails?.expertiseLevel || "N/A";
-                let comm = p.commissionPercentage;
-
-                if (!comm) {
-                    if (level === "INITIO") comm = globalCommissions.initio;
-                    else if (level === "ELITE") comm = globalCommissions.elite;
-                    else if (level === "PRO") comm = globalCommissions.pro;
-                }
-
-                const baseUrl = `${req.protocol}://${req.get("host")}`;
-                let photo = p.basicInfo?.profilePhoto || "";
-                if (photo && !photo.startsWith("http")) {
-                    photo = `${baseUrl}/${photo.replace(/\\/g, "/").replace(/^\//, "")}`;
-                }
-
-                return {
-                    _id: p._id,
-                    name: p.basicInfo?.fullName || "N/A",
-                    level: level,
-                    profilePhoto: photo,
-                    commissionPercentage: comm || 0,
-                    avgRating: parseFloat((p.avgRating || 0).toFixed(1)),
-                    categories: p.categories || [],
-                    isAssigned: assignedPhotographerId === p._id.toString() && bookingStatus === "accepted"
-                };
-            });
-
-            const isLock = assignedPhotographerId !== null && bookingStatus === "accepted";
-            let finalData = result;
-            let finalTotal = total;
-
-            if (isLock) {
-                finalData = result.filter(p => p.isAssigned);
-                finalTotal = finalData.length;
-            }
-
-            res.status(200).json({
-                success: true,
-                isLock: isLock,
-                data: finalData,
-                meta: { total: finalTotal, page, limit }
-            });
-        } catch (error) {
-            console.error("Error fetching sorted photographers:", error);
-            res.status(500).json({ success: false, message: "Failed to fetch photographers", error: error.message });
+          }
+        },
+        {
+          $project: {
+            _id: 1,
+            "basicInfo.fullName": 1,
+            "basicInfo.profilePhoto": 1,
+            "professionalDetails.expertiseLevel": 1,
+            "professionalDetails.photographerType": 1,
+            "servicesAndStyles.services": 1,
+            commissionPercentage: 1,
+            avgRating: 1,
+            categories: { $ifNull: ["$extractedCategories", []] },
+            createdAt: 1
+          }
         }
+      ];
+
+      const [photographersAgg, settings] = await Promise.all([
+        Photographer.aggregate(pipeline),
+        PlatformSettings.findOne({ type: "commissions" })
+      ]);
+
+      const globalCommissions = settings || { initio: 0, elite: 0, pro: 0 };
+      const levelOrder = { "INITIO": 1, "ELITE": 2, "PRO": 3 };
+
+      let assignedPhotographerId = null;
+      let bookingStatus = null;
+      let bookingDate = null;
+      if (bookingId) {
+        const booking = await ServiceBooking.findById(bookingId)
+          .select("photographer_id bookingStatus status bookingDate");
+        if (booking && booking.status !== "canceled") {
+          assignedPhotographerId = booking.photographer_id?.toString();
+          bookingStatus = booking.bookingStatus;
+          bookingDate = booking.bookingDate;
+        }
+      }
+
+      let sortedPhotographers = photographersAgg;
+      if (assignedPhotographerId && bookingStatus === "accepted") {
+        sortedPhotographers = photographersAgg.sort((a, b) => {
+          const isAssignedA = a._id.toString() === assignedPhotographerId;
+          const isAssignedB = b._id.toString() === assignedPhotographerId;
+          if (isAssignedA) return -1;
+          if (isAssignedB) return 1;
+
+          const levelA = levelOrder[a.professionalDetails?.expertiseLevel] || 99;
+          const levelB = levelOrder[b.professionalDetails?.expertiseLevel] || 99;
+          return levelA - levelB || b.createdAt - a.createdAt;
+        });
+      } else {
+        sortedPhotographers = photographersAgg.sort((a, b) => {
+          const levelA = levelOrder[a.professionalDetails?.expertiseLevel] || 99;
+          const levelB = levelOrder[b.professionalDetails?.expertiseLevel] || 99;
+          return levelA - levelB || b.createdAt - a.createdAt;
+        });
+      }
+
+      const total = sortedPhotographers.length;
+      const paginatedItems = sortedPhotographers.slice(skip, skip + limit);
+
+      const result = paginatedItems.map(p => {
+        const level = p.professionalDetails?.expertiseLevel || "N/A";
+        let comm = p.commissionPercentage;
+
+        if (!comm) {
+          if (level === "INITIO") comm = globalCommissions.initio;
+          else if (level === "ELITE") comm = globalCommissions.elite;
+          else if (level === "PRO") comm = globalCommissions.pro;
+        }
+
+        const baseUrl = `${req.protocol}://${req.get("host")}`;
+        let photo = p.basicInfo?.profilePhoto || "";
+        if (photo && !photo.startsWith("http")) {
+          photo = `${baseUrl}/${photo.replace(/\\/g, "/").replace(/^\//, "")}`;
+        }
+
+        return {
+          _id: p._id,
+          name: p.basicInfo?.fullName || "N/A",
+          level: level,
+          profilePhoto: photo,
+          photographerType: p.professionalDetails?.photographerType || "",
+          commissionPercentage: comm || 0,
+          avgRating: parseFloat((p.avgRating || 0).toFixed(1)),
+          categories: p.categories || [],
+          isAssigned: assignedPhotographerId === p._id.toString() && bookingStatus === "accepted"
+        };
+      });
+
+      const isLock = assignedPhotographerId !== null && bookingStatus === "accepted";
+      let finalData = result;
+      let finalTotal = total;
+
+      if (isLock) {
+        finalData = result.filter(p => p.isAssigned);
+        finalTotal = finalData.length;
+      }
+
+      res.status(200).json({
+        success: true,
+        isLock: isLock,
+        bookingDate: bookingDate,
+        data: finalData,
+        meta: { total: finalTotal, page, limit }
+      });
+    } catch (error) {
+      console.error("Error fetching sorted photographers:", error);
+      res.status(500).json({ success: false, message: "Failed to fetch photographers", error: error.message });
     }
+  }
 
     // Sort photographers based on categories, expertise, and rating
     async getSortPhotographers(req, res) {

@@ -33,6 +33,9 @@ const router = express.Router();
 import { uploadController } from "../../controllers/uploadController.js";
 // --- Debug ---
 router.get("/photographers/sorted", (req, res, next) => PhotographerController.getSortedPhotographers(req, res, next));
+router.get("/photographers/videographers", (req, res, next) => PhotographerController.getSortedVideographers(req, res, next));
+router.get("/photographers/lighting-setups", (req, res, next) => PhotographerController.getSortedLightingSetups(req, res, next));
+router.get("/photographers/cinematographers", (req, res, next) => PhotographerController.getSortedCinematographers(req, res, next));
 
 //sorting photographers
 router.get("/photographers/sort", (req, res, next) => PhotographerController.getSortPhotographers(req, res, next));
@@ -130,6 +133,8 @@ router.delete("/bookings/:id", (req, res, next) => ServiceBookingController.dele
 router.get("/getpreviousbookings", (req, res, next) => ServiceBookingController.getPrevious(req, res, next));
 router.get("/completelyPaidBookings", (req, res, next) => ServiceBookingController.getCompletedBookings(req, res, next));
 router.get("/bookings-chat-count", (req, res, next) => ServiceBookingController.getServiceBookingsWithChatCount(req, res, next));
+router.get("/hourly-bookings", (req, res, next) => ServiceBookingController.getHourlyBookings(req, res, next));
+router.get("/editing-bookings", (req, res, next) => ServiceBookingController.getEditingBookings(req, res, next));
 router.get("/bookings/:id/gallery", (req, res, next) => ServiceBookingController.getGalleryByBookingId(req, res, next));
 
 

@@ -26,6 +26,7 @@ const photographerSchema = new mongoose.Schema(
         "Please enter a valid email",
       ],
     },
+    
     isPhotographer: {
       type: Boolean,
       default: true,

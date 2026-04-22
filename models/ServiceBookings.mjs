@@ -204,7 +204,28 @@ const serviceBookingSchema = new mongoose.Schema(
     razorpayOrderIds: {
       type: [String],
       default: []
-    }
+    },
+    hourlyPackages: [
+      {
+        category: { type: String },
+        hours: { type: String },
+        services: [
+          {
+            name: { type: String },
+            qty: { type: Number },
+            price: { type: Number }
+          }
+        ]
+      }
+    ],
+    editingPackages: [
+      {
+        planName: { type: String },
+        category: { type: String },
+        videos: { type: Number },
+        price: { type: Number }
+      }
+    ]
   }, { timestamps: true }
 );
 
