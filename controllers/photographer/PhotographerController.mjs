@@ -903,6 +903,17 @@ class PhotographerController {
     async updateCommissions(req, res) {
         try {
             const { initio, elite, pro } = req.body;
+            const { partnerType } = req.params;
+
+            // Mapping from URL param to Internal Types
+            const typeMap = {
+                "photographers": { dbType: null, settingsType: "photographer_commissions" },
+                "videographers": { dbType: "Videographer", settingsType: "videographer_commissions" },
+                "editors": { dbType: "Editor", settingsType: "editor_commissions" },
+                "lighting-setups": { dbType: "Lighting Setup", settingsType: "lighting_setups_commissions" }
+            };
+
+            const config = typeMap[partnerType] || typeMap["photographers"];
 
             // --- Commission Validation ---
             const validate = (val, name) => {
@@ -926,33 +937,34 @@ class PhotographerController {
             // -----------------------------
 
             const updates = [];
+            const baseQuery = config.dbType ? { "professionalDetails.photographerType": config.dbType } : {};
 
             if (initio !== undefined) {
                 updates.push(Photographer.updateMany(
-                    { "professionalDetails.expertiseLevel": "INITIO" },
+                    { ...baseQuery, "professionalDetails.expertiseLevel": "INITIO" },
                     { $set: { commissionPercentage: initio } }
                 ));
             }
 
             if (elite !== undefined) {
                 updates.push(Photographer.updateMany(
-                    { "professionalDetails.expertiseLevel": "ELITE" },
+                    { ...baseQuery, "professionalDetails.expertiseLevel": "ELITE" },
                     { $set: { commissionPercentage: elite } }
                 ));
             }
 
             if (pro !== undefined) {
                 updates.push(Photographer.updateMany(
-                    { "professionalDetails.expertiseLevel": "PRO" },
+                    { ...baseQuery, "professionalDetails.expertiseLevel": "PRO" },
                     { $set: { commissionPercentage: pro } }
                 ));
             }
 
             await Promise.all(updates);
 
-            // Update Global Settings
+            // Update Global Settings for this specific type
             await PlatformSettings.findOneAndUpdate(
-                { type: "commissions" },
+                { type: config.settingsType },
                 {
                     $set: {
                         ...(initio !== undefined && { initio }),
@@ -963,17 +975,35 @@ class PhotographerController {
                 { upsert: true, new: true }
             );
 
-            res.status(200).json({ success: true, message: "Commissions updated successfully" });
+            res.status(200).json({ 
+                success: true, 
+                message: `${partnerType.replace("-", " ")} commissions updated successfully` 
+            });
         } catch (error) {
             console.error("Error updating commissions:", error);
             res.status(500).json({ success: false, message: "Failed to update commissions", error: error.message });
         }
     }
+
     async getCommissions(req, res) {
         try {
-            const settings = await PlatformSettings.findOne({ type: "commissions" }).lean();
+            const { partnerType } = req.params;
+            const typeMap = {
+                "photographers": { settingsType: "photographer_commissions" },
+                "videographers": { settingsType: "videographer_commissions" },
+                "editors": { settingsType: "editor_commissions" },
+                "lighting-setups": { settingsType: "lighting_setups_commissions" }
+            };
 
-            // Explicitly filter only the new fields to ignore old ones in the DB
+            const config = typeMap[partnerType] || typeMap["photographers"];
+
+            // Find settings. If not found for new type, fallback to legacy 'commissions' for photographers
+            let settings = await PlatformSettings.findOne({ type: config.settingsType }).lean();
+            
+            if (!settings && partnerType === "photographers") {
+                settings = await PlatformSettings.findOne({ type: "commissions" }).lean();
+            }
+
             const commissions = settings ? {
                 initio: settings.initio || 0,
                 elite: settings.elite || 0,
@@ -982,6 +1012,7 @@ class PhotographerController {
 
             res.status(200).json({
                 success: true,
+                message: "Commissions fetched successfully",
                 commissions
             });
         } catch (error) {
