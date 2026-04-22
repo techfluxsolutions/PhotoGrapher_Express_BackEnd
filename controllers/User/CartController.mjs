@@ -1,5 +1,5 @@
 import Cart from "../../models/Cart.mjs";
-
+import User from "../../models/User.mjs"
 class CartController {
     // Create logic (often used for multiple items)
     async create(req, res, next) {
@@ -97,10 +97,11 @@ class CartController {
     async getMyCart(req, res, next) {
         try {
             const { id: userId } = req.user;
+            const userData = await User.findById(userId).select('username mobileNumber');
             // Find most recent active cart
             const cart = await Cart.findOne({ userId, status: "active" }).sort({ createdAt: -1 }).populate({ path: "userId", select: "username mobileNumber" });
             if (!cart) {
-                res.status(200).json({ success: true, message: "Your Cart Has No Items", data: [] });
+                res.status(200).json({ success: true, message: "Your Cart Has No Items", data: [{ userId: userData }] });
             }
             res.status(200).json({ success: true, data: cart });
         } catch (error) {
