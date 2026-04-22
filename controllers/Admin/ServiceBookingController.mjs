@@ -1211,11 +1211,12 @@ class ServiceBookingController {
             eventDate: eDate,
             eventTime: eTime
           })),
-          subtotal: (booking.hourlyPackages || []).reduce((sum, pkg) => {
+          subTotal: (booking.hourlyPackages || []).reduce((sum, pkg) => {
             const pkgPrice = parseFloat(pkg.price) || 0;
             const servicesSum = (pkg.services || []).reduce((pSum, svc) => pSum + (parseFloat(svc.price) || 0), 0);
             return sum + pkgPrice + servicesSum;
-          }, 0)
+          }, 0),
+          totalAmount: booking.totalAmount || 0
         };
       });
 
@@ -1278,11 +1279,12 @@ class ServiceBookingController {
             eventDate: eDate,
             eventTime: eTime
           })),
-          subtotal: (booking.editingPackages || []).reduce((sum, pkg) => {
+          subTotal: (booking.editingPackages || []).reduce((sum, pkg) => {
             const pkgPrice = parseFloat(pkg.price) || 0;
             const servicesSum = (pkg.services || []).reduce((pSum, svc) => pSum + (parseFloat(svc.price) || 0), 0);
             return sum + pkgPrice + servicesSum;
-          }, 0)
+          }, 0),
+          totalAmount: booking.totalAmount || 0
         };
       });
 

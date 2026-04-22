@@ -942,6 +942,7 @@ class BookingController {
             const data = {
                 todaysBookingCount: todaysCount,
                 upcomingBookingCount: upcomingCount,
+                upcommingBookingCount: upcomingCount,
                 completedBookingCount: completedCount,
                 uploadPending,
                 totalBookingCount: todaysCount + upcomingCount + completedCount
