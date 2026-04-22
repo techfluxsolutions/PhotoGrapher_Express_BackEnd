@@ -101,7 +101,7 @@ class CartController {
             // Find most recent active cart
             const cart = await Cart.findOne({ userId, status: "active" }).sort({ createdAt: -1 }).populate({ path: "userId", select: "username mobileNumber" });
             if (!cart) {
-                res.status(200).json({ success: true, message: "Your Cart Has No Items", data: [{ userId: userData }] });
+                res.status(200).json({ success: true, message: "Your Cart Has No Items", data: { userId: userData } });
             }
             res.status(200).json({ success: true, data: cart });
         } catch (error) {
