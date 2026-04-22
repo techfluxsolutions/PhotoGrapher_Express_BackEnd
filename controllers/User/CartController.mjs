@@ -97,13 +97,51 @@ class CartController {
     async getMyCart(req, res, next) {
         try {
             const { id: userId } = req.user;
-            const userData = await User.findById(userId).select('username mobileNumber');
-            // Find most recent active cart
-            const cart = await Cart.findOne({ userId, status: "active" }).sort({ createdAt: -1 }).populate({ path: "userId", select: "username mobileNumber" });
+
+            const userData = await User.findById(userId)
+                .select("username mobileNumber");
+
+            // Get latest active cart
+            const cart = await Cart.findOne({
+                userId,
+                status: "active"
+            })
+                .sort({ createdAt: -1 })
+                .populate({
+                    path: "userId",
+                    select: "username mobileNumber"
+                });
+
+            // No cart
             if (!cart) {
-                res.status(200).json({ success: true, message: "Your Cart Has No Items", data: { userId: userData } });
+                return res.status(200).json({
+                    success: true,
+                    message: "Your Cart Has No Items",
+                    data: { userId: userData }
+                });
             }
-            res.status(200).json({ success: true, data: cart });
+
+            /**
+             * ✅ GST Calculation (18%)
+             */
+            const cartData = cart.toObject();
+
+            const gstAmount = Number(
+                (cartData.totalAmount * 0.18).toFixed(2)
+            );
+
+            const finalAmount = Number(
+                (cartData.totalAmount + gstAmount).toFixed(2)
+            );
+
+            cartData.gst = gstAmount;
+            cartData.finalAmount = finalAmount;
+
+            res.status(200).json({
+                success: true,
+                data: cartData
+            });
+
         } catch (error) {
             next(error);
         }
