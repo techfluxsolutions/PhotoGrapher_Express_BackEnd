@@ -9,6 +9,7 @@ import { sendMessageCentral, verifyMessageCentral } from "../../utils/messageCen
 import razorpayInstance from "../../Config/razorpay.mjs";
 import Notification from "../../models/Notification.mjs";
 import { emitNotificationCount } from "../../services/SocketService.mjs";
+import admin from "../../utils/firebaseAdmin.mjs";
 
 class PhotographerController {
     // Get All Photographers (Unified endpoint with filtering)
@@ -542,6 +543,23 @@ class PhotographerController {
                         notification_type: "system",
                     });
                     emitNotificationCount(photographer._id.toString());
+
+                    // Send FCM Push Notification
+                    if (photographer.fcmToken) {
+                        try {
+                            const message = {
+                                notification: {
+                                    title: "Account Verified!",
+                                    body: welcomeMessage,
+                                },
+                                token: photographer.fcmToken,
+                            };
+                            await admin.messaging().send(message);
+                            console.log("Welcome FCM sent to photographer:", photographer._id);
+                        } catch (fcmError) {
+                            console.error("Error sending Welcome FCM:", fcmError);
+                        }
+                    }
                 }
             } catch (notificationError) {
                 console.error("Error creating welcome notification:", notificationError);
