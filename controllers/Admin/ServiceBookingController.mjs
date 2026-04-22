@@ -1206,11 +1206,16 @@ class ServiceBookingController {
           galleryUpload: booking.galleryStatus === "Photos Uploaded",
           galleryStatus: booking.galleryStatus || "pending",
           bookingStatus: booking.status || "pending",
-          hourlyPackages: (booking.hourlyPackages || []).map(pkg => ({
-            ...pkg.toObject(),
-            eventDate: eDate,
-            eventTime: eTime
-          })),
+          hourlyPackages: (booking.hourlyPackages || []).map(pkg => {
+            const pkgPrice = parseFloat(pkg.price) || 0;
+            const servicesSum = (pkg.services || []).reduce((pSum, svc) => pSum + (parseFloat(svc.price) || 0), 0);
+            return {
+              ...pkg.toObject(),
+              eventDate: eDate,
+              eventTime: eTime,
+              subTotal: pkgPrice + servicesSum
+            };
+          }),
           subTotal: (booking.hourlyPackages || []).reduce((sum, pkg) => {
             const pkgPrice = parseFloat(pkg.price) || 0;
             const servicesSum = (pkg.services || []).reduce((pSum, svc) => pSum + (parseFloat(svc.price) || 0), 0);
@@ -1274,11 +1279,16 @@ class ServiceBookingController {
           galleryUpload: booking.galleryStatus === "Photos Uploaded",
           galleryStatus: booking.galleryStatus || "pending",
           bookingStatus: booking.status || "pending",
-          editingPackages: (booking.editingPackages || []).map(pkg => ({
-            ...pkg.toObject(),
-            eventDate: eDate,
-            eventTime: eTime
-          })),
+          editingPackages: (booking.editingPackages || []).map(pkg => {
+            const pkgPrice = parseFloat(pkg.price) || 0;
+            const servicesSum = (pkg.services || []).reduce((pSum, svc) => pSum + (parseFloat(svc.price) || 0), 0);
+            return {
+              ...pkg.toObject(),
+              eventDate: eDate,
+              eventTime: eTime,
+              subTotal: pkgPrice + servicesSum
+            };
+          }),
           subTotal: (booking.editingPackages || []).reduce((sum, pkg) => {
             const pkgPrice = parseFloat(pkg.price) || 0;
             const servicesSum = (pkg.services || []).reduce((pSum, svc) => pSum + (parseFloat(svc.price) || 0), 0);
