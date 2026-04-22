@@ -28,7 +28,7 @@ import EditingController from "../../controllers/Admin/EditingPlanController.mjs
 import PhotographyPlanController from "../../controllers/Admin/PhotographyPlanController.mjs";
 import AdminRevenueController from "../../controllers/Admin/AdminRevenueController.mjs";
 import AdminTeamShootController from "../../controllers/Admin/AdminTeamShootController.mjs";
-
+import CouponController from "../../controllers/User/Coupon_Controller/CouponController.mjs";
 const router = express.Router();
 import { uploadController } from "../../controllers/uploadController.js";
 // --- Debug ---
@@ -188,7 +188,17 @@ router.delete("/customers/:id", (req, res, next) => CustomerController.delete(re
 router.get("/invoices/:bookingId", (req, res, next) => downloadInvoice(req, res, next));
 router.get("/partner-invoices/:bookingId", (req, res, next) => downloadPartnerInvoice(req, res, next));
 
+
+//Coupon Routes
+router.post("/coupon", CouponController.createCoupon);
+router.get("/coupon", CouponController.getAllCoupons);
+router.get("/coupon/:id", CouponController.getCouponById);
+router.put("/coupon/:id", CouponController.updateCoupon);
+router.delete("/coupon/:id", CouponController.deleteCoupon);
+router.patch("/coupon/toggle/:id", CouponController.toggleCouponStatus);
+router.post("/coupon/validate", CouponController.validateCoupon);
 //Subscriber
+
 
 router.get("/getsubscribers", (req, res, next) => SubscribedUserController.getAllSubscribers(req, res, next));
 router.get("/getsubscriber/:id", (req, res, next) => SubscribedUserController.getSubscriberById(req, res, next));
@@ -288,6 +298,7 @@ router.put("/:id/status", (req, res, next) => AdminController.changeStatus(req, 
 router.get("/:id", (req, res, next) => AdminController.getById(req, res, next));
 router.put("/:id", (req, res, next) => AdminController.update(req, res, next));
 router.delete("/:id", (req, res, next) => AdminController.delete(req, res, next));
+
 
 
 export default router;
