@@ -130,6 +130,8 @@ router.delete("/bookings/:id", (req, res, next) => ServiceBookingController.dele
 router.get("/getpreviousbookings", (req, res, next) => ServiceBookingController.getPrevious(req, res, next));
 router.get("/completelyPaidBookings", (req, res, next) => ServiceBookingController.getCompletedBookings(req, res, next));
 router.get("/bookings-chat-count", (req, res, next) => ServiceBookingController.getServiceBookingsWithChatCount(req, res, next));
+router.get("/hourly-bookings", (req, res, next) => ServiceBookingController.getHourlyBookings(req, res, next));
+router.get("/editing-bookings", (req, res, next) => ServiceBookingController.getEditingBookings(req, res, next));
 router.get("/bookings/:id/gallery", (req, res, next) => ServiceBookingController.getGalleryByBookingId(req, res, next));
 
 

@@ -82,6 +82,7 @@ class PhotographerController {
             commissionPercentage: p.commissionPercentage || 0,
             team_studio: p.professionalDetails?.team_studio || "",
             expertiseLevel: p.professionalDetails?.expertiseLevel || "N/A",
+            photographerType: p.professionalDetails?.photographerType || "",
             categories: p.servicesAndStyles?.services ?
                 Object.keys(p.servicesAndStyles.services).filter(key => p.servicesAndStyles.services[key] === true) : [],
             isAbleToVerify: (
@@ -233,10 +234,10 @@ class PhotographerController {
     // Add Unverified Photographer (Status: Pending)
     async addUnverifiedPhotographer(req, res) {
         try {
-            const { name, email, phone, experience, city, startUpDate, signUpDate } = req.body;
+            const { name, email, phone, experience, city, startUpDate, signUpDate, photographerType } = req.body;
 
             // 1. Mandatory Validations
-            const required = { name, email, phone, experience, city };
+            const required = { name, email, phone, experience, city, photographerType };
             const missing = Object.keys(required).filter(k => !required[k]);
 
             if (missing.length > 0) {
@@ -281,6 +282,7 @@ class PhotographerController {
                     phone: phone
                 },
                 professionalDetails: {
+                    photographerType: photographerType || "",
                     yearsOfExperience: experience,
                     primaryLocation: city,
                     startUpDate: startUpDate || signUpDate,
@@ -301,6 +303,7 @@ class PhotographerController {
                     phone: newPhotographer.mobileNumber,
                     experience: newPhotographer.professionalDetails.yearsOfExperience,
                     city: newPhotographer.professionalDetails.primaryLocation,
+                    photographerType: newPhotographer.professionalDetails.photographerType || "",
                     status: newPhotographer.status,
                     createdAt: newPhotographer.createdAt,
                     signUpDate: newPhotographer.professionalDetails.startUpDate || `${String(newPhotographer.createdAt.getDate()).padStart(2, '0')}/${String(newPhotographer.createdAt.getMonth() + 1).padStart(2, '0')}/${newPhotographer.createdAt.getFullYear()}`
@@ -391,6 +394,7 @@ class PhotographerController {
                     phone: photographer.mobileNumber,
                     experience: photographer.professionalDetails.yearsOfExperience,
                     city: photographer.professionalDetails.primaryLocation,
+                    photographerType: photographer.professionalDetails.photographerType || "",
                     status: photographer.status,
                     signUpDate: photographer.professionalDetails.startUpDate || `${String(photographer.createdAt.getDate()).padStart(2, '0')}/${String(photographer.createdAt.getMonth() + 1).padStart(2, '0')}/${photographer.createdAt.getFullYear()}`,
                     team_studio: photographer.professionalDetails.team_studio || "",
