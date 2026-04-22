@@ -883,30 +883,55 @@ class BookingController {
         try {
             const myId = new mongoose.Types.ObjectId(req.user.id);
             const now = new Date();
-            // Get IST date string reliably
             const todayStr = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' }).format(now);
             const todayStartIST = new Date(`${todayStr}T00:00:00.000+05:30`);
+            
+            const tomorrowIST = new Date(todayStartIST);
+            tomorrowIST.setDate(tomorrowIST.getDate() + 1);
+            const tomorrowStr = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' }).format(tomorrowIST);
+            const tomorrowStartIST = new Date(`${tomorrowStr}T00:00:00.000+05:30`);
 
-            // 1. Upcoming/Ongoing: All accepted bookings from today onwards (not canceled/completed)
-            const upcomingCount = await ServiceBooking.countDocuments({
+            const acceptedPaidBase = {
                 photographer_id: myId,
                 bookingStatus: "accepted",
                 status: { $nin: ["completed", "canceled"] },
-                // Removed paymentStatus filter to ensure accuracy as per user request
+                paymentStatus: { $in: ["partially paid", "fully paid"] }
+            };
+
+            // 1. Today's Bookings (Paid only)
+            const todaysCount = await ServiceBooking.countDocuments({
+                ...acceptedPaidBase,
                 $or: [
-                    { bookingDate: { $gte: todayStartIST } },
-                    { startDate: { $gte: todayStr } }
+                    { bookingDate: { $gte: todayStartIST, $lt: tomorrowStartIST } },
+                    { startDate: todayStr },
+                    { eventDate: todayStr }
                 ]
             });
 
-            // 2. Completed: history count
+            // 2. Upcoming: Strictly FUTURE (Tomorrow onwards, Paid only)
+            const upcomingCount = await ServiceBooking.countDocuments({
+                ...acceptedPaidBase,
+                $or: [
+                    { bookingDate: { $gte: tomorrowStartIST } },
+                    { startDate: { $gte: tomorrowStr } },
+                    { eventDate: { $gte: tomorrowStr } }
+                ]
+            });
+
+            // 3. Completed/History: Status is completed OR date is in the past
             const completedCount = await ServiceBooking.countDocuments({
                 photographer_id: myId,
                 bookingStatus: "accepted",
-                status: "completed"
+                status: { $ne: "canceled" },
+                $or: [
+                    { status: "completed" },
+                    { bookingDate: { $lt: todayStartIST } },
+                    { $and: [{ startDate: { $lt: todayStr } }, { $or: [{ endDate: { $exists: false } }, { endDate: { $lt: todayStr } }] }] },
+                    { eventDate: { $lt: todayStr } }
+                ]
             });
 
-            // 3. Pending Uploads
+            // 4. Pending Uploads
             const uploadPending = await ServiceBooking.countDocuments({
                 photographer_id: myId,
                 bookingStatus: "accepted",
@@ -915,11 +940,11 @@ class BookingController {
             });
 
             const data = {
+                todaysBookingCount: todaysCount,
                 upcomingBookingCount: upcomingCount,
-                upcommingBookingCount: upcomingCount, // Typo preserved for compatibility
                 completedBookingCount: completedCount,
                 uploadPending,
-                totalBookingCount: upcomingCount + completedCount
+                totalBookingCount: todaysCount + upcomingCount + completedCount
             };
 
             return sendSuccessResponse(res, data, "Booking count fetched successfully");
