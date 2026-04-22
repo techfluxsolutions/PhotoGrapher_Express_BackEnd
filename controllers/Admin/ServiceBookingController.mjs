@@ -1206,7 +1206,12 @@ class ServiceBookingController {
           galleryUpload: booking.galleryStatus === "Photos Uploaded",
           galleryStatus: booking.galleryStatus || "pending",
           bookingStatus: booking.status || "pending",
-          hourlyPackages: booking.hourlyPackages
+          hourlyPackages: booking.hourlyPackages,
+          subtotal: (booking.hourlyPackages || []).reduce((sum, pkg) => {
+            const pkgPrice = parseFloat(pkg.price) || 0;
+            const servicesSum = (pkg.services || []).reduce((pSum, svc) => pSum + (parseFloat(svc.price) || 0), 0);
+            return sum + pkgPrice + servicesSum;
+          }, 0)
         };
       });
 
@@ -1264,7 +1269,12 @@ class ServiceBookingController {
           galleryUpload: booking.galleryStatus === "Photos Uploaded",
           galleryStatus: booking.galleryStatus || "pending",
           bookingStatus: booking.status || "pending",
-          editingPackages: booking.editingPackages
+          editingPackages: booking.editingPackages,
+          subtotal: (booking.editingPackages || []).reduce((sum, pkg) => {
+            const pkgPrice = parseFloat(pkg.price) || 0;
+            const servicesSum = (pkg.services || []).reduce((pSum, svc) => pSum + (parseFloat(svc.price) || 0), 0);
+            return sum + pkgPrice + servicesSum;
+          }, 0)
         };
       });
 
