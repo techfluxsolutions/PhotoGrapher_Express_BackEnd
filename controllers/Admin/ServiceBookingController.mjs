@@ -1195,18 +1195,22 @@ class ServiceBookingController {
         ].filter(Boolean);
 
         const eventAddress = addressParts.join(", ") + (booking.postalCode ? ` - ${booking.postalCode}` : "");
+        const eDate = booking.bookingDate ? new Date(booking.bookingDate).toISOString().split('T')[0] : (booking.eventDate || "N/A");
+        const eTime = booking.bookingDate ? new Date(booking.bookingDate).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true }) : "N/A";
 
         return {
           bookingId: booking.veroaBookingId || booking._id,
           clientName: booking.client_id?.username || "Unknown",
-          eventDate: booking.bookingDate ? new Date(booking.bookingDate).toISOString().split('T')[0] : "N/A",
-          eventTime: booking.bookingDate ? new Date(booking.bookingDate).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true }) : "N/A",
           eventAddress: eventAddress || "N/A",
           assignedPhotographer: booking.photographer_id?.basicInfo?.fullName || "",
           galleryUpload: booking.galleryStatus === "Photos Uploaded",
           galleryStatus: booking.galleryStatus || "pending",
           bookingStatus: booking.status || "pending",
-          hourlyPackages: booking.hourlyPackages,
+          hourlyPackages: (booking.hourlyPackages || []).map(pkg => ({
+            ...pkg.toObject(),
+            eventDate: eDate,
+            eventTime: eTime
+          })),
           subtotal: (booking.hourlyPackages || []).reduce((sum, pkg) => {
             const pkgPrice = parseFloat(pkg.price) || 0;
             const servicesSum = (pkg.services || []).reduce((pSum, svc) => pSum + (parseFloat(svc.price) || 0), 0);
@@ -1258,18 +1262,22 @@ class ServiceBookingController {
         ].filter(Boolean);
 
         const eventAddress = addressParts.join(", ") + (booking.postalCode ? ` - ${booking.postalCode}` : "");
+        const eDate = booking.bookingDate ? new Date(booking.bookingDate).toISOString().split('T')[0] : (booking.eventDate || "N/A");
+        const eTime = booking.bookingDate ? new Date(booking.bookingDate).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true }) : "N/A";
 
         return {
           bookingId: booking.veroaBookingId || booking._id,
           clientName: booking.client_id?.username || "Unknown",
-          eventDate: booking.bookingDate ? new Date(booking.bookingDate).toISOString().split('T')[0] : "N/A",
-          eventTime: booking.bookingDate ? new Date(booking.bookingDate).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true }) : "N/A",
           eventAddress: eventAddress || "N/A",
           assignedPhotographer: booking.photographer_id?.basicInfo?.fullName || "",
           galleryUpload: booking.galleryStatus === "Photos Uploaded",
           galleryStatus: booking.galleryStatus || "pending",
           bookingStatus: booking.status || "pending",
-          editingPackages: booking.editingPackages,
+          editingPackages: (booking.editingPackages || []).map(pkg => ({
+            ...pkg.toObject(),
+            eventDate: eDate,
+            eventTime: eTime
+          })),
           subtotal: (booking.editingPackages || []).reduce((sum, pkg) => {
             const pkgPrice = parseFloat(pkg.price) || 0;
             const servicesSum = (pkg.services || []).reduce((pSum, svc) => pSum + (parseFloat(svc.price) || 0), 0);
