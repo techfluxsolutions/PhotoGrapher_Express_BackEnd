@@ -46,6 +46,7 @@ router.put("/status", (req, res, next) => PhotographerController.updatePhotograp
 router.post("/status", (req, res, next) => PhotographerController.updatePhotographerStatus(req, res, next));
 router.patch("/me", upload.single('profilePhoto'), (req, res, next) => PhotographerController.updatePhotographer(req, res, next));
 router.delete("/me", (req, res, next) => PhotographerController.deleteAccount(req, res, next));
+router.patch("/fcm-token", (req, res, next) => PhotographerController.updateFcmToken(req, res, next));
 
 
 

@@ -201,6 +201,40 @@ class PhotographerController {
         }
     }
 
+    // Update FCM Token
+    async updateFcmToken(req, res) {
+        try {
+            const id = req.user?.id || req.user?._id || req.photographer?._id;
+            const { fcmToken } = req.body;
+
+            if (!id) {
+                return res.status(401).json({ success: false, message: "Authentication required" });
+            }
+
+            if (!fcmToken) {
+                return res.status(400).json({ success: false, message: "fcmToken is required" });
+            }
+
+            const photographer = await Photographer.findByIdAndUpdate(
+                id,
+                { $set: { fcmToken } },
+                { new: true }
+            ).select('fcmToken');
+
+            if (!photographer) {
+                return res.status(404).json({ success: false, message: "Photographer not found" });
+            }
+
+            res.status(200).json({
+                success: true,
+                message: "FCM token updated successfully"
+            });
+        } catch (error) {
+            console.error("Update FCM Token Error:", error);
+            res.status(500).json({ success: false, message: "Failed to update FCM token", error: error.message });
+        }
+    }
+
     // get photographer by id (Supports Admin/Public via :id, or Self via Auth)
     async getPhotographerById(req, res) {
         try {
@@ -456,7 +490,7 @@ class PhotographerController {
     async verifyPhotographer(req, res) {
         try {
             // const { id } = req.params;
-            const { mobileNumber, OTP } = req.body;
+            const { mobileNumber, OTP, fcmToken } = req.body;
 
             if (!mobileNumber || !OTP) {
                 return res.status(400).json({ message: "Mobile number and OTP are required" });
@@ -496,6 +530,7 @@ class PhotographerController {
             // Set username to email as requested
             photographer.username = photographer.email;
             photographer.status = "active";
+            if (fcmToken) photographer.fcmToken = fcmToken;
             // Create Razorpay account if not exists
 
             // commenting this due to no route feature is enabled till yet 
@@ -548,18 +583,39 @@ class PhotographerController {
                     // Send FCM Push Notification
                     if (photographer.fcmToken) {
                         try {
+                            console.log(`[FCM] Sending Welcome Notification to token: ${photographer.fcmToken.substring(0, 10)}...`);
                             const message = {
                                 notification: {
-                                    title: "Account Verified!",
+                                    title: "Account Verified! 🎉",
                                     body: welcomeMessage,
                                 },
+                                data: {
+                                    type: "WELCOME_NOTIFICATION",
+                                    click_action: "FLUTTER_NOTIFICATION_CLICK"
+                                },
                                 token: photographer.fcmToken,
+                                android: {
+                                    priority: "high",
+                                    notification: {
+                                        channelId: "veroa_updates"
+                                    }
+                                },
+                                apns: {
+                                    payload: {
+                                        aps: {
+                                            sound: "default",
+                                            badge: 1
+                                        }
+                                    }
+                                }
                             };
-                            await admin.messaging().send(message);
-                            console.log("Welcome FCM sent to photographer:", photographer._id);
+                            const response = await admin.messaging().send(message);
+                            console.log("[FCM] Welcome notification sent successfully:", response);
                         } catch (fcmError) {
-                            console.error("Error sending Welcome FCM:", fcmError);
+                            console.error("[FCM] Error sending Welcome FCM:", fcmError.message);
                         }
+                    } else {
+                        console.log("[FCM] Skip sending welcome notification: No fcmToken found.");
                     }
                 }
             } catch (notificationError) {

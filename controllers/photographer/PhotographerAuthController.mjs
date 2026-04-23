@@ -10,7 +10,7 @@ class PhotographerAuthController {
   // Login
   async login(req, res) {
     try {
-      const { email, password } = req.body;
+      const { email, password, fcmToken } = req.body;
 
       if (!email || !password) {
         return sendErrorResponse(res, "Email and password are required", 400);
