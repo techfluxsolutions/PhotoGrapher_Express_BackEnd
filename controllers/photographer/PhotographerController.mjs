@@ -322,7 +322,7 @@ class PhotographerController {
     async updateUnverifiedPhotographer(req, res) {
         try {
             const { id } = req.params;
-            const { name, email, phone, experience, city, startUpDate, signUpDate } = req.body;
+            const { name, email, phone, experience, city, startUpDate, signUpDate, photographerType } = req.body;
 
             // 1. Mandatory Validations (If provided they cannot be empty)
             const requiredFields = ['name', 'email', 'phone', 'experience', 'city'];
@@ -382,6 +382,7 @@ class PhotographerController {
             const dateToUpdate = startUpDate || signUpDate;
             if (dateToUpdate) photographer.professionalDetails.startUpDate = dateToUpdate;
             if (req.body.team_studio) photographer.professionalDetails.team_studio = req.body.team_studio;
+            if (photographerType) photographer.professionalDetails.photographerType = photographerType;
 
             await photographer.save();
 
@@ -761,7 +762,7 @@ class PhotographerController {
             if (updateData.displayName) updateData.basicInfo.displayName = updateData.displayName;
             if (updateData.phone) updateData.basicInfo.phone = updateData.phone;
 
-            if (!updateData.professionalDetails && (updateData.expertiseLevel || updateData.yearsOfExperience || updateData.primaryLocation)) {
+            if (!updateData.professionalDetails && (updateData.expertiseLevel || updateData.yearsOfExperience || updateData.primaryLocation || updateData.photographerType)) {
                 updateData.professionalDetails = {};
             }
             if (updateData.expertiseLevel) {
@@ -771,6 +772,7 @@ class PhotographerController {
             }
             if (updateData.yearsOfExperience) updateData.professionalDetails.yearsOfExperience = updateData.yearsOfExperience;
             if (updateData.primaryLocation) updateData.professionalDetails.primaryLocation = updateData.primaryLocation;
+            if (updateData.photographerType) updateData.professionalDetails.photographerType = updateData.photographerType;
 
             // 4. Sanitize Bank Details
             if (updateData.bank_ifsc) {
