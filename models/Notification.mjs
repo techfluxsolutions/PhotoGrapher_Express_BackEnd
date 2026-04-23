@@ -18,6 +18,8 @@ const notificationSchema = new mongoose.Schema(
       type: String,
       required: [true, "Notification message is required"],
     },
+    booking_id: { type: mongoose.Schema.Types.ObjectId, ref: "ServiceBooking" },
+    screen: { type: String },
     sent_at: {
       type: Date,
       default: Date.now,

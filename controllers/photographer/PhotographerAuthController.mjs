@@ -152,6 +152,26 @@ class PhotographerAuthController {
       return sendErrorResponse(res, error.message, 500);
     }
   }
+  // ... existing methods ...
+
+  // Logout
+  async logout(req, res) {
+    try {
+      const id = req.user?.id || req.user?._id;
+
+      if (id) {
+        // Clear the FCM token from DB so they stop getting pushes on this device
+        await PhotographerDB.findByIdAndUpdate(id, { $unset: { fcmToken: "" } });
+        console.log(`[Logout] Cleared FCM token for photographer: ${id}`);
+      }
+
+      res.clearCookie("token");
+      return sendSuccessResponse(res, null, "Logged out successfully");
+    } catch (error) {
+      console.error("Logout error:", error);
+      return sendErrorResponse(res, error.message, 500);
+    }
+  }
 }
 
 export default new PhotographerAuthController();

@@ -21,6 +21,7 @@ const router = express.Router();
 
 // --- Auth Routes ---
 router.post("/auth/login", (req, res, next) => PhotographerAuthController.login(req, res, next));
+router.post("/auth/logout", authMiddleware, (req, res, next) => PhotographerAuthController.logout(req, res, next));
 router.post("/auth/forgot-password", (req, res, next) => PhotographerAuthController.forgotPassword(req, res, next));
 router.post("/auth/reset-password", (req, res, next) => PhotographerAuthController.resetPassword(req, res, next));
 
@@ -122,6 +123,8 @@ router.get("/partner-invoice/:bookingId", (req, res, next) => BookingController.
 router.get("/notifications", (req, res, next) => NotificationController.getNotifications(req, res, next));
 router.get("/notifications/unread-count", (req, res, next) => NotificationController.getUnreadCount(req, res, next));
 router.patch("/notifications/:id/read", (req, res, next) => NotificationController.markAsRead(req, res, next));
+router.delete("/notifications/all", (req, res, next) => NotificationController.deleteAllNotifications(req, res, next));
+router.delete("/notifications/:id", (req, res, next) => NotificationController.deleteNotification(req, res, next));
 
 // --- Services ---
 router.get("/servicename", (req, res, next) => ServiceController.getServiceNameOnly(req, res, next));

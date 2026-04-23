@@ -895,6 +895,8 @@ class ServiceBookingController {
               photographer_id : new mongoose.Types.ObjectId(finalPhotographerId),
               notification_type   : "booking_assigned",
               notification_message: `New booking ${bookingRef} (${eventName}) has been assigned to you.`,
+              booking_id: booking._id,
+              screen: "BookingScreen"
             });
             emitNotificationCount(finalPhotographerId.toString());
 
@@ -908,7 +910,11 @@ class ServiceBookingController {
                   body: `You have been assigned to booking ${bookingRef} (${eventName}).`,
                 },
                 token: photographer.fcmToken,
-                data: { bookingId: booking._id.toString(), type: "booking_assigned" },
+                data: { 
+                  bookingId: booking._id.toString(), 
+                  type: "booking_assigned",
+                  screen: "BookingScreen"
+                },
                 android: {
                   priority: "high",
                   notification: { channelId: "veroa_updates" }
@@ -917,7 +923,9 @@ class ServiceBookingController {
                   payload: {
                     aps: {
                       sound: "default",
-                      badge: 1
+                      badge: 1,
+                      "mutable-content": 1,
+                      "content-available": 1
                     }
                   }
                 }
@@ -941,6 +949,8 @@ class ServiceBookingController {
               photographer_id : new mongoose.Types.ObjectId(pid),
               notification_type   : "booking_invite",
               notification_message: `New booking ${bookingRef} (${eventName}) has been invited to you.`,
+              booking_id: booking._id,
+              screen: "BookingScreen"
             }));
 
             await Notification.insertMany(inviteNotifications);
@@ -956,7 +966,11 @@ class ServiceBookingController {
                   body: `You have an invitation for booking ${bookingRef} (${eventName}).`,
                 },
                 token: p.fcmToken,
-                data: { bookingId: booking._id.toString(), type: "booking_invite" },
+                data: { 
+                  bookingId: booking._id.toString(), 
+                  type: "booking_invite",
+                  screen: "BookingScreen"
+                },
                 android: {
                   priority: "high",
                   notification: { channelId: "veroa_updates" }
@@ -965,7 +979,9 @@ class ServiceBookingController {
                   payload: {
                     aps: {
                       sound: "default",
-                      badge: 1
+                      badge: 1,
+                      "mutable-content": 1,
+                      "content-available": 1
                     }
                   }
                 }
