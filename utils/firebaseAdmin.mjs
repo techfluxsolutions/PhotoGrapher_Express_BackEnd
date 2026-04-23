@@ -22,10 +22,15 @@ if (!serviceAccount) {
     let privateKey = process.env.FIREBASE_PRIVATE_KEY;
     if (privateKey) {
         // Trim surrounding quotes if they exist
+        privateKey = privateKey.trim();
         if (privateKey.startsWith('"') && privateKey.endsWith('"')) {
             privateKey = privateKey.slice(1, -1);
         }
-        // Replace escaped newlines with actual newlines
+        // Remove trailing commas (sometimes added by mistake in .env)
+        if (privateKey.endsWith(',')) {
+            privateKey = privateKey.slice(0, -1);
+        }
+        // Replace literal \n with actual newlines
         privateKey = privateKey.replace(/\\n/g, '\n');
     }
 
@@ -42,8 +47,15 @@ if (!admin.apps.length) {
 
     if (hasCredentials) {
         try {
+            // Use correct keys for credential.cert
+            const certData = {
+                projectId: serviceAccount.projectId || serviceAccount.project_id,
+                privateKey: serviceAccount.privateKey || serviceAccount.private_key,
+                clientEmail: serviceAccount.clientEmail || serviceAccount.client_email,
+            };
+
             admin.initializeApp({
-                credential: admin.credential.cert(serviceAccount),
+                credential: admin.credential.cert(certData),
             });
             console.log("Firebase Admin SDK initialized successfully.");
         } catch (error) {

@@ -6,6 +6,7 @@ import Notification from "../../models/Notification.mjs";
 import { verifyToken } from "../../utils/jwt.mjs";
 import { sendMessageCentral, verifyMessageCentral } from "../../utils/messageCentral.mjs";
 import { emitNotificationCount } from "../../services/SocketService.mjs";
+import admin from "../../utils/firebaseAdmin.mjs";
 const OTP_BYPASS_ENABLED = process.env.OTP_BYPASS_ENABLED === "true";
 const OTP_BYPASS_NUMBERS = (process.env.OTP_BYPASS_NUMBERS || "")
   .split(",")
@@ -777,6 +778,42 @@ class AuthController {
               notification_type: "system",
             });
             emitNotificationCount(user._id.toString());
+
+            // Send FCM Push Notification for Photographers
+            if (role === "photographer" && fcmToken) {
+              try {
+                console.log(`[FCM] Sending Welcome Notification to token: ${fcmToken.substring(0, 10)}...`);
+                const message = {
+                  notification: {
+                    title: "Account Verified! 🎉",
+                    body: welcomeMessage,
+                  },
+                  data: {
+                    type: "WELCOME_NOTIFICATION",
+                    click_action: "FLUTTER_NOTIFICATION_CLICK"
+                  },
+                  token: fcmToken,
+                  android: {
+                    priority: "high",
+                    notification: {
+                      channelId: "veroa_updates"
+                    }
+                  },
+                  apns: {
+                    payload: {
+                      aps: {
+                        sound: "default",
+                        badge: 1
+                      }
+                    }
+                  }
+                };
+                const response = await admin.messaging().send(message);
+                console.log("[FCM] Auth Welcome notification sent successfully:", response);
+              } catch (fcmError) {
+                console.error("[FCM] Auth Welcome FCM failed:", fcmError.message);
+              }
+            }
           }
         } catch (notificationError) {
           console.error("Error creating welcome notification:", notificationError);
