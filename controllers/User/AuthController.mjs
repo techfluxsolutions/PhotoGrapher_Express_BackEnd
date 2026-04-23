@@ -884,7 +884,37 @@ class AuthController {
       });
     }
   }
+    // Unified Logout for all roles
+  async logout(req, res) {
+    try {
+      const { fcmToken, role } = req.body;
+      const id = req.user?.id || req.user?._id;
+
+      if (id && role) {
+        // Use the role map to find the correct database model
+        const Model = roleModelMap[role] || User;
+        const account = await Model.findById(id);
+
+        if (account && account.fcmToken === fcmToken) {
+          // Clear the FCM token from DB
+          await Model.findByIdAndUpdate(id, { $unset: { fcmToken: "" } });
+          console.log(`[Logout] Cleared FCM token for ${role}: ${id}`);
+        }
+      }
+
+      res.clearCookie("token");
+      return res.status(200).json({
+        success: true,
+        message: "Logged out successfully",
+      });
+    } catch (error) {
+      console.error("Unified Logout error:", error);
+      return res.status(500).json({
+        success: false,
+        message: "Internal server error during logout",
+      });
+    }
+  }
 }
+
 export default new AuthController();
-
-

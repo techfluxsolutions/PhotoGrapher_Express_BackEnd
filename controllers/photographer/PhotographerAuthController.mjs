@@ -157,12 +157,20 @@ class PhotographerAuthController {
   // Logout
   async logout(req, res) {
     try {
+      const { fcmToken } = req.body;
       const id = req.user?.id || req.user?._id;
 
       if (id) {
-        // Clear the FCM token from DB so they stop getting pushes on this device
-        await PhotographerDB.findByIdAndUpdate(id, { $unset: { fcmToken: "" } });
-        console.log(`[Logout] Cleared FCM token for photographer: ${id}`);
+        // Find the photographer to check if the token matches (optional security)
+        const photographer = await PhotographerDB.findById(id);
+        
+        if (photographer && photographer.fcmToken === fcmToken) {
+          // Clear the FCM token from DB
+          await PhotographerDB.findByIdAndUpdate(id, { $unset: { fcmToken: "" } });
+          console.log(`[Logout] Successfully cleared matching FCM token for photographer: ${id}`);
+        } else {
+          console.log(`[Logout] FCM token did not match or already cleared for photographer: ${id}`);
+        }
       }
 
       res.clearCookie("token");
