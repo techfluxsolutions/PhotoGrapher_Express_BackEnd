@@ -899,8 +899,9 @@ class ServiceBookingController {
             emitNotificationCount(finalPhotographerId.toString());
 
             // Send FCM
-            const photographer = await Photographer.findById(finalPhotographerId).select("fcmToken");
+            const photographer = await Photographer.findById(finalPhotographerId).select("fcmToken basicInfo.fullName");
             if (photographer?.fcmToken) {
+              console.log(`[FCM] Sending notification to ${photographer.basicInfo?.fullName} (Token: ${photographer.fcmToken.substring(0, 10)}...)`);
               const message = {
                 notification: {
                   title: "New Booking Assigned!",
@@ -909,10 +910,13 @@ class ServiceBookingController {
                 token: photographer.fcmToken,
                 data: { bookingId: booking._id.toString(), type: "booking_assigned" }
               };
-              await admin.messaging().send(message);
+              const response = await admin.messaging().send(message);
+              console.log("[FCM] Direct assignment sent successfully:", response);
+            } else {
+              console.log(`[FCM] No token found for photographer ${photographer?.basicInfo?.fullName || finalPhotographerId}`);
             }
           } catch (err) {
-            console.error("[Notification] Direct assignment error:", err.message);
+            console.error("[Notification] Direct assignment FCM error:", err.message);
           }
         })();
       }
@@ -931,7 +935,7 @@ class ServiceBookingController {
             photographerIds.forEach(pid => emitNotificationCount(pid.toString()));
 
             // Send FCM to all in broadcast
-            const photographers = await Photographer.find({ _id: { $in: photographerIds } }).select("fcmToken");
+            const photographers = await Photographer.find({ _id: { $in: photographerIds } }).select("fcmToken basicInfo.fullName");
             const messages = photographers
               .filter(p => p.fcmToken)
               .map(p => ({
@@ -944,10 +948,14 @@ class ServiceBookingController {
               }));
 
             if (messages.length > 0) {
-              await admin.messaging().sendEach(messages);
+              console.log(`[FCM] Sending broadcast to ${messages.length} photographers`);
+              const response = await admin.messaging().sendEach(messages);
+              console.log("[FCM] Broadcast sent successfully:", response.successCount, "successes,", response.failureCount, "failures");
+            } else {
+              console.log("[FCM] No tokens found for any invited photographers");
             }
           } catch (err) {
-            console.error("[Notification] Broadcast error:", err.message);
+            console.error("[Notification] Broadcast FCM error:", err.message);
           }
         })();
       }
