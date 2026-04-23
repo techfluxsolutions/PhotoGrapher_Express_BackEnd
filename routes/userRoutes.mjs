@@ -23,7 +23,7 @@ import CartController from "../controllers/User/CartController.mjs";
 import EditingController from "../controllers/User/EditingController.mjs";
 import PhotographyController from "../controllers/User/PhotographyController.mjs";
 import TeamShootController from "../controllers/User/TeamShootController.mjs";
-
+import CouponController from "../controllers/User/Coupon_Controller/CouponController.mjs";
 const router = express.Router();
 import { uploadController } from "../controllers/uploadController.js";
 // Partner Registration (Public)
@@ -206,4 +206,7 @@ router.get("/team-shoots/:type", (req, res, next) => TeamShootController.getPlan
 router.post("/cart/team-shoots", (req, res, next) => TeamShootController.addTeamToCart(req, res, next));
 router.post("/cart/update-quantity", (req, res, next) => CartController.updateItemQuantity(req, res, next));
 
+// validate coupon 
+
+router.post("/coupon/validate", CouponController.validateCoupon);
 export default router;
