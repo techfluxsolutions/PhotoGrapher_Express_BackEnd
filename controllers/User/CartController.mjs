@@ -126,16 +126,16 @@ class CartController {
              */
             const cartData = cart.toObject();
 
-            const gstAmount = Number(
-                (cartData.totalAmount * 0.18).toFixed(2)
-            );
+            // const gstAmount = Number(
+            //     (cartData.totalAmount * 0.18).toFixed(2)
+            // );
 
-            const finalAmount = Number(
-                (cartData.totalAmount + gstAmount).toFixed(2)
-            );
+            // const finalAmount = Number(
+            //     (cartData.totalAmount + gstAmount).toFixed(2)
+            // );
 
-            cartData.gst = gstAmount;
-            cartData.finalAmount = finalAmount;
+            // cartData.gst = gstAmount;
+            cartData.finalAmount = cartData.totalAmount;
 
             res.status(200).json({
                 success: true,
