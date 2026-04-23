@@ -98,6 +98,8 @@ class NotificationController {
                     _id: n._id,
                     event: EVENT_LABELS[n.notification_type] || n.notification_type.replace(/_/g, " ").toUpperCase(),
                     message: n.notification_message,
+                    booking_id: n.booking_id,
+                    screen: n.screen,
                     date: ist.date,
                     time: ist.time,
                     timeAgo: getTimeAgo(n.createdAt),
