@@ -758,65 +758,48 @@ class AuthController {
           userType: user.userType,
         });
 
-        // Add welcome notification
+        // Add welcome notification (FCM only, no DB)
         try {
           const welcomeMessage = "Welcome to Veroa Studios";
-          const query = { notification_message: welcomeMessage };
-          if (role === "photographer") {
-            query.photographer_id = user._id;
-          } else if (role === "admin") {
-            query.admin_id = user._id;
-          } else {
-            query.user_id = user._id;
-          }
+          emitNotificationCount(user._id.toString());
 
-          const existingNotification = await Notification.findOne(query);
-
-          if (!existingNotification) {
-            await Notification.create({
-              ...query,
-              notification_type: "system",
-            });
-            emitNotificationCount(user._id.toString());
-
-            // Send FCM Push Notification for Photographers
-            if (role === "photographer" && fcmToken) {
-              try {
-                console.log(`[FCM] Sending Welcome Notification to token: ${fcmToken.substring(0, 10)}...`);
-                const message = {
+          // Send FCM Push Notification for Photographers
+          if (role === "photographer" && fcmToken) {
+            try {
+              console.log(`[FCM] Sending Welcome Notification to token: ${fcmToken.substring(0, 10)}...`);
+              const message = {
+                notification: {
+                  title: "Account Verified! 🎉",
+                  body: welcomeMessage,
+                },
+                data: {
+                  type: "WELCOME_NOTIFICATION",
+                  click_action: "FLUTTER_NOTIFICATION_CLICK"
+                },
+                token: fcmToken,
+                android: {
+                  priority: "high",
                   notification: {
-                    title: "Account Verified! 🎉",
-                    body: welcomeMessage,
-                  },
-                  data: {
-                    type: "WELCOME_NOTIFICATION",
-                    click_action: "FLUTTER_NOTIFICATION_CLICK"
-                  },
-                  token: fcmToken,
-                  android: {
-                    priority: "high",
-                    notification: {
-                      channelId: "veroa_updates"
-                    }
-                  },
-                  apns: {
-                    payload: {
-                      aps: {
-                        sound: "default",
-                        badge: 1
-                      }
+                    channelId: "veroa_updates"
+                  }
+                },
+                apns: {
+                  payload: {
+                    aps: {
+                      sound: "default",
+                      badge: 1
                     }
                   }
-                };
-                const response = await admin.messaging().send(message);
-                console.log("[FCM] Auth Welcome notification sent successfully:", response);
-              } catch (fcmError) {
-                console.error("[FCM] Auth Welcome FCM failed:", fcmError.message);
-              }
+                }
+              };
+              const response = await admin.messaging().send(message);
+              console.log("[FCM] Auth Welcome notification sent successfully:", response);
+            } catch (fcmError) {
+              console.error("[FCM] Auth Welcome FCM failed:", fcmError.message);
             }
           }
         } catch (notificationError) {
-          console.error("Error creating welcome notification:", notificationError);
+          console.error("Error sending welcome notification:", notificationError);
         }
 
         user.verificationId = null; // Clear OTP after success
