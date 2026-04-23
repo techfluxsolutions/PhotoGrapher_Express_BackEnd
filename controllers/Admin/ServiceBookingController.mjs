@@ -908,7 +908,19 @@ class ServiceBookingController {
                   body: `You have been assigned to booking ${bookingRef} (${eventName}).`,
                 },
                 token: photographer.fcmToken,
-                data: { bookingId: booking._id.toString(), type: "booking_assigned" }
+                data: { bookingId: booking._id.toString(), type: "booking_assigned" },
+                android: {
+                  priority: "high",
+                  notification: { channelId: "veroa_updates" }
+                },
+                apns: {
+                  payload: {
+                    aps: {
+                      sound: "default",
+                      badge: 1
+                    }
+                  }
+                }
               };
               const response = await admin.messaging().send(message);
               console.log("[FCM] Direct assignment sent successfully:", response);
@@ -944,7 +956,19 @@ class ServiceBookingController {
                   body: `You have an invitation for booking ${bookingRef} (${eventName}).`,
                 },
                 token: p.fcmToken,
-                data: { bookingId: booking._id.toString(), type: "booking_invite" }
+                data: { bookingId: booking._id.toString(), type: "booking_invite" },
+                android: {
+                  priority: "high",
+                  notification: { channelId: "veroa_updates" }
+                },
+                apns: {
+                  payload: {
+                    aps: {
+                      sound: "default",
+                      badge: 1
+                    }
+                  }
+                }
               }));
 
             if (messages.length > 0) {
