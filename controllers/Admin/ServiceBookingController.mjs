@@ -9,6 +9,7 @@ import Message from "../../models/Message.mjs";
 import Counter from "../../models/Counter.mjs";
 import Notification from "../../models/Notification.mjs";
 import { emitNotificationCount } from "../../services/SocketService.mjs";
+import admin from "../../utils/firebaseAdmin.mjs";
 
 const parseDDMMYYYY = (dateStr) => {
   if (!dateStr || dateStr instanceof Date) return dateStr;
@@ -888,23 +889,67 @@ class ServiceBookingController {
 
       // Case 1: Direct assignment — notify the single assigned photographer
       if (finalPhotographerId) {
-        Notification.create({
-          photographer_id : new mongoose.Types.ObjectId(finalPhotographerId),
-          notification_type   : "booking_assigned",
-          notification_message: `New booking ${bookingRef} (${eventName}) has been assigned to you.`,
-        }).catch((err) => console.error("[Notification] booking_assigned error:", err.message));
+        (async () => {
+          try {
+            await Notification.create({
+              photographer_id : new mongoose.Types.ObjectId(finalPhotographerId),
+              notification_type   : "booking_assigned",
+              notification_message: `New booking ${bookingRef} (${eventName}) has been assigned to you.`,
+            });
+            emitNotificationCount(finalPhotographerId.toString());
+
+            // Send FCM
+            const photographer = await Photographer.findById(finalPhotographerId).select("fcmToken");
+            if (photographer?.fcmToken) {
+              const message = {
+                notification: {
+                  title: "New Booking Assigned!",
+                  body: `You have been assigned to booking ${bookingRef} (${eventName}).`,
+                },
+                token: photographer.fcmToken,
+                data: { bookingId: booking._id.toString(), type: "booking_assigned" }
+              };
+              await admin.messaging().send(message);
+            }
+          } catch (err) {
+            console.error("[Notification] Direct assignment error:", err.message);
+          }
+        })();
       }
 
       // Case 2: Broadcast invite — notify every invited photographer
       if (photographerIds !== undefined && photographerIds.length > 0) {
-        const inviteNotifications = photographerIds.map((pid) => ({
-          photographer_id     : new mongoose.Types.ObjectId(pid),
-          notification_type   : "booking_invite",
-          notification_message: `New booking ${bookingRef} (${eventName}) has been invited to you.`,
-        }));
-        Notification.insertMany(inviteNotifications).catch((err) =>
-          console.error("[Notification] booking_invite bulk error:", err.message)
-        );
+        (async () => {
+          try {
+            const inviteNotifications = photographerIds.map((pid) => ({
+              photographer_id : new mongoose.Types.ObjectId(pid),
+              notification_type   : "booking_invite",
+              notification_message: `New booking ${bookingRef} (${eventName}) has been invited to you.`,
+            }));
+
+            await Notification.insertMany(inviteNotifications);
+            photographerIds.forEach(pid => emitNotificationCount(pid.toString()));
+
+            // Send FCM to all in broadcast
+            const photographers = await Photographer.find({ _id: { $in: photographerIds } }).select("fcmToken");
+            const messages = photographers
+              .filter(p => p.fcmToken)
+              .map(p => ({
+                notification: {
+                  title: "New Booking Invitation!",
+                  body: `You have an invitation for booking ${bookingRef} (${eventName}).`,
+                },
+                token: p.fcmToken,
+                data: { bookingId: booking._id.toString(), type: "booking_invite" }
+              }));
+
+            if (messages.length > 0) {
+              await admin.messaging().sendEach(messages);
+            }
+          } catch (err) {
+            console.error("[Notification] Broadcast error:", err.message);
+          }
+        })();
       }
       // ─────────────────────────────────────────────────────────────────────
 
