@@ -7,7 +7,6 @@ const editingPlanSchema = new mongoose.Schema({
     },
     subtitle: {
         type: String,
-        required: true
     },
     planName: {
         type: String,
@@ -20,12 +19,10 @@ const editingPlanSchema = new mongoose.Schema({
     },
     features: {
         type: Array,
-        required: true
     },
     planCategory: {
         type: String,
         enum: ["standard", "premium"],
-        required: true
     }
 });
 
