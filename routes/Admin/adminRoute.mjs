@@ -272,6 +272,8 @@ router.get("/getArrayImages/:bookingId", (req, res, next) => uploadController.ge
 // --- Editing Plan Management ---
 router.post("/editing-plans", (req, res, next) => EditingController.create(req, res, next));
 router.get("/editing-plans", (req, res, next) => EditingController.getAll(req, res, next));
+router.get("/editing-plans/standard", (req, res, next) => EditingController.getStandardPlans(req, res, next));
+router.get("/editing-plans/premium", (req, res, next) => EditingController.getPremiumPlans(req, res, next));
 router.get("/editing-plans/:id", (req, res, next) => EditingController.getById(req, res, next));
 router.put("/editing-plans/:id", (req, res, next) => EditingController.update(req, res, next));
 router.delete("/editing-plans/:id", (req, res, next) => EditingController.delete(req, res, next));
@@ -287,6 +289,8 @@ router.delete("/photography-plans/:id", (req, res, next) => PhotographyPlanContr
 // --- Team Shoot Plan Management ---
 router.post("/team-shoot-plans", (req, res, next) => AdminTeamShootController.create(req, res, next));
 router.get("/team-shoot-plans", (req, res, next) => AdminTeamShootController.getAll(req, res, next));
+router.get("/team-shoot-plans/standard", (req, res, next) => AdminTeamShootController.getStandardPlans(req, res, next));
+router.get("/team-shoot-plans/premium", (req, res, next) => AdminTeamShootController.getPremiumPlans(req, res, next));
 router.get("/team-shoot-plans/:id", (req, res, next) => AdminTeamShootController.getById(req, res, next));
 router.put("/team-shoot-plans/:id", (req, res, next) => AdminTeamShootController.update(req, res, next));
 router.delete("/team-shoot-plans/:id", (req, res, next) => AdminTeamShootController.delete(req, res, next));

@@ -24,6 +24,7 @@ const editingPlanSchema = new mongoose.Schema({
     },
     planCategory: {
         type: String,
+        enum: ["standard", "premium"],
         required: true
     }
 });

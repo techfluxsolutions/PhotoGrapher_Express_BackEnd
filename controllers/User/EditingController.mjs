@@ -3,7 +3,30 @@ import Cart from "../../models/Cart.mjs";
 class EditingController {
     async getAll(req, res, next) {
         try {
-            const editingPlans = await EditingPlan.find();
+            const { planCategory } = req.query;
+            const filter = {};
+            if (planCategory) {
+                filter.planCategory = planCategory;
+            }
+            const editingPlans = await EditingPlan.find(filter);
+            res.status(200).json({ success: true, data: editingPlans });
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    async getStandardPlans(req, res, next) {
+        try {
+            const editingPlans = await EditingPlan.find({ planCategory: "standard" });
+            res.status(200).json({ success: true, data: editingPlans });
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    async getPremiumPlans(req, res, next) {
+        try {
+            const editingPlans = await EditingPlan.find({ planCategory: "premium" });
             res.status(200).json({ success: true, data: editingPlans });
         } catch (error) {
             next(error);
