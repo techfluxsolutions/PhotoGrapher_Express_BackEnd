@@ -176,7 +176,7 @@ app.use("/api/mobile", mobileRoutes);
 // Mount S3 Large Upload/Streaming Module
 app.use("/upload", uploadRoutes);
 
-// Optional mongoose connection if MONGODB_URI is provided
+// Optional mongoose connection if MONGODB_URI is provided..
 console.log("MONGODB_URI defined:", !!process.env.MONGODB_URI);
 if (process.env.MONGODB_URI) {
   mongoose
