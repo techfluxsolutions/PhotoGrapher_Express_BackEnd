@@ -2,12 +2,12 @@ import mongoose from "mongoose";
 
 const editingPlanSchema = new mongoose.Schema({
     numberOfVideos: {
-        type: Number,
-        required: true["Number of videos is required"]
+        type: String, // Changed to String to allow "1-2 Videos"
+        required: [true, "Number of videos is required"]
     },
     subtitle: {
         type: String,
-        required: true
+        required: false
     },
     planName: {
         type: String,
@@ -20,7 +20,7 @@ const editingPlanSchema = new mongoose.Schema({
     },
     features: {
         type: Array,
-        required: true
+        default: []
     },
     planCategory: {
         type: String,

@@ -2,7 +2,7 @@ import mongoose from "mongoose";
 
 const pricingOptionSchema = new mongoose.Schema({
     durationText: { type: String, required: true }, // e.g., "3 Hours", "5 Hours", "8 Hours"
-    durationValue: { type: Number, required: true }, // e.g., 3, 5, 8
+    durationValue: { type: Number }, // e.g., 3, 5, 8
     price: { type: Number, required: true },
     subtitle: { type: String, spare: true, trim: true }
 });
@@ -15,11 +15,11 @@ const teamShootPlanSchema = new mongoose.Schema({
     },
     role: {
         type: String,
-        required: true
+        default: "Photographer"
     }, // e.g., "Photographer", "Videographer", "Cinematographer", "Lighting Setup", "Editing"
     pricingType: {
         type: String,
-        enum: ["fixed", "duration_based"],
+        enum: ["fixed", "duration_based", "duration"],
         required: true
     },
     pricingOptions: [pricingOptionSchema], // Used if pricingType is duration_based

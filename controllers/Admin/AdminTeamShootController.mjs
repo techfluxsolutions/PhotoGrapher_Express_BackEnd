@@ -4,8 +4,13 @@ class AdminTeamShootController {
     // 1. Create a new team shoot plan
     async create(req, res, next) {
         try {
-            const { teamCategory, role, pricingType, pricingOptions, fixedPrice, features, isBaseIncluded } = req.body;
+            let { teamCategory, category, role, pricingType, pricingOptions, fixedPrice, features, isBaseIncluded } = req.body;
             
+            // Map frontend names if necessary
+            if (!teamCategory && category) teamCategory = category;
+            if (pricingType === "duration") pricingType = "duration_based";
+            if (!role) role = "Photographer";
+
             // Basic validation depending on pricingType
             if (pricingType === "duration_based" && (!pricingOptions || pricingOptions.length === 0)) {
                  return res.status(400).json({ success: false, message: "duration_based pricing requires pricingOptions" });
@@ -81,6 +86,15 @@ class AdminTeamShootController {
         try {
             const { id } = req.params;
             const updateData = req.body;
+
+            // Map frontend names if necessary
+            if (!updateData.teamCategory && updateData.category) {
+                updateData.teamCategory = updateData.category;
+                delete updateData.category;
+            }
+            if (updateData.pricingType === "duration") {
+                updateData.pricingType = "duration_based";
+            }
 
             // Enforce logic validation during update if pricing types change
             if (updateData.pricingType === "duration_based" && (!updateData.pricingOptions || updateData.pricingOptions.length === 0)) {
