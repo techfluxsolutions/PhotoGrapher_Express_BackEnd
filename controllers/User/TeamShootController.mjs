@@ -67,7 +67,8 @@ class TeamShootController {
                 // Check if already in cart by planId and selectedroleId (or just name if fixed)
                 const existingItemIndex = cart.items.findIndex(item => {
                     if (plan.pricingType === "duration_based") {
-                        return item.planId?.toString() === selection.planId && item.selectedroleId === selection.selectedroleId;
+                        return item.planId?.toString() === selection.planId && 
+                               item.selectedroleId?.toString() === selection.selectedroleId;
                     }
                     return item.name === itemName && item.category === "shoot_team";
                 });

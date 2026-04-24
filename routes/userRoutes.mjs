@@ -26,6 +26,7 @@ import TeamShootController from "../controllers/User/TeamShootController.mjs";
 import CouponController from "../controllers/User/Coupon_Controller/CouponController.mjs";
 const router = express.Router();
 import { uploadController } from "../controllers/uploadController.js";
+import HourlyShootBookingController from "../controllers/User/HourlyShootBookingController.mjs";
 // Partner Registration (Public)
 router.post("/partner-registration", (req, res, next) => PartnerRegistrationController.create(req, res, next));
 router.get("/partner-registration", (req, res, next) => PartnerRegistrationController.getAll(req, res, next));
@@ -89,6 +90,13 @@ router.get("/incompleteBookings", (req, res, next) => ServiceBookingController.g
 router.put('/updatePaymentStatusBooking/:id', (req, res, next) => ServiceBookingController.updatePaymentStatusBooking(req, res, next));
 router.post('/payment/create-order', (req, res, next) => PaymentController.createRazorpayOrder(req, res, next));
 router.post('/payment/verify', (req, res, next) => PaymentController.verifyRazorpayPayment(req, res, next));
+
+//hourly shoot payment
+router.post('/cart/payment/create-order', (req, res, next) => PaymentController.createCartRazorpayOrder(req, res, next));
+router.post('/cart/payment/verify', (req, res, next) => PaymentController.verifyCartPayment(req, res, next));
+
+//create hourlyshoot
+router.post('/createhourlyshootBooking', (req, res, next) => HourlyShootBookingController.createHourlyBooking);
 
 // --- Quotes ---
 router.post("/quotes", (req, res, next) => QuoteController.create(req, res, next));

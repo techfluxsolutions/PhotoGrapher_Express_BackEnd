@@ -1,0 +1,141 @@
+{
+    "info": {
+        "_postman_id": "aa1a156e-8123-4567-8910-abcdefabcdef",
+        "name": "S3 Large File Uploads (Express)",
+        "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+    },
+    "item": [
+        {
+            "name": "1. Start Multipart Upload",
+            "request": {
+                "method": "POST",
+                "header": [],
+                "body": {
+                    "mode": "raw",
+                    "raw": "{\n    \"fileName\": \"raw_wedding_footage.mp4\",\n    \"fileType\": \"video/mp4\"\n}",
+                    "options": {
+                        "raw": {
+                            "language": "json"
+                        }
+                    }
+                },
+                "url": {
+                    "raw": "http://localhost:5002/upload/start",
+                    "protocol": "http",
+                    "host": [
+                        "localhost"
+                    ],
+                    "port": "5002",
+                    "path": [
+                        "upload",
+                        "start"
+                    ]
+                }
+            },
+            "response": []
+        },
+        {
+            "name": "2. Upload Chunk (Part 1)",
+            "request": {
+                "method": "POST",
+                "header": [],
+                "body": {
+                    "mode": "formdata",
+                    "formdata": [
+                        {
+                            "key": "key",
+                            "value": "uploads/123-raw_wedding_footage.mp4",
+                            "type": "text"
+                        },
+                        {
+                            "key": "uploadId",
+                            "value": "YOUR_UPLOAD_ID_FROM_START",
+                            "type": "text"
+                        },
+                        {
+                            "key": "partNumber",
+                            "value": "1",
+                            "type": "text"
+                        },
+                        {
+                            "key": "chunk",
+                            "type": "file",
+                            "src": []
+                        }
+                    ]
+                },
+                "url": {
+                    "raw": "http://localhost:5002/upload/chunk",
+                    "protocol": "http",
+                    "host": [
+                        "localhost"
+                    ],
+                    "port": "5002",
+                    "path": [
+                        "upload",
+                        "chunk"
+                    ]
+                }
+            },
+            "response": []
+        },
+        {
+            "name": "3. Complete Multipart Upload",
+            "request": {
+                "method": "POST",
+                "header": [],
+                "body": {
+                    "mode": "raw",
+                    "raw": "{\n    \"key\": \"uploads/123-raw_wedding_footage.mp4\",\n    \"uploadId\": \"YOUR_UPLOAD_ID_FROM_START\",\n    \"parts\": [\n        {\n            \"ETag\": \"\\\"etag-returned-from-chunk-1\\\"\",\n            \"PartNumber\": 1\n        }\n    ],\n    \"bookingid\": \"BOOKING_123\",\n    \"clientId\": \"CLIENT_MONGO_ID\",\n    \"photographerId\": \"PHOTOGRAPHER_MONGO_ID\",\n    \"veroaBookingId\": \"V_BOOK_123\"\n}",
+                    "options": {
+                        "raw": {
+                            "language": "json"
+                        }
+                    }
+                },
+                "url": {
+                    "raw": "http://localhost:5002/upload/complete",
+                    "protocol": "http",
+                    "host": [
+                        "localhost"
+                    ],
+                    "port": "5002",
+                    "path": [
+                        "upload",
+                        "complete"
+                    ]
+                }
+            },
+            "response": []
+        },
+        {
+            "name": "4. Abort/Cancel Upload (Optional)",
+            "request": {
+                "method": "POST",
+                "header": [],
+                "body": {
+                    "mode": "raw",
+                    "raw": "{\n    \"key\": \"uploads/123-raw_wedding_footage.mp4\",\n    \"uploadId\": \"YOUR_UPLOAD_ID_FROM_START\"\n}",
+                    "options": {
+                        "raw": {
+                            "language": "json"
+                        }
+                    }
+                },
+                "url": {
+                    "raw": "http://localhost:5002/upload/abort",
+                    "protocol": "http",
+                    "host": [
+                        "localhost"
+                    ],
+                    "port": "5002",
+                    "path": [
+                        "upload",
+                        "abort"
+                    ]
+                }
+            },
+            "response": []
+        }
+    ]
+}
