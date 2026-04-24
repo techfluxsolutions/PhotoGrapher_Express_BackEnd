@@ -23,6 +23,8 @@ const editingPlanSchema = new mongoose.Schema({
     planCategory: {
         type: String,
         enum: ["standard", "premium"],
+        required: [true, "Plan category is required (standard or premium)"],
+        lowercase: true
     }
 });
 

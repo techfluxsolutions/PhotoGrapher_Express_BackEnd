@@ -11,7 +11,8 @@ const teamShootPlanSchema = new mongoose.Schema({
     teamCategory: {
         type: String,
         enum: ["standard", "premium"],
-        required: true
+        required: true,
+        lowercase: true
     },
     role: {
         type: String,
