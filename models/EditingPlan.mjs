@@ -3,7 +3,7 @@ import mongoose from "mongoose";
 const editingPlanSchema = new mongoose.Schema({
     numberOfVideos: {
         type: Number,
-        required: true["Number of videos is required"]
+        required: [true, "Number of videos is required"]
     },
     subtitle: {
         type: String,
