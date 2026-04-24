@@ -73,6 +73,7 @@ router.use(authMiddleware);
 // --- User Profile ---
 router.get("/me", (req, res, next) => UserController.getById(req, res, next));
 router.put("/me", uploadAvatar.single("avatar"), (req, res, next) => UserController.update(req, res, next));
+router.patch("/me/toggle-push", (req, res, next) => UserController.togglePushNotification(req, res, next));
 
 // --- Enquiries ---
 router.post("/enquiries", (req, res, next) => EnquiryController.create(req, res, next));

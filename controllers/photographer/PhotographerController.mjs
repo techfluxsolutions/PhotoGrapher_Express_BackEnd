@@ -1395,6 +1395,32 @@ class PhotographerController {
             res.status(500).json({ success: false, message: "Failed to delete account", error: error.message });
         }
     }
+
+    // Toggle Push Notification
+    async togglePushNotification(req, res) {
+        try {
+            const id = req.user?.id || req.user?._id || req.photographer?._id;
+            if (!id) {
+                return res.status(401).json({ success: false, message: "Authentication required" });
+            }
+
+            const photographer = await Photographer.findById(id);
+            if (!photographer) {
+                return res.status(404).json({ success: false, message: "Photographer not found" });
+            }
+
+            photographer.pushNotification = !photographer.pushNotification;
+            await photographer.save();
+
+            res.status(200).json({
+                success: true,
+                message: `Push notifications ${photographer.pushNotification ? 'enabled' : 'disabled'} successfully`,
+                pushNotification: photographer.pushNotification
+            });
+        } catch (error) {
+            res.status(500).json({ success: false, message: "Failed to toggle push notification", error: error.message });
+        }
+    }
 }
 
 export default new PhotographerController();

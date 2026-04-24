@@ -48,6 +48,7 @@ router.post("/status", (req, res, next) => PhotographerController.updatePhotogra
 router.patch("/me", upload.single('profilePhoto'), (req, res, next) => PhotographerController.updatePhotographer(req, res, next));
 router.delete("/me", (req, res, next) => PhotographerController.deleteAccount(req, res, next));
 router.patch("/fcm-token", (req, res, next) => PhotographerController.updateFcmToken(req, res, next));
+router.patch("/push-notification", (req, res, next) => PhotographerController.togglePushNotification(req, res, next));
 
 
 
@@ -88,6 +89,7 @@ router.get("/bookings/completed", (req, res, next) => BookingController.getCompl
 router.get("/bookings/gallery-upload-list", (req, res, next) => BookingController.getBookingsForGalleryUpload(req, res, next));
 router.get("/bookings/upload-pending", (req, res, next) => BookingController.getUploadPendingBookings(req, res, next));
 router.patch("/bookings/:id/status", (req, res, next) => BookingController.updateBookingStatus(req, res, next));
+router.patch("/bookings/:id/mark-as-done", (req, res, next) => BookingController.markAsDone(req, res, next));
 
 router.post("/bookings/initialize-status", (req, res, next) => BookingController.initializePreviousBookingsStatus(req, res, next));
 
@@ -110,7 +112,8 @@ router.delete("/bookings/:id", (req, res, next) => BookingController.deleteBooki
 router.post("/bookings/:id/gallery", galleryUpload.array('gallery', 50), (req, res, next) => BookingController.uploadGallery(req, res, next));
 router.post("/bookings/:id/gallery/server", galleryUpload.array('gallery', 50), (req, res, next) => BookingController.uploadGalleryToServer(req, res, next));
 router.post("/bookings/:id/gallery/cloud", galleryUpload.array('gallery', 50), (req, res, next) => BookingController.uploadGalleryToCloud(req, res, next));
-router.post("/bookings/:id/gallery/share", (req, res, next) => BookingController.shareGallery(req, res, next));
+router.post("/bookings/:id/gallery/share", (req, res, next) => BookingController.publishGallery(req, res, next));
+router.post("/bookings/:id/gallery/publish", (req, res, next) => BookingController.publishGallery(req, res, next));
 
 
 // --- Invoice (For their bookings) ---

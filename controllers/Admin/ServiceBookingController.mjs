@@ -901,8 +901,8 @@ class ServiceBookingController {
             emitNotificationCount(finalPhotographerId.toString());
 
             // Send FCM
-            const photographer = await Photographer.findById(finalPhotographerId).select("fcmToken basicInfo.fullName");
-            if (photographer?.fcmToken) {
+            const photographer = await Photographer.findById(finalPhotographerId).select("fcmToken basicInfo.fullName pushNotification");
+            if (photographer?.fcmToken && photographer.pushNotification !== false) {
               console.log(`[FCM] Sending notification to ${photographer.basicInfo?.fullName} (Token: ${photographer.fcmToken.substring(0, 10)}...)`);
               const message = {
                 notification: {
@@ -957,9 +957,9 @@ class ServiceBookingController {
             photographerIds.forEach(pid => emitNotificationCount(pid.toString()));
 
             // Send FCM to all in broadcast
-            const photographers = await Photographer.find({ _id: { $in: photographerIds } }).select("fcmToken basicInfo.fullName");
+            const photographers = await Photographer.find({ _id: { $in: photographerIds } }).select("fcmToken basicInfo.fullName pushNotification");
             const messages = photographers
-              .filter(p => p.fcmToken)
+              .filter(p => p.fcmToken && p.pushNotification !== false)
               .map(p => ({
                 notification: {
                   title: "New Booking Invitation!",
