@@ -895,12 +895,14 @@ class ServiceBookingController {
               photographer_id : new mongoose.Types.ObjectId(finalPhotographerId),
               notification_type   : "booking_assigned",
               notification_message: `New booking ${bookingRef} (${eventName}) has been assigned to you.`,
+              booking_id: booking._id,
+              screen: "BookingScreen"
             });
             emitNotificationCount(finalPhotographerId.toString());
 
             // Send FCM
-            const photographer = await Photographer.findById(finalPhotographerId).select("fcmToken basicInfo.fullName");
-            if (photographer?.fcmToken) {
+            const photographer = await Photographer.findById(finalPhotographerId).select("fcmToken basicInfo.fullName pushNotification");
+            if (photographer?.fcmToken && photographer.pushNotification !== false) {
               console.log(`[FCM] Sending notification to ${photographer.basicInfo?.fullName} (Token: ${photographer.fcmToken.substring(0, 10)}...)`);
               const message = {
                 notification: {
@@ -908,7 +910,25 @@ class ServiceBookingController {
                   body: `You have been assigned to booking ${bookingRef} (${eventName}).`,
                 },
                 token: photographer.fcmToken,
-                data: { bookingId: booking._id.toString(), type: "booking_assigned" }
+                data: { 
+                  bookingId: booking._id.toString(), 
+                  type: "booking_assigned",
+                  screen: "BookingScreen"
+                },
+                android: {
+                  priority: "high",
+                  notification: { channelId: "veroa_updates" }
+                },
+                apns: {
+                  payload: {
+                    aps: {
+                      sound: "default",
+                      badge: 1,
+                      "mutable-content": 1,
+                      "content-available": 1
+                    }
+                  }
+                }
               };
               const response = await admin.messaging().send(message);
               console.log("[FCM] Direct assignment sent successfully:", response);
@@ -929,22 +949,42 @@ class ServiceBookingController {
               photographer_id : new mongoose.Types.ObjectId(pid),
               notification_type   : "booking_invite",
               notification_message: `New booking ${bookingRef} (${eventName}) has been invited to you.`,
+              booking_id: booking._id,
+              screen: "BookingScreen"
             }));
 
             await Notification.insertMany(inviteNotifications);
             photographerIds.forEach(pid => emitNotificationCount(pid.toString()));
 
             // Send FCM to all in broadcast
-            const photographers = await Photographer.find({ _id: { $in: photographerIds } }).select("fcmToken basicInfo.fullName");
+            const photographers = await Photographer.find({ _id: { $in: photographerIds } }).select("fcmToken basicInfo.fullName pushNotification");
             const messages = photographers
-              .filter(p => p.fcmToken)
+              .filter(p => p.fcmToken && p.pushNotification !== false)
               .map(p => ({
                 notification: {
                   title: "New Booking Invitation!",
                   body: `You have an invitation for booking ${bookingRef} (${eventName}).`,
                 },
                 token: p.fcmToken,
-                data: { bookingId: booking._id.toString(), type: "booking_invite" }
+                data: { 
+                  bookingId: booking._id.toString(), 
+                  type: "booking_invite",
+                  screen: "BookingScreen"
+                },
+                android: {
+                  priority: "high",
+                  notification: { channelId: "veroa_updates" }
+                },
+                apns: {
+                  payload: {
+                    aps: {
+                      sound: "default",
+                      badge: 1,
+                      "mutable-content": 1,
+                      "content-available": 1
+                    }
+                  }
+                }
               }));
 
             if (messages.length > 0) {

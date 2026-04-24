@@ -74,6 +74,7 @@ router.use(authMiddleware);
 // --- User Profile ---
 router.get("/me", (req, res, next) => UserController.getById(req, res, next));
 router.put("/me", uploadAvatar.single("avatar"), (req, res, next) => UserController.update(req, res, next));
+router.patch("/me/toggle-push", (req, res, next) => UserController.togglePushNotification(req, res, next));
 
 // --- Enquiries ---
 router.post("/enquiries", (req, res, next) => EnquiryController.create(req, res, next));
@@ -190,6 +191,8 @@ router.get("/getcart", (req, res, next) => CartController.getMyCart(req, res, ne
 
 //editing plans
 router.get("/editing-plans", (req, res, next) => EditingController.getAll(req, res, next));
+router.get("/editing-plans/standard", (req, res, next) => EditingController.getStandardPlans(req, res, next));
+router.get("/editing-plans/premium", (req, res, next) => EditingController.getPremiumPlans(req, res, next));
 router.get("/editing-plans/:id", (req, res, next) => EditingController.getOne(req, res, next));
 router.get('/getplanBynumberOfVideos/:numberOfvideos', (req, res, next) => EditingController.getplanBynumberOfVideos(req, res, next));
 router.get('/getplanBynumberOfVideos', (req, res, next) => EditingController.getplanByPlanCategory(req, res, next));
@@ -210,6 +213,8 @@ router.get("/cart/:id", (req, res, next) => CartController.getOne(req, res, next
 router.put("/cart/:id", (req, res, next) => CartController.update(req, res, next));
 router.delete("/cart/:id", (req, res, next) => CartController.delete(req, res, next));
 // team shoot Apis
+router.get("/team-shoots/standard", (req, res, next) => { req.params.type = "standard"; return TeamShootController.getPlans(req, res, next); });
+router.get("/team-shoots/premium", (req, res, next) => { req.params.type = "premium"; return TeamShootController.getPlans(req, res, next); });
 router.get("/team-shoots/:type", (req, res, next) => TeamShootController.getPlans(req, res, next));
 router.post("/cart/team-shoots", (req, res, next) => TeamShootController.addTeamToCart(req, res, next));
 router.post("/cart/update-quantity", (req, res, next) => CartController.updateItemQuantity(req, res, next));

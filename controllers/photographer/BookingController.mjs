@@ -680,8 +680,8 @@ class BookingController {
     }
 
 
-    // Share Gallery
-    async shareGallery(req, res) {
+    // Publish Gallery
+    async publishGallery(req, res) {
         try {
             const { id } = req.params;
 
@@ -693,13 +693,19 @@ class BookingController {
             let gallery = await Gallery.findOne({ booking_id: id });
 
             if (!gallery) {
-                return sendErrorResponse(res, { message: "Gallery not found for this booking" }, 404);
+                return sendErrorResponse(res, { message: "Gallery not found for this booking. Please upload photos first." }, 404);
             }
 
             gallery.isShared = true;
             await gallery.save();
 
-            return sendSuccessResponse(res, { gallery }, "Gallery shared with user successfully");
+            // Also update the booking status
+            await ServiceBooking.findByIdAndUpdate(id, {
+                galleryStatus: "Photos Uploaded",
+                photosUploadedAt: new Date()
+            });
+
+            return sendSuccessResponse(res, { gallery }, "Gallery published successfully. User can now view the photos.");
 
         } catch (error) {
             return sendErrorResponse(res, error, 500);
@@ -1523,6 +1529,75 @@ class BookingController {
             }
         } catch (error) {
             console.error("Error verifying booking OTP:", error);
+            return sendErrorResponse(res, error, 500);
+        }
+    }
+
+    // Mark as Done (Photographer can only complete on the day of the booking)
+    async markAsDone(req, res) {
+        try {
+            const { id } = req.params;
+            const myId = new mongoose.Types.ObjectId(req.user.id);
+
+            if (!mongoose.Types.ObjectId.isValid(id)) {
+                return sendErrorResponse(res, { message: "Invalid booking ID" }, 400);
+            }
+
+            const booking = await ServiceBooking.findById(id);
+            if (!booking) {
+                return sendErrorResponse(res, { message: "Booking not found" }, 404);
+            }
+
+            // 1. Authorization: Only the assigned photographer can mark as done
+            if (!booking.photographer_id || booking.photographer_id.toString() !== myId.toString()) {
+                return sendErrorResponse(res, { message: "Unauthorized: You are not assigned to this booking" }, 403);
+            }
+
+            // 2. Date Restriction: Only allowed on the day of the booking
+            const now = new Date();
+            const todayStr = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' }).format(now); // YYYY-MM-DD
+            
+            let bookingDateStr = "";
+            const dateToParse = booking.bookingDate || booking.startDate || booking.eventDate;
+            
+            if (dateToParse) {
+                if (dateToParse instanceof Date) {
+                    bookingDateStr = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' }).format(dateToParse);
+                } else if (typeof dateToParse === 'string') {
+                    // Check if format is DD-MM-YYYY
+                    const bits = dateToParse.split("-");
+                    if (bits.length === 3 && bits[0].length === 2) {
+                        bookingDateStr = `${bits[2]}-${bits[1]}-${bits[0]}`;
+                    } else {
+                        // Attempt standard parsing
+                        const parsedDate = new Date(dateToParse);
+                        if (!isNaN(parsedDate.getTime())) {
+                            bookingDateStr = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' }).format(parsedDate);
+                        }
+                    }
+                }
+            }
+
+            if (todayStr !== bookingDateStr) {
+                return res.status(200).json({ 
+                    success: false, 
+                    message: `You can only mark this booking as completed on the day of the event (${bookingDateStr || "N/A"}). Today is ${todayStr}.`,
+                });
+            }
+
+            // 3. Update Status
+            booking.status = "completed";
+            // booking.bookingStatus = "completed"; // Usually bookingStatus is accepted/rejected, but some logic might use it
+            await booking.save();
+
+            return sendSuccessResponse(res, {
+                _id: booking._id,
+                veroaBookingId: booking.veroaBookingId,
+                status: booking.status
+            }, "Booking marked as completed successfully");
+
+        } catch (error) {
+            console.error("Mark as Done Error:", error);
             return sendErrorResponse(res, error, 500);
         }
     }

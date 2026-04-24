@@ -78,6 +78,10 @@ const userSchema = new mongoose.Schema(
       type: String,
       default: null,
     },
+    pushNotification: {
+      type: Boolean,
+      default: true,
+    },
 
     userType: {
       type: String,

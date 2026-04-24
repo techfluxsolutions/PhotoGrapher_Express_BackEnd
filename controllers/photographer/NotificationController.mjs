@@ -98,6 +98,8 @@ class NotificationController {
                     _id: n._id,
                     event: EVENT_LABELS[n.notification_type] || n.notification_type.replace(/_/g, " ").toUpperCase(),
                     message: n.notification_message,
+                    booking_id: n.booking_id,
+                    screen: n.screen,
                     date: ist.date,
                     time: ist.time,
                     timeAgo: getTimeAgo(n.createdAt),
@@ -231,6 +233,47 @@ class NotificationController {
             return sendErrorResponse(res, error, 500);
         }
     }
+  // Delete single notification
+  async deleteNotification(req, res) {
+    try {
+      const photographerId = req.user?.id || req.user?._id;
+      const { id } = req.params;
+
+      const notification = await Notification.findOneAndDelete({
+        _id: id,
+        photographer_id: photographerId
+      });
+
+      if (!notification) {
+        return res.status(404).json({ success: false, message: "Notification not found or access denied" });
+      }
+
+      // Sync unread count
+      emitNotificationCount(photographerId.toString());
+
+      res.status(200).json({ success: true, message: "Notification deleted successfully" });
+    } catch (error) {
+      console.error("Delete Notification Error:", error);
+      res.status(500).json({ success: false, message: "Failed to delete notification" });
+    }
+  }
+
+  // Delete all notifications for the photographer
+  async deleteAllNotifications(req, res) {
+    try {
+      const photographerId = req.user?.id || req.user?._id;
+
+      await Notification.deleteMany({ photographer_id: photographerId });
+
+      // Sync unread count
+      emitNotificationCount(photographerId.toString());
+
+      res.status(200).json({ success: true, message: "All notifications deleted successfully" });
+    } catch (error) {
+      console.error("Delete All Notifications Error:", error);
+      res.status(500).json({ success: false, message: "Failed to clear notifications" });
+    }
+  }
 }
 
 export default new NotificationController();

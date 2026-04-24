@@ -46,6 +46,24 @@ class AdminTeamShootController {
         }
     }
 
+    async getStandardPlans(req, res, next) {
+        try {
+            const plans = await TeamShootPlan.find({ teamCategory: "standard" }).sort({ createdAt: -1 });
+            res.status(200).json({ success: true, data: plans });
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    async getPremiumPlans(req, res, next) {
+        try {
+            const plans = await TeamShootPlan.find({ teamCategory: "premium" }).sort({ createdAt: -1 });
+            res.status(200).json({ success: true, data: plans });
+        } catch (error) {
+            next(error);
+        }
+    }
+
     // 3. Get single plan by ID
     async getById(req, res, next) {
         try {

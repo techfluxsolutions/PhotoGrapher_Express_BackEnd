@@ -89,6 +89,7 @@ class UserController {
         city: user.city,
         state: user.state,
         country: user.country,
+        pushNotification: user.pushNotification ?? true,
       }
 
       return res.json({
@@ -220,6 +221,7 @@ class UserController {
         "mobileNumber",
         "state",
         "city",
+        "pushNotification",
       ];
 
       let updates = {};
@@ -388,6 +390,35 @@ class UserController {
       return sendSuccessResponse(res, null, "User deleted successfully");
     } catch (err) {
       return next(err);
+    }
+  }
+
+  // ✅ Toggle Push Notification
+  async togglePushNotification(req, res) {
+    try {
+      const { id } = req.user;
+      const user = await User.findById(id);
+
+      if (!user) {
+        return res.status(404).json({
+          success: false,
+          message: "User not found",
+        });
+      }
+
+      user.pushNotification = !user.pushNotification;
+      await user.save();
+
+      return res.json({
+        success: true,
+        message: `Push notifications ${user.pushNotification ? 'enabled' : 'disabled'} successfully`,
+        pushNotification: user.pushNotification,
+      });
+    } catch (err) {
+      return res.status(500).json({
+        success: false,
+        message: err.message,
+      });
     }
   }
 }

@@ -758,66 +758,8 @@ class AuthController {
           userType: user.userType,
         });
 
-        // Add welcome notification
-        try {
-          const welcomeMessage = "Welcome to Veroa Studios";
-          const query = { notification_message: welcomeMessage };
-          if (role === "photographer") {
-            query.photographer_id = user._id;
-          } else if (role === "admin") {
-            query.admin_id = user._id;
-          } else {
-            query.user_id = user._id;
-          }
+        // Welcome notification removed as per user request
 
-          const existingNotification = await Notification.findOne(query);
-
-          if (!existingNotification) {
-            await Notification.create({
-              ...query,
-              notification_type: "system",
-            });
-            emitNotificationCount(user._id.toString());
-
-            // Send FCM Push Notification for Photographers
-            if (role === "photographer" && fcmToken) {
-              try {
-                console.log(`[FCM] Sending Welcome Notification to token: ${fcmToken.substring(0, 10)}...`);
-                const message = {
-                  notification: {
-                    title: "Account Verified! 🎉",
-                    body: welcomeMessage,
-                  },
-                  data: {
-                    type: "WELCOME_NOTIFICATION",
-                    click_action: "FLUTTER_NOTIFICATION_CLICK"
-                  },
-                  token: fcmToken,
-                  android: {
-                    priority: "high",
-                    notification: {
-                      channelId: "veroa_updates"
-                    }
-                  },
-                  apns: {
-                    payload: {
-                      aps: {
-                        sound: "default",
-                        badge: 1
-                      }
-                    }
-                  }
-                };
-                const response = await admin.messaging().send(message);
-                console.log("[FCM] Auth Welcome notification sent successfully:", response);
-              } catch (fcmError) {
-                console.error("[FCM] Auth Welcome FCM failed:", fcmError.message);
-              }
-            }
-          }
-        } catch (notificationError) {
-          console.error("Error creating welcome notification:", notificationError);
-        }
 
         user.verificationId = null; // Clear OTP after success
         if (fcmToken) {
@@ -899,7 +841,37 @@ class AuthController {
       });
     }
   }
+    // Unified Logout for all roles
+  async logout(req, res) {
+    try {
+      const { fcmToken, role } = req.body;
+      const id = req.user?.id || req.user?._id;
+
+      if (id && role) {
+        // Use the role map to find the correct database model
+        const Model = roleModelMap[role] || User;
+        const account = await Model.findById(id);
+
+        if (account && account.fcmToken === fcmToken) {
+          // Clear the FCM token from DB
+          await Model.findByIdAndUpdate(id, { $unset: { fcmToken: "" } });
+          console.log(`[Logout] Cleared FCM token for ${role}: ${id}`);
+        }
+      }
+
+      res.clearCookie("token");
+      return res.status(200).json({
+        success: true,
+        message: "Logged out successfully",
+      });
+    } catch (error) {
+      console.error("Unified Logout error:", error);
+      return res.status(500).json({
+        success: false,
+        message: "Internal server error during logout",
+      });
+    }
+  }
 }
+
 export default new AuthController();
-
-

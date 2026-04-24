@@ -3,11 +3,10 @@ import mongoose from "mongoose";
 const editingPlanSchema = new mongoose.Schema({
     numberOfVideos: {
         type: Number,
-        required: true["Number of videos is required"]
+        required: [true, "Number of videos is required"]
     },
     subtitle: {
         type: String,
-        required: true
     },
     planName: {
         type: String,
@@ -20,11 +19,12 @@ const editingPlanSchema = new mongoose.Schema({
     },
     features: {
         type: Array,
-        required: true
     },
     planCategory: {
         type: String,
-        required: true
+        enum: ["standard", "premium"],
+        required: [true, "Plan category is required (standard or premium)"],
+        lowercase: true
     }
 });
 

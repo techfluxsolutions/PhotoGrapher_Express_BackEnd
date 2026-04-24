@@ -165,6 +165,10 @@ const photographerSchema = new mongoose.Schema(
       type: String,
       default: null,
     },
+    pushNotification: {
+      type: Boolean,
+      default: true,
+    },
     otpAttempts: {
       type: Number,
       default: 0

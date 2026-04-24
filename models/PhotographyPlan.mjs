@@ -21,7 +21,8 @@ const photographyPlanSchema = new mongoose.Schema({
     }],
     planCategory:{
         type:String,
-        required:true
+        required:true,
+        lowercase: true
     }
 });
 

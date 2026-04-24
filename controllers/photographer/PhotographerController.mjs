@@ -201,6 +201,40 @@ class PhotographerController {
         }
     }
 
+    // Update FCM Token
+    async updateFcmToken(req, res) {
+        try {
+            const id = req.user?.id || req.user?._id || req.photographer?._id;
+            const { fcmToken } = req.body;
+
+            if (!id) {
+                return res.status(401).json({ success: false, message: "Authentication required" });
+            }
+
+            if (!fcmToken) {
+                return res.status(400).json({ success: false, message: "fcmToken is required" });
+            }
+
+            const photographer = await Photographer.findByIdAndUpdate(
+                id,
+                { $set: { fcmToken } },
+                { new: true }
+            ).select('fcmToken');
+
+            if (!photographer) {
+                return res.status(404).json({ success: false, message: "Photographer not found" });
+            }
+
+            res.status(200).json({
+                success: true,
+                message: "FCM token updated successfully"
+            });
+        } catch (error) {
+            console.error("Update FCM Token Error:", error);
+            res.status(500).json({ success: false, message: "Failed to update FCM token", error: error.message });
+        }
+    }
+
     // get photographer by id (Supports Admin/Public via :id, or Self via Auth)
     async getPhotographerById(req, res) {
         try {
@@ -456,7 +490,7 @@ class PhotographerController {
     async verifyPhotographer(req, res) {
         try {
             // const { id } = req.params;
-            const { mobileNumber, OTP } = req.body;
+            const { mobileNumber, OTP, fcmToken } = req.body;
 
             if (!mobileNumber || !OTP) {
                 return res.status(400).json({ message: "Mobile number and OTP are required" });
@@ -496,6 +530,7 @@ class PhotographerController {
             // Set username to email as requested
             photographer.username = photographer.email;
             photographer.status = "active";
+            if (fcmToken) photographer.fcmToken = fcmToken;
             // Create Razorpay account if not exists
 
             // commenting this due to no route feature is enabled till yet 
@@ -528,43 +563,8 @@ class PhotographerController {
             //     console.error("Error sending welcome email during verification:", emailError);
             // }
 
-            // Add welcome notification
-            try {
-                const welcomeMessage = "Welcome to Veroa Studios! Explore your dashboard to start.";
-                const query = { 
-                    photographer_id: photographer._id, 
-                    notification_message: welcomeMessage 
-                };
+            // Welcome notification removed as per user request
 
-                const existingNotification = await Notification.findOne(query);
-
-                if (!existingNotification) {
-                    await Notification.create({
-                        ...query,
-                        notification_type: "system",
-                    });
-                    emitNotificationCount(photographer._id.toString());
-
-                    // Send FCM Push Notification
-                    if (photographer.fcmToken) {
-                        try {
-                            const message = {
-                                notification: {
-                                    title: "Account Verified!",
-                                    body: welcomeMessage,
-                                },
-                                token: photographer.fcmToken,
-                            };
-                            await admin.messaging().send(message);
-                            console.log("Welcome FCM sent to photographer:", photographer._id);
-                        } catch (fcmError) {
-                            console.error("Error sending Welcome FCM:", fcmError);
-                        }
-                    }
-                }
-            } catch (notificationError) {
-                console.error("Error creating welcome notification:", notificationError);
-            }
 
             res.status(200).json({
                 success: true,
@@ -1393,6 +1393,32 @@ class PhotographerController {
             });
         } catch (error) {
             res.status(500).json({ success: false, message: "Failed to delete account", error: error.message });
+        }
+    }
+
+    // Toggle Push Notification
+    async togglePushNotification(req, res) {
+        try {
+            const id = req.user?.id || req.user?._id || req.photographer?._id;
+            if (!id) {
+                return res.status(401).json({ success: false, message: "Authentication required" });
+            }
+
+            const photographer = await Photographer.findById(id);
+            if (!photographer) {
+                return res.status(404).json({ success: false, message: "Photographer not found" });
+            }
+
+            photographer.pushNotification = !photographer.pushNotification;
+            await photographer.save();
+
+            res.status(200).json({
+                success: true,
+                message: `Push notifications ${photographer.pushNotification ? 'enabled' : 'disabled'} successfully`,
+                pushNotification: photographer.pushNotification
+            });
+        } catch (error) {
+            res.status(500).json({ success: false, message: "Failed to toggle push notification", error: error.message });
         }
     }
 }
