@@ -3,8 +3,7 @@ import EditingPlan from "../../models/EditingPlan.mjs";
 class EditingController {
     async create(req, res) {
         try {
-            let { planName, numberOfVideos, price, features, planCategory, category } = req.body;
-            if (!planCategory && category) planCategory = category;
+            const { planName, numberOfVideos, price, features, planCategory } = req.body;
             const editingPlan = new EditingPlan({ planName, numberOfVideos, price, features, planCategory });
             await editingPlan.save();
             res.status(201).json({ success: true, message: "Editing plan created successfully", editingPlan });
@@ -62,9 +61,8 @@ class EditingController {
 
     async update(req, res) {
         try {
-            let { planName, numberOfVideos, price, features, planCategory, category } = req.body;
-            if (!planCategory && category) planCategory = category;
-            const editingPlan = await EditingPlan.findByIdAndUpdate(req.params.id, { planName, numberOfVideos, price, features, planCategory }, { new: true });
+            const { planName, price, features, planCategory } = req.body;
+            const editingPlan = await EditingPlan.findByIdAndUpdate(req.params.id, { planName, price, features, planCategory }, { new: true });
             if (!editingPlan) {
                 return res.status(404).json({ success: false, message: "Editing plan not found" });
             }
