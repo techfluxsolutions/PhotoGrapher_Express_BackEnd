@@ -1,5 +1,4 @@
 import mongoose from "mongoose";
-
 const hourlyShootBookingSchema = new mongoose.Schema(
   {
     veroaBookingId: {
@@ -7,72 +6,134 @@ const hourlyShootBookingSchema = new mongoose.Schema(
       unique: true,
       sparse: true,
     },
+
     client_id: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       required: true,
     },
+
     photographer_id: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Photographer",
       default: null,
     },
+
     hourlyShootService_id: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "HourlyShootService",
       required: false,
     },
+
     date: {
       type: String,
       required: true,
     },
+
     time: {
       type: String,
       required: true,
     },
+
     hours: {
       type: Number,
       required: true,
     },
+
+    /* ===============================
+       LOCATION FIELDS (Added)
+    =============================== */
+
+    location: {
+      type: String,
+      default: "",
+    },
+
+    lat: {
+      type: Number,
+      default: null,
+    },
+
+    lng: {
+      type: Number,
+      default: null,
+    },
+
     address: {
       type: String,
-      required: true,
+      default: "",
     },
+
+    flatOrHouseNo: {
+      type: String,
+      default: "",
+    },
+
+    streetName: {
+      type: String,
+      default: "",
+    },
+
     city: {
       type: String,
-      required: false,
+      default: "",
     },
+
+    state: {
+      type: String,
+      default: "",
+    },
+
+    postalCode: {
+      type: String,
+      default: "",
+    },
+
+    /* =============================== */
+
     requirements: {
       type: String,
       default: "",
     },
+
     photographerAmount: {
       type: Number,
       default: 0,
     },
+
     totalAmount: {
       type: Number,
       default: 0,
     },
+
     status: {
       type: String,
       enum: ["pending", "confirmed", "completed", "canceled"],
       default: "pending",
     },
+
     bookingStatus: {
       type: String,
       enum: ["accepted", "rejected", "pending"],
       default: "pending",
     },
+
     galleryStatus: {
       type: String,
       enum: ["Upload Pending", "Photos Uploaded"],
       default: "Upload Pending",
     },
+
     paymentStatus: {
       type: String,
       enum: ["pending", "paid"],
       default: "pending",
+    },
+
+    paymentMethod: {
+      type: String,
+      enum: ["online", "COD"],
+      default: "COD",
     },
   },
   { timestamps: true }

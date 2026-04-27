@@ -5,7 +5,11 @@ import razorpayInstance from "../../Config/razorpay.mjs";
 import crypto from "crypto";
 import Message from "../../models/Message.mjs";
 import Conversation from "../../models/Conversation.mjs";
-
+import Cart from "../../models/Cart.mjs";
+import HourlyShootBooking from "../../models/HourlyShootBooking.mjs";
+import Payout from "../../models/Payout.mjs";
+import Counter from "../../models/Counter.mjs";
+import Coupon from "../../models/Coupon.model.mjs";
 class PaymentController {
   async createRazorpayOrder(req, res, next) {
     try {
@@ -184,7 +188,7 @@ class PaymentController {
 
       // [NEW] Delete paymentCard messages from conversation after successful payment
       try {
-        const linkedConv = await Conversation.findOne({ 
+        const linkedConv = await Conversation.findOne({
           $or: [
             { bookingId: booking._id },
             { quoteId: booking.quoteId }
@@ -228,6 +232,11 @@ class PaymentController {
           { razorpayOrderIds: razorpayOrderId }
         ]
       });
+    }
+
+    if (payment.notes?.type === "cart_checkout" || (order && order.notes?.type === "cart_checkout")) {
+      await this._processCartCheckoutSuccess(order, razorpayPaymentId);
+      return;
     }
 
     if (!booking) return;
@@ -311,7 +320,7 @@ class PaymentController {
 
     // [NEW] Delete paymentCard messages via webhook flow
     try {
-      const linkedConv = await Conversation.findOne({ 
+      const linkedConv = await Conversation.findOne({
         $or: [
           { bookingId: booking._id },
           { quoteId: booking.quoteId }
@@ -395,6 +404,170 @@ class PaymentController {
       res.status(200).json({ success: true, message: "Payment deleted successfully" });
     } catch (error) {
       next(error);
+    }
+  } async createCartRazorpayOrder(req, res, next) {
+    try {
+      const { amount, bookingDetails } = req.body; // finalPayable from frontend
+      const userId = req.user.id;
+
+      if (!amount || amount <= 0) {
+        return res.status(400).json({ success: false, message: "Invalid amount" });
+      }
+
+      // Get cart to store its ID in notes
+      const cart = await Cart.findOne({ userId, status: "active" });
+      if (!cart) {
+        return res.status(404).json({ success: false, message: "Active cart not found" });
+      }
+
+      const options = {
+        amount: Math.round(amount * 100), // amount in paise
+        currency: "INR",
+        receipt: `receipt_cart_${userId.toString().slice(-10)}_${Date.now().toString().slice(-8)}`,
+        notes: {
+          userId: userId.toString(),
+          cartId: cart._id.toString(),
+          type: "cart_checkout",
+          date: bookingDetails?.date || "TBD",
+          time: bookingDetails?.time || "TBD",
+          specialInstructions: (bookingDetails?.specialInstructions || "").substring(0, 100) // limit for safety
+        }
+      };
+
+      const order = await razorpayInstance.orders.create(options);
+      return res.status(200).json({ success: true, order });
+    } catch (error) {
+      console.error("Error creating cart Razorpay order:", error);
+      res.status(500).json({ success: false, message: "Failed to create order", error: error.message });
+    }
+  }
+
+  async verifyCartPayment(req, res, next) {
+    try {
+      const {
+        razorpay_order_id,
+        razorpay_payment_id,
+        razorpay_signature,
+        couponId
+      } = req.body;
+
+      if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
+        return res.status(400).json({ success: false, message: "Missing payment parameters" });
+      }
+
+      const body = razorpay_order_id + "|" + razorpay_payment_id;
+      const expectedSignature = crypto
+        .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET)
+        .update(body.toString())
+        .digest("hex");
+
+      if (expectedSignature !== razorpay_signature) {
+        return res.status(400).json({ success: false, message: "Invalid payment signature" });
+      }
+
+      // Process the payment (using shared logic)
+      const order = await razorpayInstance.orders.fetch(razorpay_order_id);
+      const result = await this._processCartCheckoutSuccess(order, razorpay_payment_id, couponId);
+
+      if (!result.success) {
+        return res.status(400).json(result);
+      }
+
+      return res.status(200).json(result);
+
+    } catch (error) {
+      console.error("Error verifying cart payment:", error);
+      res.status(500).json({ success: false, message: "Checkout verification failed", error: error.message });
+    }
+  }
+
+  async _processCartCheckoutSuccess(order, paymentId, couponId = "") {
+    try {
+      const { userId, cartId, date, time, specialInstructions } = order.notes;
+
+      // 1. Check if already processed (check if cart is already completed)
+      const cart = await Cart.findById(cartId);
+      if (!cart || cart.status === "completed") {
+        return { success: true, message: "Already processed or cart not found" };
+      }
+
+      const createdBookings = [];
+
+      // 2. Process each item in the cart
+      for (const item of cart.items) {
+        if (item.category === "editing" || item.category === "hourly") {
+          // Generate Booking ID
+          const counter = await Counter.findByIdAndUpdate(
+            "veroaBookingId",
+            { $inc: { seq: 1 } },
+            { new: true, upsert: true }
+          );
+          const formattedNumber = String(counter.seq).padStart(6, "0");
+          const veroaBookingId = `VEROA-BK-${formattedNumber}`;
+
+          // Create HourlyShootBooking
+          const booking = await HourlyShootBooking.create({
+            veroaBookingId,
+            client_id: userId,
+            date: date || "TBD",
+            time: time || "TBD",
+            hours: item.quantity || 1,
+            address: "N/A", // Will be updated by user later if needed
+            totalAmount: item.price * item.quantity,
+            paymentStatus: "paid",
+            status: "confirmed",
+            paymentMethod: "COD",
+            requirements: specialInstructions || ""
+          });
+
+          if (couponId && couponId !== "" && couponId !== null) {
+            const coupon = await Coupon.findById(couponId);
+            if (coupon) {
+              coupon.usedCount += 1
+              await coupon.save();
+            }
+          }
+
+          // Create Payout Summary
+          await Payout.create({
+            shootType: item.category === "editing" ? "PhotoEditing" : "HourlyShoot",
+            photographer_id: item.photographer_id || "657a8b9c0d1e2f3a4b5c6d7e", // Placeholder
+            booking_id: booking._id,
+            total_amount: booking.totalAmount,
+            status: "Pending",
+            payout_status: "pending"
+          });
+
+          createdBookings.push(booking);
+        }
+      }
+
+      // 3. Update Cart status
+      cart.status = "completed";
+      await cart.save();
+
+      // 4. Create Payment Record
+      await Payment.create({
+        user_id: userId,
+        payment_status: "paid",
+        upfront_amount: order.amount / 100,
+        paid_type: "full paid",
+        razorpay_details: [{
+          orderId: order.id,
+          paymentId: paymentId,
+          amount: order.amount / 100,
+          paymentType: "cart_checkout"
+        }]
+      });
+
+      return {
+        success: true,
+        message: "Checkout successful",
+        bookings: createdBookings
+      };
+    } catch (error) {
+      console.error("Error in _processCartCheckoutSuccess:", error);
+      return { success: false, message: error.message };
     }
   }
 

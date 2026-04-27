@@ -39,7 +39,7 @@ const cartSchema = new mongoose.Schema({
   },
   status: {
     type: String,
-    enum: ["active", "ordered", "cancelled"],
+    enum: ["active", "ordered", "cancelled", "completed"],
     default: "active"
   }
 }, { timestamps: true });
