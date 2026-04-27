@@ -3,12 +3,7 @@ import Cart from "../../models/Cart.mjs";
 class EditingController {
     async getAll(req, res, next) {
         try {
-            const { planCategory } = req.query;
-            const filter = {};
-            if (planCategory) {
-                filter.planCategory = planCategory;
-            }
-            const editingPlans = await EditingPlan.find(filter);
+            const editingPlans = await EditingPlan.find();
             res.status(200).json({ success: true, data: editingPlans });
         } catch (error) {
             next(error);
@@ -32,6 +27,8 @@ class EditingController {
             next(error);
         }
     }
+
+
     async getOne(req, res, next) {
         try {
             const { id } = req.params;
@@ -232,6 +229,7 @@ class EditingController {
             res.status(500).json({ success: false, message: error.message });
         }
     }
+
     async getplanByPlanCategory(req, res) {
         try {
             const plansDetails = await EditingPlan.find({ planCategory: "standard" }).select('numberOfVideos price subtitle');

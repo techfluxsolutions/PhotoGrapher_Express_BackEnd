@@ -14,15 +14,7 @@ class EditingController {
 
     async getAll(req, res) {
         try {
-            const { planCategory } = req.query;
-            const filter = {};
-            if (planCategory) {
-                filter.planCategory = planCategory;
-            }
-            const editingPlans = await EditingPlan.find(filter);
-            if (!editingPlans) {
-                return res.status(404).json({ success: false, message: "Editing plans not found" });
-            }
+            const editingPlans = await EditingPlan.find();
             res.status(200).json({ success: true, message: "Editing plans fetched successfully", editingPlans });
         } catch (error) {
             res.status(500).json({ success: false, message: error.message });
@@ -46,6 +38,8 @@ class EditingController {
             res.status(500).json({ success: false, message: error.message });
         }
     }
+
+
 
     async getById(req, res) {
         try {
