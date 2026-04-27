@@ -190,6 +190,7 @@ router.get("/getcart", (req, res, next) => CartController.getMyCart(req, res, ne
 // Moving /cart/:id routes to the bottom of the file to prevent catching exact routes
 
 //editing plans
+router.get("/get-editing-plans", (req, res, next) => EditingController.getEditingPlans(req, res, next));
 router.get("/editing-plans", (req, res, next) => EditingController.getAll(req, res, next));
 router.get("/editing-plans/standard", (req, res, next) => EditingController.getStandardPlans(req, res, next));
 router.get("/editing-plans/premium", (req, res, next) => EditingController.getPremiumPlans(req, res, next));

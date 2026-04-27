@@ -242,6 +242,15 @@ class EditingController {
             res.status(500).json({ success: false, message: error.message });
         }
     }
+
+    async getEditingPlans(req, res) {
+        try {
+            const editingPlans = await EditingPlan.find();
+            res.status(200).json({ success: true, message: "Editing plans fetched successfully", editingPlans });
+        } catch (error) {
+            res.status(500).json({ success: false, message: error.message });
+        }
+    }
 }
 
 export default new EditingController();
