@@ -1,4 +1,5 @@
 import express from "express";
+import multer from "multer";
 import UserController from "../controllers/User/UserController.mjs";
 import EnquiryController from "../controllers/User/EnquiryController.mjs";
 import ReviewController from "../controllers/User/ReviewController.mjs";
@@ -26,6 +27,11 @@ import TeamShootController from "../controllers/User/TeamShootController.mjs";
 import CouponController from "../controllers/User/Coupon_Controller/CouponController.mjs";
 const router = express.Router();
 import { uploadController } from "../controllers/uploadController.js";
+
+const upload = multer({
+    storage: multer.memoryStorage(),
+    limits: { fileSize: 50 * 1024 * 1024 } // 50MB Memory limit max per chunk
+});
 import HourlyShootBookingController from "../controllers/User/HourlyShootBookingController.mjs";
 // Partner Registration (Public)
 router.post("/partner-registration", (req, res, next) => PartnerRegistrationController.create(req, res, next));
@@ -200,6 +206,14 @@ router.get('/getplanBynumberOfVideos', (req, res, next) => EditingController.get
 //photography plans
 router.get("/photography-plans", (req, res, next) => PhotographyController.getAll(req, res, next));
 router.get("/photography-plans/:id", (req, res, next) => PhotographyController.getOne(req, res, next));
+
+
+// --- Editing Upload Routes ---
+router.post("/editing/upload/start", (req, res, next) => EditingController.startUpload(req, res, next));
+router.post("/editing/upload/get-part-url", (req, res, next) => EditingController.getPartUploadUrl(req, res, next));
+router.post("/editing/upload/chunk", upload.single("chunk"), (req, res, next) => EditingController.uploadChunk(req, res, next));
+router.post("/editing/upload/complete", (req, res, next) => EditingController.completeUpload(req, res, next));
+router.post("/editing/upload/abort", (req, res, next) => EditingController.abortUpload(req, res, next));
 
 
 // cart Apis
