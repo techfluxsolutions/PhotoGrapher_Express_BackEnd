@@ -10,6 +10,7 @@ import Counter from "../../models/Counter.mjs";
 import Notification from "../../models/Notification.mjs";
 import { emitNotificationCount } from "../../services/SocketService.mjs";
 import admin from "../../utils/firebaseAdmin.mjs";
+import HourlyShootBooking from "../../models/HourlyShootBooking.mjs";
 
 const parseDDMMYYYY = (dateStr) => {
   if (!dateStr || dateStr instanceof Date) return dateStr;
@@ -1266,17 +1267,13 @@ class ServiceBookingController {
       const skip = (page - 1) * limit;
 
       const [items, total] = await Promise.all([
-        ServiceBooking.find({
-          hourlyPackages: { $exists: true, $not: { $size: 0 } }
-        })
-          .populate("client_id", "username")
-          .populate("photographer_id", "basicInfo.fullName")
+        HourlyShootBooking.find()
+          .populate("client_id", "username mobileNumber email")
+          .populate("photographer_id", "basicInfo.fullName professionalDetails")
           .sort({ createdAt: -1 })
           .skip(skip)
           .limit(limit),
-        ServiceBooking.countDocuments({
-          hourlyPackages: { $exists: true, $not: { $size: 0 } }
-        })
+        HourlyShootBooking.countDocuments()
       ]);
 
       const formattedBookings = items.map(booking => {
@@ -1288,32 +1285,26 @@ class ServiceBookingController {
         ].filter(Boolean);
 
         const eventAddress = addressParts.join(", ") + (booking.postalCode ? ` - ${booking.postalCode}` : "");
-        const eDate = booking.bookingDate ? new Date(booking.bookingDate).toISOString().split('T')[0] : (booking.eventDate || "N/A");
-        const eTime = booking.bookingDate ? new Date(booking.bookingDate).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true }) : "N/A";
+        const eDate = booking.date || "N/A";
+        const eTime = booking.time || "N/A";
 
         return {
           bookingId: booking.veroaBookingId || booking._id,
           clientName: booking.client_id?.username || "Unknown",
-          eventAddress: eventAddress || "N/A",
+          eventAddress: eventAddress || booking.address || "N/A",
           assignedPhotographer: booking.photographer_id?.basicInfo?.fullName || "",
           galleryUpload: booking.galleryStatus === "Photos Uploaded",
           galleryStatus: booking.galleryStatus || "pending",
           bookingStatus: booking.status || "pending",
-          hourlyPackages: (booking.hourlyPackages || []).map(pkg => {
-            const pkgPrice = parseFloat(pkg.price) || 0;
-            const servicesSum = (pkg.services || []).reduce((pSum, svc) => pSum + (parseFloat(svc.price) || 0), 0);
-            return {
-              ...pkg.toObject(),
-              eventDate: eDate,
-              eventTime: eTime,
-              subTotal: pkgPrice + servicesSum
-            };
-          }),
-          subTotal: (booking.hourlyPackages || []).reduce((sum, pkg) => {
-            const pkgPrice = parseFloat(pkg.price) || 0;
-            const servicesSum = (pkg.services || []).reduce((pSum, svc) => pSum + (parseFloat(svc.price) || 0), 0);
-            return sum + pkgPrice + servicesSum;
-          }, 0),
+          hourlyPackages: [{
+            hours: booking.hours,
+            price: booking.totalAmount,
+            eventDate: eDate,
+            eventTime: eTime,
+            services: [],
+            subTotal: booking.totalAmount || 0
+          }],
+          subTotal: booking.totalAmount || 0,
           totalAmount: booking.totalAmount || 0
         };
       });
@@ -1324,6 +1315,7 @@ class ServiceBookingController {
         meta: { total, page, limit }
       });
     } catch (error) {
+      console.error("Error in getHourlyBookings:", error);
       next(error);
     }
   }
