@@ -10,7 +10,6 @@ const editingPlanSchema = new mongoose.Schema({
     },
     planName: {
         type: String,
-        required: true,
         trim: true,
     },
     price: {
