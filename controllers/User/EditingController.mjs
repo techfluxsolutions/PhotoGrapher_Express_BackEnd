@@ -15,15 +15,14 @@ const findPlan = async (planId) => {
         throw error;
     }
 };
+import { s3Service } from "../../lib/s3Service.js";
+import DataLinks from "../../models/DataLinks.js";
+import ServiceBooking from "../../models/ServiceBookings.mjs";
+import mongoose from "mongoose";
 class EditingController {
     async getAll(req, res, next) {
         try {
-            const { planCategory } = req.query;
-            const filter = {};
-            if (planCategory) {
-                filter.planCategory = planCategory;
-            }
-            const editingPlans = await EditingPlan.find(filter);
+            const editingPlans = await EditingPlan.find();
             res.status(200).json({ success: true, data: editingPlans });
         } catch (error) {
             next(error);
@@ -48,6 +47,8 @@ class EditingController {
             next(error);
         }
     }
+
+
     async getOne(req, res, next) {
         try {
             const { id } = req.params;
@@ -230,6 +231,7 @@ class EditingController {
             res.status(500).json({ success: false, message: error.message });
         }
     }
+
     async getplanByPlanCategory(req, res) {
         try {
             const plansDetails = await EditingPlan.find({}).select('numberOfVideos price subtitle');
@@ -240,6 +242,143 @@ class EditingController {
             res.status(200).json({ success: true, message: "Editing plans fetched successfully", plansDetails });
         } catch (error) {
             res.status(500).json({ success: false, message: error.message });
+        }
+    }
+
+    async getEditingPlans(req, res) {
+        try {
+            const editingPlans = await EditingPlan.find();
+            res.status(200).json({ success: true, message: "Editing plans fetched successfully", editingPlans });
+        } catch (error) {
+            res.status(500).json({ success: false, message: error.message });
+        }
+    }
+
+    // --- Upload APIs for Editing (Raw Footage) ---
+
+    async startUpload(req, res) {
+        try {
+            const { fileName, fileType, relativePath, veroaBookingId, fileSize } = req.body;
+
+            if (!fileName || !fileType || !veroaBookingId) {
+                return res.status(400).json({ error: "fileName, fileType, and veroaBookingId are required." });
+            }
+
+            let key;
+            if (relativePath) {
+                key = `editing-raw/${veroaBookingId}/${relativePath}`;
+            } else {
+                key = `editing-raw/${veroaBookingId}/${Date.now()}-${fileName.replace(/\s+/g, "-")}`;
+            }
+
+            const STRATEGY_THRESHOLD = 100 * 1024 * 1024; // 100MB
+            const CHUNK_SIZE = 20 * 1024 * 1024; // 20MB parts
+
+            if (fileSize && fileSize < STRATEGY_THRESHOLD) {
+                const uploadUrl = await s3Service.getPresignedUrl(key, fileType);
+                return res.status(200).json({
+                    strategy: "single",
+                    uploadUrl,
+                    key
+                });
+            } else {
+                const { uploadId, key: s3Key } = await s3Service.startMultipartUpload(fileName, fileType, key);
+                return res.status(200).json({
+                    strategy: "multipart",
+                    uploadId,
+                    key: s3Key,
+                    chunkSize: CHUNK_SIZE
+                });
+            }
+        } catch (error) {
+            console.error("Editing startUpload error:", error);
+            res.status(500).json({ error: error.message });
+        }
+    }
+
+    async getPartUploadUrl(req, res) {
+        try {
+            const { key, uploadId, partNumber } = req.body;
+            if (!key || !uploadId || !partNumber) {
+                return res.status(400).json({ error: "key, uploadId, and partNumber are required." });
+            }
+            const uploadUrl = await s3Service.getPresignedUrlForPart(key, uploadId, parseInt(partNumber, 10));
+            res.status(200).json({ uploadUrl });
+        } catch (error) {
+            console.error("Editing getPartUploadUrl error:", error);
+            res.status(500).json({ error: error.message });
+        }
+    }
+
+    async uploadChunk(req, res) {
+        try {
+            const { key, uploadId, partNumber } = req.body;
+            const fileBuffer = req.file?.buffer;
+
+            if (!key || !uploadId || !partNumber || !fileBuffer) {
+                return res.status(400).json({ error: "Missing required fields" });
+            }
+
+            const partInfo = await s3Service.uploadChunk(key, uploadId, parseInt(partNumber, 10), fileBuffer);
+            res.status(200).json(partInfo);
+        } catch (error) {
+            console.error("Editing uploadChunk error:", error);
+            res.status(500).json({ error: error.message });
+        }
+    }
+
+    async completeUpload(req, res) {
+        try {
+            const { key, uploadId, parts, bookingid, veroaBookingId } = req.body;
+            const userId = req.user.id;
+
+            if (!key || !parts || !Array.isArray(parts)) {
+                return res.status(400).json({ error: "key and parts array are required." });
+            }
+
+            let fileUrl;
+            if (uploadId) {
+                fileUrl = await s3Service.completeMultipartUpload(key, uploadId, parts);
+            } else {
+                const baseUrl = process.env.SPACES_CDN_URL || process.env.AWS_PUBLIC_URL || "";
+                fileUrl = `${baseUrl}/${key}`;
+            }
+
+            // Extract folder path
+            const folderPath = key.substring(0, key.lastIndexOf("/"));
+
+            const savedDatalink = await DataLinks.create({
+                dataLink: fileUrl,
+                key: key,
+                folderPath, // Note: This should be added to DataLinks schema if not present
+                bookingid,
+                clientId: userId,
+                veroaBookingId
+            });
+
+            res.status(200).json({
+                message: "Upload complete successfully",
+                fileUrl,
+                key,
+                savedDatalink
+            });
+        } catch (error) {
+            console.error("Editing completeUpload error:", error);
+            res.status(500).json({ error: error.message });
+        }
+    }
+
+    async abortUpload(req, res) {
+        try {
+            const { key, uploadId } = req.body;
+            if (!key || !uploadId) {
+                return res.status(400).json({ error: "key and uploadId are required." });
+            }
+            await s3Service.abortMultipartUpload(key, uploadId);
+            res.status(200).json({ message: "Upload aborted and cleaned up." });
+        } catch (error) {
+            console.error("Editing abortUpload error:", error);
+            res.status(500).json({ error: error.message });
         }
     }
 }

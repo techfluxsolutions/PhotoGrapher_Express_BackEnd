@@ -21,6 +21,9 @@ const DataLinksSchema = new mongoose.Schema({
     key: {
         type: String,
         required: true
+    },
+    folderPath: {
+        type: String
     }
 }, { collection: 'datalinks' });
 
