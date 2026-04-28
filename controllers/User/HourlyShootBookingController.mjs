@@ -82,6 +82,7 @@ class HourlyShootBookingController {
     async createHourlyBooking(req, res) {
         try {
             const payload = req.body;
+            payload.client_id = payload.client_id || req.user.id;
 
             // Get next booking sequence atomically
             const counter = await Counter.findByIdAndUpdate(

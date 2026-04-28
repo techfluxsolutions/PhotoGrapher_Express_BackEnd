@@ -68,8 +68,30 @@ router.get("/services/:id", (req, res, next) => ServiceController.getById(req, r
 
 // testinomials unprotected route
 router.get("/getThreeRatings", (req, res, next) => ReviewAndRatingController.getThreeRatings(req, res, next));
+
+//editing plans
+router.get("/editing-plans", (req, res, next) => EditingController.getAll(req, res, next));
+router.get("/editing-plans/standard", (req, res, next) => EditingController.getStandardPlans(req, res, next));
+router.get("/editing-plans/premium", (req, res, next) => EditingController.getPremiumPlans(req, res, next));
+router.get("/editing-plans/:id", (req, res, next) => EditingController.getOne(req, res, next));
+router.get('/getplanBynumberOfVideos/:numberOfvideos', (req, res, next) => EditingController.getplanBynumberOfVideos(req, res, next));
+router.get('/getplanBynumberOfVideos', (req, res, next) => EditingController.getplanByPlanCategory(req, res, next));
+
+//photography plans
+router.get("/photography-plans", (req, res, next) => PhotographyController.getAll(req, res, next));
+router.get("/photography-plans/:id", (req, res, next) => PhotographyController.getOne(req, res, next));
+
 // Protected Routes
 router.use(authMiddleware);
+
+// cart Apis
+
+router.post("/cart/add", (req, res, next) => EditingController.addToCart(req, res, next));
+router.post("/cart/updateQuantity", (req, res, next) => EditingController.updateQuantity(req, res, next));
+router.get("/get-mycart", (req, res, next) => CartController.getMyCart(req, res, next));
+router.get("/cart/get-mycart", (req, res, next) => CartController.getMyCart(req, res, next));
+
+
 
 // --- User Profile ---
 router.get("/me", (req, res, next) => UserController.getById(req, res, next));
@@ -97,7 +119,7 @@ router.post('/cart/payment/create-order', (req, res, next) => PaymentController.
 router.post('/cart/payment/verify', (req, res, next) => PaymentController.verifyCartPayment(req, res, next));
 
 //create hourlyshoot
-router.post('/createhourlyshootBooking', (req, res, next) => HourlyShootBookingController.createHourlyBooking);
+router.post('/createhourlyshootBooking', (req, res, next) => HourlyShootBookingController.createHourlyBooking(req, res, next));
 
 // --- Quotes ---
 router.post("/quotes", (req, res, next) => QuoteController.create(req, res, next));
@@ -154,6 +176,9 @@ router.put("/servicebookings/:id", (req, res, next) => ServiceBookingController.
 router.get("/getpreviousbookings", (req, res, next) => ServiceBookingController.getPreviousBookings(req, res, next));
 router.put("/reschedule/:id", (req, res, next) => ServiceBookingController.reschedule(req, res, next));
 
+
+
+
 //Ticket Routes
 router.post("/raiseTicket", uploadTicketAttachment.single("attachment"), (req, res, next) => TicketController.create(req, res, next));
 router.get("/allTickets", (req, res, next) => TicketController.getAll(req, res, next));
@@ -189,26 +214,11 @@ router.post("/cart", (req, res, next) => CartController.addToCart(req, res, next
 router.get("/getcart", (req, res, next) => CartController.getMyCart(req, res, next));
 // Moving /cart/:id routes to the bottom of the file to prevent catching exact routes
 
-//editing plans
-router.get("/editing-plans", (req, res, next) => EditingController.getAll(req, res, next));
-router.get("/editing-plans/standard", (req, res, next) => EditingController.getStandardPlans(req, res, next));
-router.get("/editing-plans/premium", (req, res, next) => EditingController.getPremiumPlans(req, res, next));
-router.get("/editing-plans/:id", (req, res, next) => EditingController.getOne(req, res, next));
-router.get('/getplanBynumberOfVideos/:numberOfvideos', (req, res, next) => EditingController.getplanBynumberOfVideos(req, res, next));
-router.get('/getplanBynumberOfVideos', (req, res, next) => EditingController.getplanByPlanCategory(req, res, next));
-//photography plans
-router.get("/photography-plans", (req, res, next) => PhotographyController.getAll(req, res, next));
-router.get("/photography-plans/:id", (req, res, next) => PhotographyController.getOne(req, res, next));
 
 
-// cart Apis
 
-router.post("/cart/add", (req, res, next) => EditingController.addToCart(req, res, next));
-router.get("/cart/mycart", (req, res, next) => EditingController.getMyCart(req, res, next));
-router.post("/cart/updateQuantity", (req, res, next) => EditingController.updateQuantity(req, res, next));
-router.get("/get-mycart", (req, res, next) => CartController.getMyCart(req, res, next));
 
-// Generic cart routes (MUST BE DECLARED AFTER ALL OTHER /cart/ ROUTES)
+// Generic cart routes (MUST BE DECLARED AFTER ALL OTHER /cart/ROUTES)
 router.get("/cart/:id", (req, res, next) => CartController.getOne(req, res, next));
 router.put("/cart/:id", (req, res, next) => CartController.update(req, res, next));
 router.delete("/cart/:id", (req, res, next) => CartController.delete(req, res, next));
@@ -217,7 +227,7 @@ router.get("/team-shoots/standard", (req, res, next) => { req.params.type = "sta
 router.get("/team-shoots/premium", (req, res, next) => { req.params.type = "premium"; return TeamShootController.getPlans(req, res, next); });
 router.get("/team-shoots/:type", (req, res, next) => TeamShootController.getPlans(req, res, next));
 router.post("/cart/team-shoots", (req, res, next) => TeamShootController.addTeamToCart(req, res, next));
-router.post("/cart/update-quantity", (req, res, next) => CartController.updateItemQuantity(req, res, next));
+router.post("/cart/update-quantity", (req, res, next) => EditingController.updateQuantity(req, res, next));
 
 // validate coupon 
 

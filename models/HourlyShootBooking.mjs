@@ -135,6 +135,26 @@ const hourlyShootBookingSchema = new mongoose.Schema(
       enum: ["online", "COD"],
       default: "COD",
     },
+    cartId: {
+      type: mongoose.Types.ObjectId,
+      ref: "Cart"
+    },
+    couponApplied: {
+      type: Boolean,
+      default: false
+    },
+    couponId: {
+      type: mongoose.Types.ObjectId,
+      ref: "Coupon"
+    },
+    discountAmount: {
+      type: Number,
+      default: 0
+    },
+    finalAmount: {
+      type: Number,
+      default: 0
+    }
   },
   { timestamps: true }
 );

@@ -1,5 +1,20 @@
 import EditingPlan from "../../models/EditingPlan.mjs";
 import Cart from "../../models/Cart.mjs";
+import TeamShootPlan from "../../models/TeamShootPlan.mjs"
+
+const findPlan = async (planId) => {
+    try {
+        let plan;
+        plan = await EditingPlan.findById(planId);
+        if (!plan) {
+            plan = await TeamShootPlan.findById(planId);
+        }
+        return plan; // Returns null if not found
+    } catch (error) {
+        console.error("Error fetching plan:", error);
+        throw error;
+    }
+};
 class EditingController {
     async getAll(req, res, next) {
         try {
@@ -14,6 +29,7 @@ class EditingController {
             next(error);
         }
     }
+
 
     async getStandardPlans(req, res, next) {
         try {
@@ -46,69 +62,51 @@ class EditingController {
     async updateQuantity(req, res) {
         try {
             const userId = req.user.id;
+            const { action, itemId } = req.body;
 
-            let { editingPlanId, planName, action } = req.body;
-
-            // ✅ validate action
             if (!["increase", "decrease"].includes(action)) {
                 return res.status(400).json({
                     success: false,
-                    message: "Invalid action",
+                    message: "Invalid action. Use 'increase' or 'decrease'.",
                 });
             }
 
-            // ✅ Get plan name if only ID provided
-            if (editingPlanId && !planName) {
-                const plan = await EditingPlan.findById(editingPlanId);
-
-                if (!plan) {
-                    return res.status(404).json({
-                        success: false,
-                        message: "Editing plan not found",
-                    });
-                }
-
-                planName = plan.planName;
-            }
-
-            // ✅ Find Active Cart
             const cart = await Cart.findOne({
-                userId: userId,
+                userId,
                 status: "active",
             });
 
             if (!cart) {
                 return res.status(404).json({
                     success: false,
-                    message: "Cart not found",
+                    message: "Active cart not found",
                 });
             }
 
-            // ✅ Find Item Index
-            const itemIndex = cart.items.findIndex(
-                (i) => (editingPlanId ? i.planId?.toString() === editingPlanId : i.name === planName) && i.category === "editing"
+            // ✅ Find Item
+            let itemindex = cart.items.findIndex(
+                (i) =>
+                    i._id.toString() === itemId ||
+                    i.planId.toString() === itemId
             );
 
-            if (itemIndex === -1) {
+            if (itemindex === -1) {
                 return res.status(404).json({
                     success: false,
                     message: "Item not found in cart",
                 });
             }
 
-            const item = cart.items[itemIndex];
+            const item = cart.items[itemindex];
 
-            // 🔥 MAIN LOGIC
+            // ✅ Update quantity
             if (action === "increase") {
                 item.quantity += 1;
-            }
-
-            if (action === "decrease") {
+            } else {
                 if (item.quantity > 1) {
                     item.quantity -= 1;
                 } else {
-                    // remove item
-                    cart.items.splice(itemIndex, 1);
+                    cart.items.splice(itemindex, 1);
                 }
             }
 
@@ -126,17 +124,17 @@ class EditingController {
                     action === "increase"
                         ? "Quantity increased"
                         : "Quantity decreased",
-                cart,
+                data: cart,
             });
         } catch (error) {
-            console.error(error);
-
+            console.error("Update Quantity Error:", error);
             res.status(500).json({
                 success: false,
-                message: "Server error",
+                message: "Server error during quantity update",
             });
         }
     }
+
     async addToCart(req, res) {
         try {
             const userId = req.user.id;
@@ -191,7 +189,7 @@ class EditingController {
             res.status(200).json({
                 success: true,
                 message: "Editing plan added to cart",
-                cart,
+                data: cart,
             });
         } catch (error) {
             console.error("Add to cart error:", error);
@@ -210,7 +208,7 @@ class EditingController {
 
             res.status(200).json({
                 success: true,
-                cart: cart || { items: [], totalAmount: 0 },
+                data: cart || { items: [], totalAmount: 0 },
             });
         } catch (error) {
             console.error("Get cart error:", error);
@@ -234,10 +232,10 @@ class EditingController {
     }
     async getplanByPlanCategory(req, res) {
         try {
-            const plansDetails = await EditingPlan.find({ planCategory: "standard" }).select('numberOfVideos price subtitle');
+            const plansDetails = await EditingPlan.find({}).select('numberOfVideos price subtitle');
 
-            if (!plansDetails) {
-                res.status(200).json({ success: true, message: "No plan found please contact admin", plansDetails: [] });
+            if (!plansDetails || plansDetails.length === 0) {
+                return res.status(200).json({ success: true, message: "No plan found please contact admin", plansDetails: [] });
             }
             res.status(200).json({ success: true, message: "Editing plans fetched successfully", plansDetails });
         } catch (error) {
