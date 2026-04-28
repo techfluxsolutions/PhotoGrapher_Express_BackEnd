@@ -183,7 +183,12 @@ class CartController {
             cart.totalAmount = cart.items.reduce((total, item) => total + (item.price * item.quantity), 0);
             await cart.save();
 
-            res.status(200).json({ success: true, data: cart });
+            await cart.populate({
+                path: "userId",
+                select: "username mobileNumber"
+            });
+
+            res.status(200).json({ success: true, data: cart, message: `Quantity ${action}d` });
         } catch (error) {
             next(error);
         }
