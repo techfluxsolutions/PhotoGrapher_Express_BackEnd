@@ -7,6 +7,10 @@ import { sendBookingSMS, sendMessageCentral, retryMessageCentral } from "../../u
 import mongoose from "mongoose";
 import Message from "../../models/Message.mjs";
 import Counter from "../../models/Counter.mjs";
+import Notification from "../../models/Notification.mjs";
+import { emitNotificationCount } from "../../services/SocketService.mjs";
+import admin from "../../utils/firebaseAdmin.mjs";
+import HourlyShootBooking from "../../models/HourlyShootBooking.mjs";
 
 const parseDDMMYYYY = (dateStr) => {
   if (!dateStr || dateStr instanceof Date) return dateStr;
@@ -109,7 +113,7 @@ class ServiceBookingController {
           .skip(skip)
           .limit(limit)
           .sort({ createdAt: -1 })
-          .populate("service_id client_id photographer_id"),
+          .populate("service_id client_id photographer_id quoteId"),
         ServiceBooking.countDocuments(filter),
       ]);
 
@@ -135,6 +139,7 @@ class ServiceBookingController {
           lng: booking.lng || null,
           address: displayAddress,
           note: booking.notes || "",
+          requirements: booking.notes || (booking.quoteId?.requirements?.length > 0 ? booking.quoteId.requirements.join(", ") : booking.quoteId?.photographyRequirements) || "No requirements",
           status: booking.status,
           date: dateVal,
           time: t || "N/A",
@@ -257,7 +262,7 @@ class ServiceBookingController {
         const fs = sDate.toISOString().split("T")[0];
         const ts = eDate.toISOString().split("T")[0];
 
-        // 📅 RANGE SEARCH for UPCOMING: BOTH start and end must be within [fs, ts] AND be today or future
+        // 📅 RANGE SEARCH for UPCOMING: BOTH start and end must be within [fs, ts] AND be today or future AND PAID
         filter.$and = [
           // Must be today or future
           {
@@ -267,6 +272,8 @@ class ServiceBookingController {
               { $and: [{ endDate: { $in: [null, ""] } }, { startDate: { $in: [null, ""] } }, { bookingDate: { $gte: today } }] }
             ]
           },
+          // Must not be pending payment
+          { paymentStatus: { $ne: "pending" } },
           // BOTH start and end must be within the date range [fs, ts]
           {
             $or: [
@@ -299,37 +306,42 @@ class ServiceBookingController {
           }
         ];
       } else {
-        // 📅 DEFAULT VIEW: Upcoming/Active
-        filter.$or = [
-          // Case 1: Has endDate (string) - must be >= today
-          { 
-            $and: [
-              { endDate: { $exists: true, $ne: null, $ne: "" } },
-              { endDate: { $gte: todayStr } }
+        // 📅 DEFAULT VIEW: Upcoming/Active AND PAID
+        filter.$and = [
+          {
+            $or: [
+              // Case 1: Has endDate (string) - must be >= today
+              { 
+                $and: [
+                  { endDate: { $exists: true, $ne: null, $ne: "" } },
+                  { endDate: { $gte: todayStr } }
+                ]
+              },
+              // Case 2: No endDate but has startDate (string) - must be >= today
+              { 
+                $and: [
+                  { $or: [{ endDate: { $exists: false } }, { endDate: null }, { endDate: "" }] },
+                  { startDate: { $exists: true, $ne: null, $ne: "" } },
+                  { startDate: { $gte: todayStr } }
+                ]
+              },
+              // Case 3: No endDate/startDate, use bookingDate (Date) - must be >= today
+              { 
+                $and: [
+                  { $or: [{ endDate: { $exists: false } }, { endDate: null }, { endDate: "" }] },
+                  { $or: [{ startDate: { $exists: false } }, { startDate: null }, { startDate: "" }] },
+                  { bookingDate: { $exists: true } },
+                  { bookingDate: { $gte: today } }
+                ]
+              }
             ]
           },
-          // Case 2: No endDate but has startDate (string) - must be >= today
-          { 
-            $and: [
-              { $or: [{ endDate: { $exists: false } }, { endDate: null }, { endDate: "" }] },
-              { startDate: { $exists: true, $ne: null, $ne: "" } },
-              { startDate: { $gte: todayStr } }
-            ]
-          },
-          // Case 3: No endDate/startDate, use bookingDate (Date) - must be >= today
-          { 
-            $and: [
-              { $or: [{ endDate: { $exists: false } }, { endDate: null }, { endDate: "" }] },
-              { $or: [{ startDate: { $exists: false } }, { startDate: null }, { startDate: "" }] },
-              { bookingDate: { $exists: true } },
-              { bookingDate: { $gte: today } }
-            ]
-          }
+          { paymentStatus: { $ne: "pending" } }
         ];
       }
 
       const [items, total] = await Promise.all([
-        ServiceBooking.find(filter).skip(skip).limit(limit).sort({ createdAt: -1 }).populate("service_id client_id photographer_id"),
+        ServiceBooking.find(filter).skip(skip).limit(limit).sort({ createdAt: -1 }).populate("service_id client_id photographer_id quoteId"),
         ServiceBooking.countDocuments(filter),
       ]);
 
@@ -355,6 +367,7 @@ class ServiceBookingController {
           lng: booking.lng || null,
           address: displayAddress,
           note: booking.notes || "",
+          requirements: booking.notes || (booking.quoteId?.requirements?.length > 0 ? booking.quoteId.requirements.join(", ") : booking.quoteId?.photographyRequirements) || "No requirements",
           status: booking.status,
           date: dateVal,
           time: t || "N/A",
@@ -481,7 +494,7 @@ class ServiceBookingController {
       }
 
       const [items, total] = await Promise.all([
-        ServiceBooking.find(filter).skip(skip).limit(limit).sort({ createdAt: -1 }).populate("service_id client_id photographer_id"),
+        ServiceBooking.find(filter).skip(skip).limit(limit).sort({ createdAt: -1 }).populate("service_id client_id photographer_id quoteId"),
         ServiceBooking.countDocuments(filter),
       ]);
 
@@ -507,6 +520,7 @@ class ServiceBookingController {
           lng: booking.lng || null,
           address: displayAddress,
           note: booking.notes || "",
+          requirements: booking.notes || (booking.quoteId?.requirements?.length > 0 ? booking.quoteId.requirements.join(", ") : booking.quoteId?.photographyRequirements) || "No requirements",
           status: booking.status,
           date: dateVal,
           time: t || "N/A",
@@ -537,7 +551,7 @@ class ServiceBookingController {
       const { id } = req.params;
 
       const booking = await ServiceBooking.findById(id)
-        .populate("service_id client_id photographer_id");
+        .populate("service_id client_id photographer_id quoteId");
 
       if (!booking) {
         return res.status(404).json({
@@ -601,7 +615,11 @@ class ServiceBookingController {
           payload.bookingStatus = "rejected";
           payload.photographerIds = [];
           payload.bookingOtp = null;
+          payload.cancelledBy = "admin";
       }
+
+      // 📸 Snapshot the old booking BEFORE update (so we can detect changes)
+      const oldBooking = await ServiceBooking.findById(id).lean();
 
       const booking = await ServiceBooking.findByIdAndUpdate(id, payload, {
         new: true,
@@ -614,6 +632,47 @@ class ServiceBookingController {
           message: "ServiceBooking not found"
         });
       }
+
+      // ─── Notify photographer on status change (non-blocking) ──────────────
+      if (oldBooking) {
+        const assignedPhotographerId = oldBooking.photographer_id; // before cancel clears it
+        const photographerIdToNotify = assignedPhotographerId || booking.photographer_id?._id;
+
+        const statusChanged      = payload.status        && oldBooking.status        !== payload.status;
+        const bookingStatusChanged = payload.bookingStatus && oldBooking.bookingStatus !== payload.bookingStatus;
+
+        if (photographerIdToNotify && (statusChanged || bookingStatusChanged)) {
+          const bookingRef = booking.veroaBookingId || booking._id.toString();
+          const eventName  = booking.service_id?.serviceName || "your booking";
+
+          // Human-readable messages per status (Short & Professional)
+          const STATUS_MESSAGES = {
+            confirmed  : `Confirmed: ${bookingRef} (${eventName})`,
+            completed  : `Completed: ${bookingRef} (${eventName})`,
+            canceled   : `Canceled: ${bookingRef} (${eventName})`,
+            pending    : `Pending: ${bookingRef} (${eventName})`,
+          };
+          const BOOKING_STATUS_MESSAGES = {
+            accepted   : `Assignment Active: ${bookingRef}`,
+            rejected   : `Assignment Rejected: ${bookingRef}`,
+            pending    : `Action Required: Confirm ${bookingRef}`,
+          };
+
+          const message =
+            (statusChanged      && STATUS_MESSAGES[payload.status])         ||
+            (bookingStatusChanged && BOOKING_STATUS_MESSAGES[payload.bookingStatus]) ||
+            `The status of booking ${bookingRef} (${eventName}) has been updated by the admin.`;
+
+          Notification.create({
+            photographer_id     : new mongoose.Types.ObjectId(photographerIdToNotify.toString()),
+            notification_type   : "booking_status_update",
+            notification_message: message,
+          }).then(() => {
+            emitNotificationCount(photographerIdToNotify.toString());
+          }).catch((err) => console.error("[Notification] booking_status_update error:", err.message));
+        }
+      }
+      // ─────────────────────────────────────────────────────────────────────
 
       return res.json({
         success: true,
@@ -639,7 +698,9 @@ class ServiceBookingController {
           bookingStatus: "rejected", // Mark as rejected/canceled for the photographer
           photographer_id: null,      // Clear assignment
           photographerIds: [],        // Clear any pending invitations
-          bookingOtp: null            // Clear OTP
+          bookingOtp: null,           // Clear OTP
+          cancelledBy: "admin",
+          cancelReason: req.body?.cancelReason || req.body?.cancellationReason || "Canceled by admin"
         },
         { new: true }
       );
@@ -817,7 +878,7 @@ class ServiceBookingController {
         finalBookingId,
         updateData,
         { new: true }
-      ).populate("photographer_id");
+      ).populate("service_id photographer_id");
 
       if (!booking) {
         return res.status(404).json({
@@ -825,6 +886,124 @@ class ServiceBookingController {
           message: "Booking not found"
         });
       }
+
+      // ─── Send Notifications (non-blocking) ────────────────────────────────
+      const bookingRef = booking.veroaBookingId || booking._id.toString();
+      const eventName  = booking.service_id?.serviceName || "your booking";
+
+      // Case 1: Direct assignment — notify the single assigned photographer
+      if (finalPhotographerId) {
+        (async () => {
+          try {
+            await Notification.create({
+              photographer_id : new mongoose.Types.ObjectId(finalPhotographerId),
+              notification_type   : "booking_assigned",
+              notification_message: `New booking ${bookingRef} (${eventName}) has been assigned to you.`,
+              booking_id: booking._id,
+              screen: "BookingScreen"
+            });
+            emitNotificationCount(finalPhotographerId.toString());
+
+            // Send FCM
+            const photographer = await Photographer.findById(finalPhotographerId).select("fcmToken basicInfo.fullName pushNotification");
+            if (photographer?.fcmToken && photographer.pushNotification !== false) {
+              console.log(`[FCM] Sending notification to ${photographer.basicInfo?.fullName} (Token: ${photographer.fcmToken.substring(0, 10)}...)`);
+              const message = {
+                notification: {
+                  title: "New Booking Assigned!",
+                  body: `You have been assigned to booking ${bookingRef} (${eventName}).`,
+                },
+                token: photographer.fcmToken,
+                data: { 
+                  bookingId: booking._id.toString(), 
+                  type: "booking_assigned",
+                  screen: "BookingScreen"
+                },
+                android: {
+                  priority: "high",
+                  notification: { channelId: "veroa_updates" }
+                },
+                apns: {
+                  payload: {
+                    aps: {
+                      sound: "default",
+                      badge: 1,
+                      "mutable-content": 1,
+                      "content-available": 1
+                    }
+                  }
+                }
+              };
+              const response = await admin.messaging().send(message);
+              console.log("[FCM] Direct assignment sent successfully:", response);
+            } else {
+              console.log(`[FCM] No token found for photographer ${photographer?.basicInfo?.fullName || finalPhotographerId}`);
+            }
+          } catch (err) {
+            console.error("[Notification] Direct assignment FCM error:", err.message);
+          }
+        })();
+      }
+
+      // Case 2: Broadcast invite — notify every invited photographer
+      if (photographerIds !== undefined && photographerIds.length > 0) {
+        (async () => {
+          try {
+            const inviteNotifications = photographerIds.map((pid) => ({
+              photographer_id : new mongoose.Types.ObjectId(pid),
+              notification_type   : "booking_invite",
+              notification_message: `New booking ${bookingRef} (${eventName}) has been invited to you.`,
+              booking_id: booking._id,
+              screen: "BookingScreen"
+            }));
+
+            await Notification.insertMany(inviteNotifications);
+            photographerIds.forEach(pid => emitNotificationCount(pid.toString()));
+
+            // Send FCM to all in broadcast
+            const photographers = await Photographer.find({ _id: { $in: photographerIds } }).select("fcmToken basicInfo.fullName pushNotification");
+            const messages = photographers
+              .filter(p => p.fcmToken && p.pushNotification !== false)
+              .map(p => ({
+                notification: {
+                  title: "New Booking Invitation!",
+                  body: `You have an invitation for booking ${bookingRef} (${eventName}).`,
+                },
+                token: p.fcmToken,
+                data: { 
+                  bookingId: booking._id.toString(), 
+                  type: "booking_invite",
+                  screen: "BookingScreen"
+                },
+                android: {
+                  priority: "high",
+                  notification: { channelId: "veroa_updates" }
+                },
+                apns: {
+                  payload: {
+                    aps: {
+                      sound: "default",
+                      badge: 1,
+                      "mutable-content": 1,
+                      "content-available": 1
+                    }
+                  }
+                }
+              }));
+
+            if (messages.length > 0) {
+              console.log(`[FCM] Sending broadcast to ${messages.length} photographers`);
+              const response = await admin.messaging().sendEach(messages);
+              console.log("[FCM] Broadcast sent successfully:", response.successCount, "successes,", response.failureCount, "failures");
+            } else {
+              console.log("[FCM] No tokens found for any invited photographers");
+            }
+          } catch (err) {
+            console.error("[Notification] Broadcast FCM error:", err.message);
+          }
+        })();
+      }
+      // ─────────────────────────────────────────────────────────────────────
 
       return res.json({
         success: true,
@@ -1022,6 +1201,7 @@ class ServiceBookingController {
                 ]
               },
               "bookingAmount": "$totalAmount",
+              "totalAmount": "$totalAmount",
               "photographerAmount": { $ifNull: ["$photographerAmount", 0] },
               "paymentMode": "$paymentMode",
               "bookingStatus": "$status",
@@ -1076,6 +1256,143 @@ class ServiceBookingController {
       });
     } catch (err) {
       return next(err);
+    }
+  }
+
+  /**
+   * Get all hourly bookings
+   * GET /api/admins/hourly-bookings
+   */
+  async getHourlyBookings(req, res, next) {
+    try {
+      const page = Math.max(1, parseInt(req.query.page) || 1);
+      const limit = Math.max(1, parseInt(req.query.limit) || 20);
+      const skip = (page - 1) * limit;
+
+      const [items, total] = await Promise.all([
+        HourlyShootBooking.find()
+          .populate("client_id", "username mobileNumber email")
+          .populate("photographer_id", "basicInfo.fullName professionalDetails")
+          .sort({ createdAt: -1 })
+          .skip(skip)
+          .limit(limit),
+        HourlyShootBooking.countDocuments()
+      ]);
+
+      const formattedBookings = items.map(booking => {
+        const addressParts = [
+          booking.flatOrHouseNo,
+          booking.streetName,
+          booking.city,
+          booking.state
+        ].filter(Boolean);
+
+        const eventAddress = addressParts.join(", ") + (booking.postalCode ? ` - ${booking.postalCode}` : "");
+        const eDate = booking.date || "N/A";
+        const eTime = booking.time || "N/A";
+
+        return {
+          bookingId: booking.veroaBookingId || booking._id,
+          clientName: booking.client_id?.username || "Unknown",
+          eventAddress: eventAddress || booking.address || "N/A",
+          assignedPhotographer: booking.photographer_id?.basicInfo?.fullName || "",
+          galleryUpload: booking.galleryStatus === "Photos Uploaded",
+          galleryStatus: booking.galleryStatus || "pending",
+          bookingStatus: booking.status || "pending",
+          hourlyPackages: [{
+            hours: booking.hours,
+            price: booking.totalAmount,
+            eventDate: eDate,
+            eventTime: eTime,
+            services: [],
+            subTotal: booking.totalAmount || 0
+          }],
+          subTotal: booking.totalAmount || 0,
+          totalAmount: booking.totalAmount || 0
+        };
+      });
+
+      return res.status(200).json({
+        success: true,
+        data: formattedBookings,
+        meta: { total, page, limit }
+      });
+    } catch (error) {
+      console.error("Error in getHourlyBookings:", error);
+      next(error);
+    }
+  }
+
+  /**
+   * Get all editing bookings
+   * GET /api/admins/editing-bookings
+   */
+  async getEditingBookings(req, res, next) {
+    try {
+      const page = Math.max(1, parseInt(req.query.page) || 1);
+      const limit = Math.max(1, parseInt(req.query.limit) || 20);
+      const skip = (page - 1) * limit;
+
+      const [items, total] = await Promise.all([
+        ServiceBooking.find({
+          editingPackages: { $exists: true, $not: { $size: 0 } }
+        })
+          .populate("client_id", "username")
+          .populate("photographer_id", "basicInfo.fullName")
+          .sort({ createdAt: -1 })
+          .skip(skip)
+          .limit(limit),
+        ServiceBooking.countDocuments({
+          editingPackages: { $exists: true, $not: { $size: 0 } }
+        })
+      ]);
+
+      const formattedBookings = items.map(booking => {
+        const addressParts = [
+          booking.flatOrHouseNo,
+          booking.streetName,
+          booking.city,
+          booking.state
+        ].filter(Boolean);
+
+        const eventAddress = addressParts.join(", ") + (booking.postalCode ? ` - ${booking.postalCode}` : "");
+        const eDate = booking.bookingDate ? new Date(booking.bookingDate).toISOString().split('T')[0] : (booking.eventDate || "N/A");
+        const eTime = booking.bookingDate ? new Date(booking.bookingDate).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true }) : "N/A";
+
+        return {
+          bookingId: booking.veroaBookingId || booking._id,
+          clientName: booking.client_id?.username || "Unknown",
+          eventAddress: eventAddress || "N/A",
+          assignedPhotographer: booking.photographer_id?.basicInfo?.fullName || "",
+          galleryUpload: booking.galleryStatus === "Photos Uploaded",
+          galleryStatus: booking.galleryStatus || "pending",
+          bookingStatus: booking.status || "pending",
+          editingPackages: (booking.editingPackages || []).map(pkg => {
+            const pkgPrice = parseFloat(pkg.price) || 0;
+            const servicesSum = (pkg.services || []).reduce((pSum, svc) => pSum + (parseFloat(svc.price) || 0), 0);
+            return {
+              ...pkg.toObject(),
+              eventDate: eDate,
+              eventTime: eTime,
+              subTotal: pkgPrice + servicesSum
+            };
+          }),
+          subTotal: (booking.editingPackages || []).reduce((sum, pkg) => {
+            const pkgPrice = parseFloat(pkg.price) || 0;
+            const servicesSum = (pkg.services || []).reduce((pSum, svc) => pSum + (parseFloat(svc.price) || 0), 0);
+            return sum + pkgPrice + servicesSum;
+          }, 0),
+          totalAmount: booking.totalAmount || 0
+        };
+      });
+
+      return res.status(200).json({
+        success: true,
+        data: formattedBookings,
+        meta: { total, page, limit }
+      });
+    } catch (error) {
+      next(error);
     }
   }
 }

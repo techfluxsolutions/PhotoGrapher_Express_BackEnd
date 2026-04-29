@@ -1,6 +1,8 @@
 import Notification from "../../models/Notification.mjs";
 import { sendSuccessResponse, sendErrorResponse } from "../../utils/handleResponce.mjs";
 import mongoose from "mongoose";
+import admin from "../../utils/firebaseAdmin.mjs";
+import { emitNotificationCount } from "../../services/SocketService.mjs";
 
 class NotificationController {
     // Get notifications for the authenticated photographer
@@ -12,12 +14,31 @@ class NotificationController {
                 return sendErrorResponse(res, "Unauthorized", 401);
             }
 
+            // Pagination parameters
+            const page = Math.max(1, parseInt(req.query.page) || 1);
+            const limit = Math.max(1, parseInt(req.query.limit) || 20);
+            const skip = (page - 1) * limit;
+
             // Fetch real notifications from DB (if any)
             let realNotifications = [];
+            let total = 0;
+
             if (photographer_id) {
-                realNotifications = await Notification.find({ photographer_id: new mongoose.Types.ObjectId(photographer_id) })
-                    .sort({ createdAt: -1 })
-                    .limit(20);
+                const query = {
+                    $or: [
+                        { photographer_id: new mongoose.Types.ObjectId(photographer_id) },
+                        { user_id: new mongoose.Types.ObjectId(photographer_id) },
+                        { admin_id: new mongoose.Types.ObjectId(photographer_id) }
+                    ]
+                };
+
+                [realNotifications, total] = await Promise.all([
+                    Notification.find(query)
+                        .sort({ createdAt: -1 })
+                        .skip(skip)
+                        .limit(limit),
+                    Notification.countDocuments(query)
+                ]);
             }
 
             const demoNotifications = []; // Removed confusing demo data
@@ -60,12 +81,25 @@ class NotificationController {
             };
 
             // Combine real data with demo data (real data first)
+            const EVENT_LABELS = {
+                booking_assigned      : "Booking Assigned",
+                booking_invite        : "Booking Invitation",
+                booking_status_update : "Booking Status Update",
+                job_update            : "Job Update",
+                payment               : "Payment",
+                review                : "Review",
+                system                : "System",
+                reminder              : "Reminder",
+            };
+
             const formattedReal = realNotifications.map(n => {
                 const ist = formatIST(n.createdAt);
                 return {
                     _id: n._id,
-                    event: n.notification_type.replace("_", " ").toUpperCase(),
+                    event: EVENT_LABELS[n.notification_type] || n.notification_type.replace(/_/g, " ").toUpperCase(),
                     message: n.notification_message,
+                    booking_id: n.booking_id,
+                    screen: n.screen,
                     date: ist.date,
                     time: ist.time,
                     timeAgo: getTimeAgo(n.createdAt),
@@ -91,10 +125,25 @@ class NotificationController {
 
 
 
+            // Get real total unread count from DB (not just from the fetched page)
+            const totalUnreadCount = await Notification.countDocuments({
+                $or: [
+                    { photographer_id: new mongoose.Types.ObjectId(photographer_id) },
+                    { user_id: new mongoose.Types.ObjectId(photographer_id) },
+                    { admin_id: new mongoose.Types.ObjectId(photographer_id) }
+                ],
+                read_status: false
+            });
+
             return sendSuccessResponse(res, {
                 notifications: allNotifications,
-                count: allNotifications.length,
-                unreadCount: allNotifications.filter(n => !n.read_status).length
+                unreadCount: totalUnreadCount,
+                meta: {
+                    total,
+                    page,
+                    limit,
+                    totalPages: Math.ceil(total / limit)
+                }
             }, "Notifications fetched successfully");
 
         } catch (error) {
@@ -102,7 +151,7 @@ class NotificationController {
         }
     }
 
-    // Mark notification as read
+    // Mark notification as read...
     async markAsRead(req, res) {
         try {
             const { id } = req.params;
@@ -111,7 +160,14 @@ class NotificationController {
             }
 
             const notification = await Notification.findOneAndUpdate(
-                { _id: id, photographer_id: req.user?.id },
+                { 
+                    _id: id, 
+                    $or: [
+                        { photographer_id: req.user?.id },
+                        { user_id: req.user?.id },
+                        { admin_id: req.user?.id }
+                    ]
+                },
                 { read_status: true },
                 { new: true }
             );
@@ -119,11 +175,105 @@ class NotificationController {
                 return sendErrorResponse(res, { message: "Notification not found" }, 404);
             }
 
+            // Real-time Update via Socket
+            emitNotificationCount(req.user?.id);
+
             return sendSuccessResponse(res, notification, "Notification marked as read");
         } catch (error) {
             return sendErrorResponse(res, error, 500);
         }
     }
+
+    // Send a test notification using an FCM token
+    async sendTestNotification(req, res) {
+        try {
+            const { fcmToken, title, body, data } = req.body;
+
+            if (!fcmToken) {
+                return sendErrorResponse(res, "FCM Token is required", 400);
+            }
+
+            const message = {
+                notification: {
+                    title: title || "Test Notification",
+                    body: body || "This is a test notification from PhotoGrapher Express",
+                },
+                data: data || {},
+                token: fcmToken,
+            };
+
+            const response = await admin.messaging().send(message);
+            return sendSuccessResponse(res, { messageId: response }, "Test notification sent successfully");
+        } catch (error) {
+            console.error("FCM Test Error:", error);
+            return sendErrorResponse(res, error, 500);
+        }
+    }
+
+    // Get unread notification count
+    async getUnreadCount(req, res) {
+        try {
+            const photographer_id = req.user?.id;
+
+            if (!photographer_id) {
+                return sendErrorResponse(res, "Unauthorized", 401);
+            }
+
+            const unreadCount = await Notification.countDocuments({
+                $or: [
+                    { photographer_id: new mongoose.Types.ObjectId(photographer_id) },
+                    { user_id: new mongoose.Types.ObjectId(photographer_id) },
+                    { admin_id: new mongoose.Types.ObjectId(photographer_id) }
+                ],
+                read_status: false
+            });
+
+            return sendSuccessResponse(res, { unreadCount }, "Unread notification count fetched successfully");
+        } catch (error) {
+            return sendErrorResponse(res, error, 500);
+        }
+    }
+  // Delete single notification
+  async deleteNotification(req, res) {
+    try {
+      const photographerId = req.user?.id || req.user?._id;
+      const { id } = req.params;
+
+      const notification = await Notification.findOneAndDelete({
+        _id: id,
+        photographer_id: photographerId
+      });
+
+      if (!notification) {
+        return res.status(404).json({ success: false, message: "Notification not found or access denied" });
+      }
+
+      // Sync unread count
+      emitNotificationCount(photographerId.toString());
+
+      res.status(200).json({ success: true, message: "Notification deleted successfully" });
+    } catch (error) {
+      console.error("Delete Notification Error:", error);
+      res.status(500).json({ success: false, message: "Failed to delete notification" });
+    }
+  }
+
+  // Delete all notifications for the photographer
+  async deleteAllNotifications(req, res) {
+    try {
+      const photographerId = req.user?.id || req.user?._id;
+
+      await Notification.deleteMany({ photographer_id: photographerId });
+
+      // Sync unread count
+      emitNotificationCount(photographerId.toString());
+
+      res.status(200).json({ success: true, message: "All notifications deleted successfully" });
+    } catch (error) {
+      console.error("Delete All Notifications Error:", error);
+      res.status(500).json({ success: false, message: "Failed to clear notifications" });
+    }
+  }
 }
 
 export default new NotificationController();

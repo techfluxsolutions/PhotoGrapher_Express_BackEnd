@@ -109,10 +109,16 @@ class CloudPlanController {
                 return res.status(400).json({ success: false, message: "Invalid payment signature" });
             }
 
-            // cloudPlanId in the request now refers to the CloudPayment record ID
-            const paymentRecord = await CloudPayment.findById(cloudPlanId).populate("cloud_plan_id");
+            // cloudPlanId in the request refers to the CloudPayment record ID.
+            // We'll also try to find by razorpay_order_id as a fallback for robustness.
+            let paymentRecord = await CloudPayment.findById(cloudPlanId).populate("cloud_plan_id");
+            
+            if (!paymentRecord && razorpay_order_id) {
+                paymentRecord = await CloudPayment.findOne({ razorpay_order_id }).populate("cloud_plan_id");
+            }
+
             if (!paymentRecord) {
-                return res.status(404).json({ success: false, message: `Cloud Payment record not found for ID: ${cloudPlanId}` });
+                return res.status(404).json({ success: false, message: `Cloud Payment record not found for Order: ${razorpay_order_id}` });
             }
 
             if (!paymentRecord.booking_id) {

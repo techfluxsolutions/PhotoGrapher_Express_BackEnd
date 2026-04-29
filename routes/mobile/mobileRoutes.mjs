@@ -4,6 +4,7 @@ import MobileRevenueController from "../../controllers/mobile/MobileRevenueContr
 import authMiddleware from "../../middleware/authmiddleware.mjs";
 import { isPhotographer } from "../../middleware/isValid.Middleware.mjs";
 import CloudPlanController from "../../controllers/Admin/CloudPlanController.mjs";
+import PhotographerBookingController from "../../controllers/photographer/BookingController.mjs";
 
 const router = express.Router();
 
@@ -29,6 +30,9 @@ router.get(
 
 // --- Photographer Bookings ---
 router.get("/photographer/bookings/upcoming", isPhotographer, (req, res, next) => MobileBookingController.getPhotographerUpcomingBookings(req, res, next));
+router.get("/photographer/invoices/:bookingId", isPhotographer, (req, res, next) => PhotographerBookingController.downloadCustomerInvoice(req, res, next));
+router.get("/photographer/partner-invoices/:bookingId", isPhotographer, (req, res, next) => PhotographerBookingController.downloadPartnerInvoice(req, res, next));
+router.get("/photographer/photographer-invoice/:bookingId", isPhotographer, (req, res, next) => PhotographerBookingController.downloadPartnerInvoice(req, res, next));
 
 // --- Cloud Plans ---
 router.get("/cloud-plans", (req, res, next) => CloudPlanController.getAll(req, res, next));

@@ -5,12 +5,21 @@ const userSchema = new mongoose.Schema(
     username: {
       type: String,
       trim: true,
+      //required: [true, "Full Name is required"],
     },
 
     mobileNumber: {
       type: String,
-      required: true,
+      required: [true, "Mobile number is required"],
       unique: true,
+      validate: {
+        validator: function (v) {
+          if (!v) return true; // optional field
+          return /^\d{10}$/.test(v); // only 10 digits
+        },
+        message: props => `Please enter a valid 10-digit mobile number`
+      }
+
     },
     avatar: {
       type: String,
@@ -31,15 +40,19 @@ const userSchema = new mongoose.Schema(
       type: String,
       unique: true,  // Enforce uniqueness
       sparse: true,  // Allow multiple docs to skip this field (null/missing)
+      optional:true
 
     },
     state: {
       type: String,
-      default: ""
+      default: "",
+      //required: [true, "State is required"],
+
     },
     city: {
       type: String,
-      default: ""
+      default: "",
+
     },
     otpExpiresAt: {
       type: Date,
@@ -64,6 +77,10 @@ const userSchema = new mongoose.Schema(
     fcmToken: {
       type: String,
       default: null,
+    },
+    pushNotification: {
+      type: Boolean,
+      default: true,
     },
 
     userType: {

@@ -1,4 +1,5 @@
 import express from "express";
+import multer from "multer";
 import UserController from "../controllers/User/UserController.mjs";
 import EnquiryController from "../controllers/User/EnquiryController.mjs";
 import ReviewController from "../controllers/User/ReviewController.mjs";
@@ -19,8 +20,19 @@ import ContactUsController from "../controllers/ContactUsController.mjs";
 import DataLinksController from "../controllers/DataLinksController.js";
 import PaymentController from "../controllers/User/PaymentController.mjs";
 import CloudPlanController from "../controllers/Admin/CloudPlanController.mjs";
+import CartController from "../controllers/User/CartController.mjs";
+import EditingController from "../controllers/User/EditingController.mjs";
+import PhotographyController from "../controllers/User/PhotographyController.mjs";
+import TeamShootController from "../controllers/User/TeamShootController.mjs";
+import CouponController from "../controllers/User/Coupon_Controller/CouponController.mjs";
 const router = express.Router();
 import { uploadController } from "../controllers/uploadController.js";
+
+const upload = multer({
+    storage: multer.memoryStorage(),
+    limits: { fileSize: 50 * 1024 * 1024 } // 50MB Memory limit max per chunk
+});
+import HourlyShootBookingController from "../controllers/User/HourlyShootBookingController.mjs";
 // Partner Registration (Public)
 router.post("/partner-registration", (req, res, next) => PartnerRegistrationController.create(req, res, next));
 router.get("/partner-registration", (req, res, next) => PartnerRegistrationController.getAll(req, res, next));
@@ -62,12 +74,35 @@ router.get("/services/:id", (req, res, next) => ServiceController.getById(req, r
 
 // testinomials unprotected route
 router.get("/getThreeRatings", (req, res, next) => ReviewAndRatingController.getThreeRatings(req, res, next));
+
+//editing plans
+router.get("/editing-plans", (req, res, next) => EditingController.getAll(req, res, next));
+router.get("/editing-plans/standard", (req, res, next) => EditingController.getStandardPlans(req, res, next));
+router.get("/editing-plans/premium", (req, res, next) => EditingController.getPremiumPlans(req, res, next));
+router.get("/editing-plans/:id", (req, res, next) => EditingController.getOne(req, res, next));
+router.get('/getplanBynumberOfVideos/:numberOfvideos', (req, res, next) => EditingController.getplanBynumberOfVideos(req, res, next));
+router.get('/getplanBynumberOfVideos', (req, res, next) => EditingController.getplanByPlanCategory(req, res, next));
+
+//photography plans
+router.get("/photography-plans", (req, res, next) => PhotographyController.getAll(req, res, next));
+router.get("/photography-plans/:id", (req, res, next) => PhotographyController.getOne(req, res, next));
+
 // Protected Routes
 router.use(authMiddleware);
+
+// cart Apis
+
+router.post("/cart/add", (req, res, next) => EditingController.addToCart(req, res, next));
+router.post("/cart/updateQuantity", (req, res, next) => EditingController.updateQuantity(req, res, next));
+router.get("/get-mycart", (req, res, next) => CartController.getMyCart(req, res, next));
+router.get("/cart/get-mycart", (req, res, next) => CartController.getMyCart(req, res, next));
+
+
 
 // --- User Profile ---
 router.get("/me", (req, res, next) => UserController.getById(req, res, next));
 router.put("/me", uploadAvatar.single("avatar"), (req, res, next) => UserController.update(req, res, next));
+router.patch("/me/toggle-push", (req, res, next) => UserController.togglePushNotification(req, res, next));
 
 // --- Enquiries ---
 router.post("/enquiries", (req, res, next) => EnquiryController.create(req, res, next));
@@ -84,6 +119,16 @@ router.get("/incompleteBookings", (req, res, next) => ServiceBookingController.g
 router.put('/updatePaymentStatusBooking/:id', (req, res, next) => ServiceBookingController.updatePaymentStatusBooking(req, res, next));
 router.post('/payment/create-order', (req, res, next) => PaymentController.createRazorpayOrder(req, res, next));
 router.post('/payment/verify', (req, res, next) => PaymentController.verifyRazorpayPayment(req, res, next));
+
+//hourly shoot payment
+router.post('/cart/payment/create-order', (req, res, next) => PaymentController.createCartRazorpayOrder(req, res, next));
+router.post('/cart/payment/verify', (req, res, next) => PaymentController.verifyCartPayment(req, res, next));
+
+//create hourlyshoot
+router.post('/createhourlyshootBooking', (req, res, next) => HourlyShootBookingController.createHourlyBooking(req, res, next));
+
+// Create Hourly & Editing Quotes
+router.post('/hourly-shoot-quote', (req, res, next) => HourlyShootBookingController.createhourlyShookQuote(req, res, next));
 
 // --- Quotes ---
 router.post("/quotes", (req, res, next) => QuoteController.create(req, res, next));
@@ -138,6 +183,10 @@ router.get("/servicebookings", (req, res, next) => ServiceBookingController.list
 router.get("/servicebookings/:id", (req, res, next) => ServiceBookingController.getById(req, res, next));
 router.put("/servicebookings/:id", (req, res, next) => ServiceBookingController.cancelBooking(req, res, next));
 router.get("/getpreviousbookings", (req, res, next) => ServiceBookingController.getPreviousBookings(req, res, next));
+router.put("/reschedule/:id", (req, res, next) => ServiceBookingController.reschedule(req, res, next));
+
+
+
 
 //Ticket Routes
 router.post("/raiseTicket", uploadTicketAttachment.single("attachment"), (req, res, next) => TicketController.create(req, res, next));
@@ -169,12 +218,51 @@ router.get("/getArrayImages/:bookingId", (req, res, next) => uploadController.ge
 router.get("/datalinks", (req, res, next) => DataLinksController.getAll(req, res, next));
 router.get("/datalinks/:id", (req, res, next) => DataLinksController.getById(req, res, next));
 
+// --- Cart ---
+router.post("/cart", (req, res, next) => CartController.addToCart(req, res, next));
+router.get("/getcart", (req, res, next) => CartController.getMyCart(req, res, next));
+// Moving /cart/:id routes to the bottom of the file to prevent catching exact routes
+
+//editing plans
+router.get("/get-editing-plans", (req, res, next) => EditingController.getEditingPlans(req, res, next));
+router.get("/editing-plans", (req, res, next) => EditingController.getAll(req, res, next));
+router.get("/editing-plans/standard", (req, res, next) => EditingController.getStandardPlans(req, res, next));
+router.get("/editing-plans/premium", (req, res, next) => EditingController.getPremiumPlans(req, res, next));
+router.get("/editing-plans/:id", (req, res, next) => EditingController.getOne(req, res, next));
+router.get('/getplanBynumberOfVideos/:numberOfvideos', (req, res, next) => EditingController.getplanBynumberOfVideos(req, res, next));
+router.get('/getplanBynumberOfVideos', (req, res, next) => EditingController.getplanByPlanCategory(req, res, next));
+//photography plans
+router.get("/photography-plans", (req, res, next) => PhotographyController.getAll(req, res, next));
+router.get("/photography-plans/:id", (req, res, next) => PhotographyController.getOne(req, res, next));
 
 
+// --- Editing Upload Routes ---
+router.post("/editing/upload/start", (req, res, next) => EditingController.startUpload(req, res, next));
+router.post("/editing/upload/get-part-url", (req, res, next) => EditingController.getPartUploadUrl(req, res, next));
+router.post("/editing/upload/chunk", upload.single("chunk"), (req, res, next) => EditingController.uploadChunk(req, res, next));
+router.post("/editing/upload/complete", (req, res, next) => EditingController.completeUpload(req, res, next));
+router.post("/editing/upload/abort", (req, res, next) => EditingController.abortUpload(req, res, next));
 
 
+// cart Apis
 
+router.post("/cart/add", (req, res, next) => EditingController.addToCart(req, res, next));
+router.get("/cart/mycart", (req, res, next) => EditingController.getMyCart(req, res, next));
+router.post("/cart/updateQuantity", (req, res, next) => EditingController.updateQuantity(req, res, next));
+router.get("/get-mycart", (req, res, next) => CartController.getMyCart(req, res, next));
 
+// Generic cart routes (MUST BE DECLARED AFTER ALL OTHER /cart/ ROUTES)
+router.get("/cart/:id", (req, res, next) => CartController.getOne(req, res, next));
+router.put("/cart/:id", (req, res, next) => CartController.update(req, res, next));
+router.delete("/cart/:id", (req, res, next) => CartController.delete(req, res, next));
+// team shoot Apis
+router.get("/team-shoots/standard", (req, res, next) => { req.params.type = "standard"; return TeamShootController.getPlans(req, res, next); });
+router.get("/team-shoots/premium", (req, res, next) => { req.params.type = "premium"; return TeamShootController.getPlans(req, res, next); });
+router.get("/team-shoots/:type", (req, res, next) => TeamShootController.getPlans(req, res, next));
+router.post("/cart/team-shoots", (req, res, next) => TeamShootController.addTeamToCart(req, res, next));
+router.post("/cart/update-quantity", (req, res, next) => EditingController.updateQuantity(req, res, next));
 
+// validate coupon 
 
+router.post("/coupon/validate", CouponController.validateCoupon);
 export default router;

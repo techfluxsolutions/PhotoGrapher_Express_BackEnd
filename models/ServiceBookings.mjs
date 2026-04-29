@@ -200,7 +200,20 @@ const serviceBookingSchema = new mongoose.Schema(
     razorpayOrderId: {
       type: String,
       default: null
-    }
+    },
+    razorpayOrderIds: {
+      type: [String],
+      default: []
+    },
+    cancelledBy: {
+      type: String,
+      enum: ["user", "photographer", "admin"],
+      required: false,
+    },
+    cancelReason: {
+      type: String,
+      required: false,
+    },
   }, { timestamps: true }
 );
 

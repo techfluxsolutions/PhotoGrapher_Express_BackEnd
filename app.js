@@ -4,7 +4,7 @@ process.on("uncaughtException", (err) => {
   console.error(err.name, err.message, err.stack);
   process.exit(1);
 });
-
+import { photographerVerificationCron } from "./cron/photographerVerification.cron.mjs";
 import "dotenv/config";
 import express from "express";
 import mongoose from "mongoose";
@@ -56,7 +56,7 @@ app.use(morgan("combined", { stream: { write: (message) => logger.info(message.t
 app.use(helmet({
   crossOriginResourcePolicy: { policy: "cross-origin" } // Required if serving assets across origins
 }));
-
+photographerVerificationCron();
 // Limit requests from same API (prevent brute force / DDoS)
 const limiter = rateLimit({
   max: 1500, // Generous limit for APIs
@@ -97,7 +97,7 @@ app.use(compression(
   }
 ));
 
-// Request Timeout Protection
+// Request Timeout Protection..
 app.use((req, res, next) => {
   // Increase timeout for specific long-running paths (Download/Stream)
   if (req.path.includes('/download') || req.path.includes('/stream') || req.path.includes('/zip')) {
@@ -176,7 +176,7 @@ app.use("/api/mobile", mobileRoutes);
 // Mount S3 Large Upload/Streaming Module
 app.use("/upload", uploadRoutes);
 
-// Optional mongoose connection if MONGODB_URI is provided
+// Optional mongoose connection if MONGODB_URI is provided..
 console.log("MONGODB_URI defined:", !!process.env.MONGODB_URI);
 if (process.env.MONGODB_URI) {
   mongoose

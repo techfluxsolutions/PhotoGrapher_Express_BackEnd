@@ -24,10 +24,18 @@ import DataLinksController from "../../controllers/DataLinksController.js";
 import ReviewAndRatingController from "../../controllers/User/ReviewAndRating.mjs";
 import authMiddleware from "../../middleware/authmiddleware.mjs";
 import CloudPlanController from "../../controllers/Admin/CloudPlanController.mjs";
+import EditingController from "../../controllers/Admin/EditingPlanController.mjs";
+import PhotographyPlanController from "../../controllers/Admin/PhotographyPlanController.mjs";
+import AdminRevenueController from "../../controllers/Admin/AdminRevenueController.mjs";
+import AdminTeamShootController from "../../controllers/Admin/AdminTeamShootController.mjs";
+import CouponController from "../../controllers/User/Coupon_Controller/CouponController.mjs";
 const router = express.Router();
 import { uploadController } from "../../controllers/uploadController.js";
 // --- Debug ---
 router.get("/photographers/sorted", (req, res, next) => PhotographerController.getSortedPhotographers(req, res, next));
+router.get("/photographers/videographers", (req, res, next) => PhotographerController.getSortedVideographers(req, res, next));
+router.get("/photographers/lighting-setups", (req, res, next) => PhotographerController.getSortedLightingSetups(req, res, next));
+router.get("/photographers/editors/sorted", (req, res, next) => PhotographerController.getSortedEditors(req, res, next));
 
 //sorting photographers
 router.get("/photographers/sort", (req, res, next) => PhotographerController.getSortPhotographers(req, res, next));
@@ -78,8 +86,8 @@ router.post("/photographers/profile/:id", (req, res, next) => PhotographerContro
 router.get("/photographers/profile/:id", (req, res, next) => PhotographerController.getPhotographerById(req, res, next));
 router.put("/photographers/unverified/:id", (req, res, next) => PhotographerController.updateUnverifiedPhotographer(req, res, next));
 router.delete("/photographers/unverified/:id", (req, res, next) => PhotographerController.deletePhotographer(req, res, next));
-router.put("/photographers/commissions", (req, res, next) => PhotographerController.updateCommissions(req, res, next));
-router.get("/photographers/commissions", (req, res, next) => PhotographerController.getCommissions(req, res, next));
+router.put("/:partnerType/commissions", (req, res, next) => PhotographerController.updateCommissions(req, res, next));
+router.get("/:partnerType/commissions", (req, res, next) => PhotographerController.getCommissions(req, res, next));
 
 router.post("/photographers", (req, res, next) => PhotographerController.createPhotographer(req, res, next));
 router.get("/photographers", (req, res, next) => PhotographerController.getAllPhotographers(req, res, next));
@@ -125,6 +133,8 @@ router.delete("/bookings/:id", (req, res, next) => ServiceBookingController.dele
 router.get("/getpreviousbookings", (req, res, next) => ServiceBookingController.getPrevious(req, res, next));
 router.get("/completelyPaidBookings", (req, res, next) => ServiceBookingController.getCompletedBookings(req, res, next));
 router.get("/bookings-chat-count", (req, res, next) => ServiceBookingController.getServiceBookingsWithChatCount(req, res, next));
+router.get("/hourly-bookings", (req, res, next) => ServiceBookingController.getHourlyBookings(req, res, next));
+router.get("/editing-bookings", (req, res, next) => ServiceBookingController.getEditingBookings(req, res, next));
 router.get("/bookings/:id/gallery", (req, res, next) => ServiceBookingController.getGalleryByBookingId(req, res, next));
 
 
@@ -158,6 +168,10 @@ router.get("/payments/:id", (req, res, next) => PaymentController.getById(req, r
 router.put("/payments/:id", (req, res, next) => PaymentController.update(req, res, next));
 router.delete("/payments/:id", (req, res, next) => PaymentController.delete(req, res, next));
 
+// --- Revenue ---
+router.get("/revenue/dashboard", (req, res, next) => AdminRevenueController.getDashboard(req, res, next));
+router.get("/revenue/top-photographers", (req, res, next) => AdminRevenueController.getTopPhotographers(req, res, next));
+
 // --- Customers Management (Admin Controller) ---//
 router.post("/customers", (req, res, next) => CustomerController.create(req, res, next));
 router.get("/customers", (req, res, next) => CustomerController.list(req, res, next));
@@ -174,7 +188,17 @@ router.delete("/customers/:id", (req, res, next) => CustomerController.delete(re
 router.get("/invoices/:bookingId", (req, res, next) => downloadInvoice(req, res, next));
 router.get("/partner-invoices/:bookingId", (req, res, next) => downloadPartnerInvoice(req, res, next));
 
+
+//Coupon Routes
+router.post("/coupon", CouponController.createCoupon);
+router.get("/coupon", CouponController.getAllCoupons);
+router.get("/coupon/:id", CouponController.getCouponById);
+router.put("/coupon/:id", CouponController.updateCoupon);
+router.delete("/coupon/:id", CouponController.deleteCoupon);
+router.patch("/coupon/toggle/:id", CouponController.toggleCouponStatus);
+router.post("/coupon/validate", CouponController.validateCoupon);
 //Subscriber
+
 
 router.get("/getsubscribers", (req, res, next) => SubscribedUserController.getAllSubscribers(req, res, next));
 router.get("/getsubscriber/:id", (req, res, next) => SubscribedUserController.getSubscriberById(req, res, next));
@@ -244,7 +268,33 @@ router.delete("/deleteAllFiles/:bookingId", (req, res, next) => uploadController
 
 router.get("/getArrayImages/:bookingId", (req, res, next) => uploadController.getUrlsListArray(req, res, next));
 
-//
+
+// --- Editing Plan Management ---
+router.post("/editing-plans", (req, res, next) => EditingController.create(req, res, next));
+router.get("/editing-plans", (req, res, next) => EditingController.getAll(req, res, next));
+router.get("/editing-plans/standard", (req, res, next) => EditingController.getStandardPlans(req, res, next));
+router.get("/editing-plans/premium", (req, res, next) => EditingController.getPremiumPlans(req, res, next));
+router.get("/editing-plans/:id", (req, res, next) => EditingController.getById(req, res, next));
+router.put("/editing-plans/:id", (req, res, next) => EditingController.update(req, res, next));
+router.delete("/editing-plans/:id", (req, res, next) => EditingController.delete(req, res, next));
+
+// --- Photography Plan Management ---
+router.post("/photography-plans", (req, res, next) => PhotographyPlanController.create(req, res, next));
+router.get("/photography-plans", (req, res, next) => PhotographyPlanController.getAll(req, res, next));
+router.get("/photography-plans/:id", (req, res, next) => PhotographyPlanController.getById(req, res, next));
+router.put("/photography-plans/:id", (req, res, next) => PhotographyPlanController.update(req, res, next));
+router.delete("/photography-plans/:id", (req, res, next) => PhotographyPlanController.delete(req, res, next));
+
+
+// --- Team Shoot Plan Management ---
+router.post("/team-shoot-plans", (req, res, next) => AdminTeamShootController.create(req, res, next));
+router.get("/team-shoot-plans", (req, res, next) => AdminTeamShootController.getAll(req, res, next));
+router.get("/team-shoot-plans/standard", (req, res, next) => AdminTeamShootController.getStandardPlans(req, res, next));
+router.get("/team-shoot-plans/premium", (req, res, next) => AdminTeamShootController.getPremiumPlans(req, res, next));
+router.get("/team-shoot-plans/:id", (req, res, next) => AdminTeamShootController.getById(req, res, next));
+router.put("/team-shoot-plans/:id", (req, res, next) => AdminTeamShootController.update(req, res, next));
+router.delete("/team-shoot-plans/:id", (req, res, next) => AdminTeamShootController.delete(req, res, next));
+
 // --- Admin Management (MUST BE LAST - generic /:id routes) ---
 router.post("/", upload.single("avatar"), (req, res, next) => AdminController.create(req, res, next));
 router.get("/", (req, res, next) => AdminController.getAll(req, res, next));
@@ -252,5 +302,7 @@ router.put("/:id/status", (req, res, next) => AdminController.changeStatus(req, 
 router.get("/:id", (req, res, next) => AdminController.getById(req, res, next));
 router.put("/:id", (req, res, next) => AdminController.update(req, res, next));
 router.delete("/:id", (req, res, next) => AdminController.delete(req, res, next));
+
+
 
 export default router;

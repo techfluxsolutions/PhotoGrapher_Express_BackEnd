@@ -1,6 +1,10 @@
 import Quote from "../../models/Quote.mjs";
 import ServiceBooking from "../../models/ServiceBookings.mjs";
 import Counter from "../../models/Counter.mjs";
+import Conversation from "../../models/Conversation.mjs";
+import Message from "../../models/Message.mjs";
+import Payment from "../../models/Payment.mjs";
+
 class QuoteController {
   async create(req, res, next) {
     try {
@@ -47,7 +51,10 @@ class QuoteController {
       // const filter = {};
       // if (enquiryId) filter.job_id = enquiryId;
       // if (photographerId) filter.photographer_id = photographerId;
-      const items = await Quote.find({ clientId: id })
+      const items = await Quote.find({
+        clientId: id,
+        quoteStatus: { $nin: ["upcommingBookings", "previousBookings", "canceled"] }
+      })
         .populate("service_id")
         .sort({ createdAt: -1 });
       return res.json({ success: true, data: items });
@@ -293,10 +300,55 @@ class QuoteController {
       // 🔄 Step 3: Update quote status
       // quote.quoteStatus = "upcommingBookings";
       // await quote.save();
+
       let deletedQuote;
       if (booking) {
-        // quote.quoteStatus = "upcommingBookings";
-        deletedQuote = await quote.deleteOne();
+        quote.quoteStatus = "awaiting-payment";
+        quote.bStatus = "accepted";
+        quote.isQuoteFinal = true;
+        quote.finalizeAt = new Date();
+        await quote.save();
+
+        // 🔄 Step 4: Link existing conversation to the new booking
+        try {
+          // Check if a "ghost" conversation was already created for this booking (race condition protection)
+          const ghostConversation = await Conversation.findOne({
+            bookingId: booking._id,
+            quoteId: { $ne: quote._id } // Not the one we're about to link
+          });
+
+          if (ghostConversation) {
+            console.log(`⚠️ Ghost conversation ${ghostConversation._id} found for booking ${booking._id}. Cleaning up.`);
+            // If it's empty (likely a race during join/send), we can just remove it. 
+            // Better yet, we could merge messages, but usually ghost ones are empty.
+            await Conversation.deleteOne({ _id: ghostConversation._id });
+          }
+
+          // Link the quote conversation to the booking
+          const linkedConv = await Conversation.findOneAndUpdate(
+            { quoteId: quote._id },
+            { $set: { bookingId: booking._id } },
+            { new: true }
+          );
+
+          if (linkedConv) {
+            console.log(`✅ Conversation ${linkedConv._id} for quote ${quote._id} linked to booking ${booking._id}`);
+            
+            // Check if the quote has already been paid
+            const existingPayment = await Payment.findOne({ quote_id: quote._id, payment_status: "paid" });
+            
+            if (existingPayment) {
+              console.log(`ℹ️ Payment already detected for quote ${quote._id}. Removing payment cards.`);
+              await Message.deleteMany({ conversationId: linkedConv._id, messageType: "paymentCard" });
+            } else {
+              console.log(`ℹ️ No payment detected for quote ${quote._id}. Keeping payment cards for booking phase.`);
+            }
+          } else {
+            console.log(`ℹ️ No existing conversation found for quote ${quote._id} to link.`);
+          }
+        } catch (convError) {
+          console.error("Error linking conversation to booking:", convError);
+        }
       }
 
       return res.status(201).json({

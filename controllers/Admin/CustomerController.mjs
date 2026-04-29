@@ -10,6 +10,26 @@ class CustomerController {
     try {
       const payload = req.body;
 
+      // Validate Username (Full Name)
+      if (!payload.username || payload.username.trim() === "") {
+        return res.status(200).json({
+          success: false,
+          message: "Full Name cannot be empty",
+        });
+      }
+
+      // Check if username contains numerical values
+      if (/\d/.test(payload.username)) {
+        return res.status(200).json({
+          success: false,
+          message: "Full Name must not contain numerical values",
+        });
+      }
+
+      const validators = {
+        email: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
+      };
+
       // Parse date of birth if provided in DD-MM-YYYY format
       if (payload.dateOfBirth && typeof payload.dateOfBirth === 'string') {
         const parseDDMMYYYY = (dateStr) => {
@@ -43,6 +63,16 @@ class CustomerController {
         }
       }
 
+      // Validate all fields
+      for (const [key, regex] of Object.entries(validators)) {
+        if (payload[key] && !regex.test(payload[key])) {
+          return res.status(400).json({
+            success: false,
+            message: `${key} is invalid`,
+          });
+        }
+      }
+
       const user = await User.create(payload);
 
       return res.status(201).json({
@@ -50,7 +80,33 @@ class CustomerController {
         data: user
       });
     } catch (err) {
-      return next(err);
+
+      // ✅ Handle duplicate key (E11000)
+      if (err.code === 11000) {
+        const field = Object.keys(err.keyPattern)[0];
+        const capitalizedField =
+          field.charAt(0).toUpperCase() + field.slice(1);
+
+        return res.status(400).json({
+          success: false,
+          message: `${capitalizedField} already exists`,
+        });
+      }
+
+      // ✅ Handle mongoose validation (ONLY FIRST ERROR)
+      if (err.name === "ValidationError") {
+        const firstError = Object.values(err.errors)[0];
+
+        return res.status(400).json({
+          success: false,
+          message: firstError.message, // 👈 clean message only
+        });
+      }
+
+      return res.status(500).json({
+        success: false,
+        message: err.message,
+      });
     }
   }
 

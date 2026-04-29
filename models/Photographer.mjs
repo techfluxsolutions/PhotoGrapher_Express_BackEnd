@@ -19,7 +19,6 @@ const photographerSchema = new mongoose.Schema(
     },
     email: {
       type: String,
-      required: [true, "Email is required"],
       unique: true,
       lowercase: true,
       match: [
@@ -27,6 +26,7 @@ const photographerSchema = new mongoose.Schema(
         "Please enter a valid email",
       ],
     },
+    
     isPhotographer: {
       type: Boolean,
       default: true,
@@ -164,6 +164,10 @@ const photographerSchema = new mongoose.Schema(
     fcmToken: {
       type: String,
       default: null,
+    },
+    pushNotification: {
+      type: Boolean,
+      default: true,
     },
     otpAttempts: {
       type: Number,

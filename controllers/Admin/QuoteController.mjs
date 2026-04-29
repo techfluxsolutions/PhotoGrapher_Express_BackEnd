@@ -67,12 +67,12 @@ class QuoteController {
       const skip = (page - 1) * limit;
 
       const [items, total] = await Promise.all([
-        Quote.find({ isQuoteFinal: true })
+        Quote.find({ isQuoteFinal: true, quoteStatus: { $nin: ["upcommingBookings"] } })
           .skip(skip)
           .limit(limit)
           .sort({ finalizeAt: -1 })
           .populate("service_id clientId"),
-        Quote.countDocuments({ isQuoteFinal: true }),
+        Quote.countDocuments({ isQuoteFinal: true, quoteStatus: { $nin: ["upcommingBookings"] } }),
       ]);
 
       return res.json({
@@ -347,7 +347,7 @@ class QuoteController {
 
       const quote = await Quote.findByIdAndUpdate(
         id,
-        { quoteStatus: "canceled" },
+        { quoteStatus: "canceled", bStatus: "rejected" },
         { new: true }
       );
 
@@ -644,6 +644,14 @@ class QuoteController {
               lat: { $ifNull: ["$lat", null] },
               lng: { $ifNull: ["$lng", null] },
               address: { $ifNull: ["$address", ""] },
+              totalAmount: {
+                $cond: {
+                  if: { $or: [{ $eq: ["$currentBudget", ""] }, { $not: ["$currentBudget"] }] },
+                  then: { $ifNull: ["$budget", "0"] },
+                  else: "$currentBudget"
+                }
+              },
+              bStatus: { $ifNull: ["$bStatus", "pending"] },
             },
           },
         ]),

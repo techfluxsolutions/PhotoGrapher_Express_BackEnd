@@ -2,6 +2,11 @@ import mongoose from "mongoose";
 
 const payoutSchema = new mongoose.Schema(
   {
+    shootType: {
+      type: String,
+      enum: ["Service", "HourlyShoot", "PhotoEditing"],
+      default: "Service",
+    },
     photographer_id: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Photographer",

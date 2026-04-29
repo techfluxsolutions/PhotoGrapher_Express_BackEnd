@@ -3,19 +3,32 @@ import dotenv from "dotenv";
 
 dotenv.config();
 
+let privateKey = process.env.FIREBASE_PRIVATE_KEY;
+
+if (privateKey) {
+  privateKey = privateKey.replace(/\\n/g, "\n");
+}
+
 const serviceAccount = {
-    projectId: process.env.FIREBASE_PROJECT_ID,
-    privateKey: process.env.FIREBASE_PRIVATE_KEY ? process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n') : undefined,
-    clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+  projectId: process.env.FIREBASE_PROJECT_ID,
+  privateKey: privateKey,
+  clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
 };
 
-if (serviceAccount.projectId && serviceAccount.privateKey && serviceAccount.clientEmail) {
+if (!admin.apps.length) {
+  try {
     admin.initializeApp({
-        credential: admin.credential.cert(serviceAccount),
+      credential: admin.credential.cert(serviceAccount),
     });
-    console.log("Firebase Admin SDK initialized successfully");
+
+    console.log("✅ Firebase Admin initialized using .env");
+    console.log("Project ID:", serviceAccount.projectId);
+    console.log("Client Email:", serviceAccount.clientEmail);
+  } catch (error) {
+    console.error("❌ Firebase Admin init error:", error);
+  }
 } else {
-    console.warn("Firebase Admin SDK not initialized: Missing environment variables (FIREBASE_PROJECT_ID, FIREBASE_PRIVATE_KEY, FIREBASE_CLIENT_EMAIL)");
+  console.log("ℹ️ Firebase Admin already initialized. Apps:", admin.apps.map(app => app.name));
 }
 
 export default admin;

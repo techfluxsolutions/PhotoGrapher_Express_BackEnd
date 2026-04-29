@@ -21,6 +21,7 @@ const router = express.Router();
 
 // --- Auth Routes ---
 router.post("/auth/login", (req, res, next) => PhotographerAuthController.login(req, res, next));
+router.post("/auth/logout", authMiddleware, (req, res, next) => PhotographerAuthController.logout(req, res, next));
 router.post("/auth/forgot-password", (req, res, next) => PhotographerAuthController.forgotPassword(req, res, next));
 router.post("/auth/reset-password", (req, res, next) => PhotographerAuthController.resetPassword(req, res, next));
 
@@ -32,6 +33,9 @@ router.get("/status/:id", (req, res, next) => PhotographerController.getPhotogra
 router.put("/status/:id", (req, res, next) => PhotographerController.updatePhotographerStatus(req, res, next));
 router.post("/status/:id", (req, res, next) => PhotographerController.updatePhotographerStatus(req, res, next));
 
+// --- Test Notification ---
+router.post("/notifications/test", (req, res, next) => NotificationController.sendTestNotification(req, res, next));
+
 // Apply Auth and Photographer check for subsequent routes
 router.use(authMiddleware, isPhotographer);
 
@@ -42,6 +46,9 @@ router.get("/status", (req, res, next) => PhotographerController.getPhotographer
 router.put("/status", (req, res, next) => PhotographerController.updatePhotographerStatus(req, res, next));
 router.post("/status", (req, res, next) => PhotographerController.updatePhotographerStatus(req, res, next));
 router.patch("/me", upload.single('profilePhoto'), (req, res, next) => PhotographerController.updatePhotographer(req, res, next));
+router.delete("/me", (req, res, next) => PhotographerController.deleteAccount(req, res, next));
+router.patch("/fcm-token", (req, res, next) => PhotographerController.updateFcmToken(req, res, next));
+router.patch("/push-notification", (req, res, next) => PhotographerController.togglePushNotification(req, res, next));
 
 
 
@@ -74,15 +81,21 @@ router.delete("/payouts/:id", (req, res, next) => PayoutController.delete(req, r
 
 // --- Bookings ---
 router.get("/bookings", (req, res, next) => BookingController.getAllBookings(req, res, next));
+router.get("/bookings/all", (req, res, next) => BookingController.getAllMyBookings(req, res, next));
 router.get("/bookings/pending", (req, res, next) => BookingController.getPendingBookings(req, res, next));
 router.get("/bookings/accepted", (req, res, next) => BookingController.getAcceptedBookings(req, res, next));
 router.get("/bookings/rejected", (req, res, next) => BookingController.getRejectedBookings(req, res, next));
 router.get("/bookings/completed", (req, res, next) => BookingController.getCompletedBookings(req, res, next));
+router.get("/bookings/gallery-upload-list", (req, res, next) => BookingController.getBookingsForGalleryUpload(req, res, next));
+router.get("/bookings/upload-pending", (req, res, next) => BookingController.getUploadPendingBookings(req, res, next));
 router.patch("/bookings/:id/status", (req, res, next) => BookingController.updateBookingStatus(req, res, next));
+router.patch("/bookings/:id/mark-as-done", (req, res, next) => BookingController.markAsDone(req, res, next));
+
 router.post("/bookings/initialize-status", (req, res, next) => BookingController.initializePreviousBookingsStatus(req, res, next));
 
 // get booking counts 
 router.get("/bookings/summary-counts", (req, res, next) => BookingController.getSummaryCounts(req, res, next));
+router.get("/bookings/dashboard-counts", (req, res, next) => BookingController.getDashboardCounts(req, res, next));
 router.get("/bookings/today-upcoming", (req, res, next) => BookingController.getTodayAndUpcomingBookings(req, res, next));
 router.post("/bookings/:id/resend-otp", (req, res, next) => BookingController.resendBookingOtp(req, res, next));
 router.post("/bookings/:id/verify-otp", (req, res, next) => BookingController.verifyBookingOtp(req, res, next));
@@ -99,15 +112,22 @@ router.delete("/bookings/:id", (req, res, next) => BookingController.deleteBooki
 router.post("/bookings/:id/gallery", galleryUpload.array('gallery', 50), (req, res, next) => BookingController.uploadGallery(req, res, next));
 router.post("/bookings/:id/gallery/server", galleryUpload.array('gallery', 50), (req, res, next) => BookingController.uploadGalleryToServer(req, res, next));
 router.post("/bookings/:id/gallery/cloud", galleryUpload.array('gallery', 50), (req, res, next) => BookingController.uploadGalleryToCloud(req, res, next));
-router.post("/bookings/:id/gallery/share", (req, res, next) => BookingController.shareGallery(req, res, next));
+router.post("/bookings/:id/gallery/share", (req, res, next) => BookingController.publishGallery(req, res, next));
+router.post("/bookings/:id/gallery/publish", (req, res, next) => BookingController.publishGallery(req, res, next));
 
 
 // --- Invoice (For their bookings) ---
-router.get("/invoices/:bookingId", (req, res, next) => BookingController.downloadInvoice(req, res, next));
+router.get("/invoices/:bookingId", (req, res, next) => BookingController.downloadCustomerInvoice(req, res, next));
+router.get("/partner-invoices/:bookingId", (req, res, next) => BookingController.downloadPartnerInvoice(req, res, next));
+router.get("/photographer-invoice/:bookingId", (req, res, next) => BookingController.downloadPartnerInvoice(req, res, next));
+router.get("/partner-invoice/:bookingId", (req, res, next) => BookingController.downloadPartnerInvoice(req, res, next));
 
 // --- Notifications ---
 router.get("/notifications", (req, res, next) => NotificationController.getNotifications(req, res, next));
+router.get("/notifications/unread-count", (req, res, next) => NotificationController.getUnreadCount(req, res, next));
 router.patch("/notifications/:id/read", (req, res, next) => NotificationController.markAsRead(req, res, next));
+router.delete("/notifications/all", (req, res, next) => NotificationController.deleteAllNotifications(req, res, next));
+router.delete("/notifications/:id", (req, res, next) => NotificationController.deleteNotification(req, res, next));
 
 // --- Services ---
 router.get("/servicename", (req, res, next) => ServiceController.getServiceNameOnly(req, res, next));

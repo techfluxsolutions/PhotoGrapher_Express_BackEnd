@@ -15,5 +15,6 @@ router.get("/conversations", (req, res, next) => ChatController.getConversations
 router.post("/create-conversation", (req, res, next) => ChatController.createConversation(req, res, next));
 router.post("/send-message", (req, res, next) => ChatController.sendMessage(req, res, next));
 router.get("/messages/:bookingId", (req, res, next) => ChatController.getMessages(req, res, next));
+router.put('/reject-qutation/:id', (req, res, next) => ChatController.rejectBooking(req, res, next));
 
 export default router;

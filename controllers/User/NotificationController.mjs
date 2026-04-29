@@ -1,9 +1,17 @@
 import Notification from "../../models/Notification.mjs";
+import { emitNotificationCount } from "../../services/SocketService.mjs";
 
 class NotificationController {
   async create(req, res, next) {
     try {
       const data = await Notification.create(req.body);
+
+      // Real-time Update via Socket
+      const recipientId = data.user_id || data.photographer_id || data.admin_id;
+      if (recipientId) {
+        emitNotificationCount(recipientId.toString());
+      }
+
       res.status(201).json({ success: true, data });
     } catch (error) {
       next(error);

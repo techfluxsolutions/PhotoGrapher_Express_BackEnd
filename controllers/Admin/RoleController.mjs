@@ -1,8 +1,14 @@
 
 import Role from '../../models/Role.mjs';
-
+import mongoose from 'mongoose';
 import AdminEmailAuth from '../../models/AdminEmailAuth.mjs';
 import bcrypt from 'bcrypt';
+
+const VALID_PERMISSIONS = [
+    'Dashboard', 'Photographers', 'Customers', 'Shoot Booking', 'Payments',
+    'Services', 'My Quote', 'Commission', 'Subscribers', 'Roles', 'Staff',
+    'Queries', 'Storage Management', 'Contact Us', 'Join Us', 'Gallery Plan'
+];
 
 class RoleController {
     async create(req, res, next) {
@@ -27,11 +33,7 @@ class RoleController {
 
             // Validate permissions
             if (permissions && permissions.length > 0) {
-                const validPermissions = [
-                    'Dashboard', 'Photographers', 'Customers', 'Shoot Booking', 'Payments',
-                    'Services', 'My Quote', 'Commission', 'Subscribers', 'Roles', "Staff","Queries","Storage Management"
-                ];
-                const invalidPermissions = permissions.filter(p => !validPermissions.includes(p));
+                const invalidPermissions = permissions.filter(p => !VALID_PERMISSIONS.includes(p));
                 if (invalidPermissions.length > 0) {
                     return res.status(400).json({
                         success: false,
@@ -90,7 +92,13 @@ class RoleController {
     async getById(req, res, next) {
         try {
             const { id } = req.params;
-            const role = await Role.findById(id);
+            let role;
+            if (mongoose.Types.ObjectId.isValid(id)) {
+                role = await Role.findById(id);
+            } else {
+                role = await Role.findOne({ roleName: id });
+            }
+
             if (!role) {
                 return res.status(404).json({
                     success: false,
@@ -110,6 +118,17 @@ class RoleController {
         try {
             const { id } = req.params;
             const { roleName, description, permissions } = req.body;
+
+            // Validate permissions
+            if (permissions && permissions.length > 0) {
+                const invalidPermissions = permissions.filter(p => !VALID_PERMISSIONS.includes(p));
+                if (invalidPermissions.length > 0) {
+                    return res.status(400).json({
+                        success: false,
+                        message: `Invalid permissions: ${invalidPermissions.join(', ')}`
+                    });
+                }
+            }
 
             const updatedRole = await Role.findByIdAndUpdate(
                 id,

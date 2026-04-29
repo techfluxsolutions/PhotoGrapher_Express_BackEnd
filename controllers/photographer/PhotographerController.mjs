@@ -7,6 +7,9 @@ import bcrypt from "bcrypt";
 import mongoose from "mongoose";
 import { sendMessageCentral, verifyMessageCentral } from "../../utils/messageCentral.mjs";
 import razorpayInstance from "../../Config/razorpay.mjs";
+import Notification from "../../models/Notification.mjs";
+import { emitNotificationCount } from "../../services/SocketService.mjs";
+import admin from "../../utils/firebaseAdmin.mjs";
 
 class PhotographerController {
     // Get All Photographers (Unified endpoint with filtering)
@@ -80,6 +83,7 @@ class PhotographerController {
             commissionPercentage: p.commissionPercentage || 0,
             team_studio: p.professionalDetails?.team_studio || "",
             expertiseLevel: p.professionalDetails?.expertiseLevel || "N/A",
+            photographerType: p.professionalDetails?.photographerType || "",
             categories: p.servicesAndStyles?.services ?
                 Object.keys(p.servicesAndStyles.services).filter(key => p.servicesAndStyles.services[key] === true) : [],
             isAbleToVerify: (
@@ -89,6 +93,47 @@ class PhotographerController {
                 !p.professionalDetails?.photographerType
             ) ? true : false
         };
+    }
+
+    // Helper to validate profile completeness
+    _validateProfileCompleteness(photographerDoc) {
+        const missingFields = [];
+        const p = photographerDoc.toObject ? photographerDoc.toObject() : photographerDoc;
+
+        // 1. Personal Info (Basic Info)
+        if (!p.basicInfo?.fullName) missingFields.push("Full Name");
+        if (!p.basicInfo?.displayName) missingFields.push("Display Name");
+        if (!p.basicInfo?.phone) missingFields.push("Mobile Number");
+
+        // 2. Professional Details
+        if (!p.professionalDetails?.photographerType) missingFields.push("Photographer Type");
+        if (!p.professionalDetails?.expertiseLevel) missingFields.push("Expertise Level");
+        if (!p.professionalDetails?.yearsOfExperience) missingFields.push("Years of Experience");
+        if (!p.professionalDetails?.primaryLocation) missingFields.push("Primary Location");
+
+        // 3. Bank Information
+        if (!p.bank_account_holder) missingFields.push("Bank Account Holder Name");
+        if (!p.bank_name) missingFields.push("Bank Name");
+        if (!p.bank_account_number) missingFields.push("Account Number");
+        if (!p.bank_ifsc) missingFields.push("Bank IFSC Code");
+        if (!p.account_type) missingFields.push("Account Type");
+
+        // 4. Services
+        const services = p.servicesAndStyles?.services || {};
+
+        // Helper to check if any field in an object is "truthy" (true, 1, "true", "on")
+        const isSelected = (obj) => Object.entries(obj).some(([key, val]) => {
+            if (key === "_id" || key === "id") return false;
+            if (val === true || val === 1 || val === "true" || val === "on") return true;
+            if (typeof val === 'string' && val.toLowerCase() === 'true') return true;
+            return false;
+        });
+
+        const hasService = isSelected(services);
+
+        if (!hasService) missingFields.push("At least one service selected");
+
+        return missingFields;
     }
 
     // Get photographer status only
@@ -156,6 +201,40 @@ class PhotographerController {
         }
     }
 
+    // Update FCM Token
+    async updateFcmToken(req, res) {
+        try {
+            const id = req.user?.id || req.user?._id || req.photographer?._id;
+            const { fcmToken } = req.body;
+
+            if (!id) {
+                return res.status(401).json({ success: false, message: "Authentication required" });
+            }
+
+            if (!fcmToken) {
+                return res.status(400).json({ success: false, message: "fcmToken is required" });
+            }
+
+            const photographer = await Photographer.findByIdAndUpdate(
+                id,
+                { $set: { fcmToken } },
+                { new: true }
+            ).select('fcmToken');
+
+            if (!photographer) {
+                return res.status(404).json({ success: false, message: "Photographer not found" });
+            }
+
+            res.status(200).json({
+                success: true,
+                message: "FCM token updated successfully"
+            });
+        } catch (error) {
+            console.error("Update FCM Token Error:", error);
+            res.status(500).json({ success: false, message: "Failed to update FCM token", error: error.message });
+        }
+    }
+
     // get photographer by id (Supports Admin/Public via :id, or Self via Auth)
     async getPhotographerById(req, res) {
         try {
@@ -190,7 +269,7 @@ class PhotographerController {
     // Add Unverified Photographer (Status: Pending)
     async addUnverifiedPhotographer(req, res) {
         try {
-            const { name, email, phone, experience, city, startUpDate, signUpDate } = req.body;
+            const { name, email, phone, experience, city, startUpDate, signUpDate, photographerType } = req.body;
 
             // 1. Mandatory Validations
             const required = { name, email, phone, experience, city };
@@ -238,6 +317,7 @@ class PhotographerController {
                     phone: phone
                 },
                 professionalDetails: {
+                    photographerType: photographerType || "",
                     yearsOfExperience: experience,
                     primaryLocation: city,
                     startUpDate: startUpDate || signUpDate,
@@ -258,6 +338,7 @@ class PhotographerController {
                     phone: newPhotographer.mobileNumber,
                     experience: newPhotographer.professionalDetails.yearsOfExperience,
                     city: newPhotographer.professionalDetails.primaryLocation,
+                    photographerType: newPhotographer.professionalDetails.photographerType || "",
                     status: newPhotographer.status,
                     createdAt: newPhotographer.createdAt,
                     signUpDate: newPhotographer.professionalDetails.startUpDate || `${String(newPhotographer.createdAt.getDate()).padStart(2, '0')}/${String(newPhotographer.createdAt.getMonth() + 1).padStart(2, '0')}/${newPhotographer.createdAt.getFullYear()}`
@@ -275,7 +356,7 @@ class PhotographerController {
     async updateUnverifiedPhotographer(req, res) {
         try {
             const { id } = req.params;
-            const { name, email, phone, experience, city, startUpDate, signUpDate } = req.body;
+            const { name, email, phone, experience, city, startUpDate, signUpDate, photographerType } = req.body;
 
             // 1. Mandatory Validations (If provided they cannot be empty)
             const requiredFields = ['name', 'email', 'phone', 'experience', 'city'];
@@ -335,6 +416,7 @@ class PhotographerController {
             const dateToUpdate = startUpDate || signUpDate;
             if (dateToUpdate) photographer.professionalDetails.startUpDate = dateToUpdate;
             if (req.body.team_studio) photographer.professionalDetails.team_studio = req.body.team_studio;
+            if (photographerType) photographer.professionalDetails.photographerType = photographerType;
 
             await photographer.save();
 
@@ -348,6 +430,7 @@ class PhotographerController {
                     phone: photographer.mobileNumber,
                     experience: photographer.professionalDetails.yearsOfExperience,
                     city: photographer.professionalDetails.primaryLocation,
+                    photographerType: photographer.professionalDetails.photographerType || "",
                     status: photographer.status,
                     signUpDate: photographer.professionalDetails.startUpDate || `${String(photographer.createdAt.getDate()).padStart(2, '0')}/${String(photographer.createdAt.getMonth() + 1).padStart(2, '0')}/${photographer.createdAt.getFullYear()}`,
                     team_studio: photographer.professionalDetails.team_studio || "",
@@ -376,6 +459,16 @@ class PhotographerController {
                 return res.status(404).json({ message: "Photographer not found" });
             }
 
+            // Check for profile completeness before sending OTP
+            const missing = this._validateProfileCompleteness(photographer);
+            if (missing.length > 0) {
+                return res.status(200).json({
+                    success: false,
+                    message: "Cannot send OTP. Photographer profile is incomplete.",
+                    missingFields: missing
+                });
+            }
+
             const response = await sendMessageCentral(cleanedMobile);
             const data = response.data;
 
@@ -397,7 +490,7 @@ class PhotographerController {
     async verifyPhotographer(req, res) {
         try {
             // const { id } = req.params;
-            const { mobileNumber, OTP } = req.body;
+            const { mobileNumber, OTP, fcmToken } = req.body;
 
             if (!mobileNumber || !OTP) {
                 return res.status(400).json({ message: "Mobile number and OTP are required" });
@@ -437,6 +530,7 @@ class PhotographerController {
             // Set username to email as requested
             photographer.username = photographer.email;
             photographer.status = "active";
+            if (fcmToken) photographer.fcmToken = fcmToken;
             // Create Razorpay account if not exists
 
             // commenting this due to no route feature is enabled till yet 
@@ -468,6 +562,9 @@ class PhotographerController {
             // } catch (emailError) {
             //     console.error("Error sending welcome email during verification:", emailError);
             // }
+
+            // Welcome notification removed as per user request
+
 
             res.status(200).json({
                 success: true,
@@ -605,6 +702,9 @@ class PhotographerController {
     // update photographer (Supports Admin via :id, or Self via Auth)
     async updatePhotographer(req, res) {
         try {
+            console.log("Update Photographer Request Body:", JSON.stringify(req.body, null, 2));
+            if (req.file) console.log("Update Photographer Request File:", req.file.fieldname);
+
             // Priority: Params ID (Admin) -> Auth User ID (Self, 'id' from token) -> Auth Photographer ID
             const id = req.params.id || req.user?.id || req.user?._id || req.photographer?._id;
 
@@ -612,31 +712,37 @@ class PhotographerController {
                 return res.status(400).json({ message: "Photographer ID required" });
             }
 
+            const photographer = await Photographer.findById(id);
+            if (!photographer) {
+                return res.status(200).json({ success: false, message: "Photographer not found" });
+            }
+
             let updateData = { ...req.body };
 
-            // 1. Map Expertise Level
-            if (updateData.professionalDetails?.expertiseLevel) {
-                const levelMap = { "Beginner": "INITIO", "Expert": "ELITE", "Master": "PRO" };
-                const level = updateData.professionalDetails.expertiseLevel;
-                updateData.professionalDetails.expertiseLevel = levelMap[level] || level.toUpperCase();
+            // 0. Handle 'data' wrapper if sent via FormData (common in frontend)
+            if (updateData.data && typeof updateData.data === 'string') {
+                try {
+                    const parsedData = JSON.parse(updateData.data);
+                    updateData = { ...updateData, ...parsedData };
+                    delete updateData.data;
+                } catch (e) {
+                    console.error("Failed to parse 'data' field:", e.message);
+                }
             }
 
-            // 2. Sanitize Bank Details
-            if (updateData.bank_ifsc) {
-                updateData.bank_ifsc = updateData.bank_ifsc.trim().toUpperCase();
-            }
-
-            // 3. Bank Details Validation
-            if (updateData.bank_account_number && updateData.confirm_account_number) {
-                if (updateData.bank_account_number !== updateData.confirm_account_number) {
+            // 1. Basic validation: ensure provided fields are not empty strings/nulls
+            for (const [key, value] of Object.entries(updateData)) {
+                if ((value === "" || value === null || value === undefined) && key !== "aboutYou") {
+                    const cleanKey = key.replace(/_/g, ' ');
+                    const capitalizedKey = cleanKey.charAt(0).toUpperCase() + cleanKey.slice(1);
                     return res.status(400).json({
                         success: false,
-                        message: "Account number and Confirm account number do not match."
+                        message: `${capitalizedKey} cannot be empty`,
                     });
                 }
             }
 
-            // 1. Handle JSON strings from FormData for nested objects
+            // 2. Handle JSON strings from FormData for nested objects
             const nestedObjects = ['basicInfo', 'professionalDetails', 'servicesAndStyles', 'availability', 'pricing', 'photographyAccessories'];
             nestedObjects.forEach(field => {
                 if (updateData[field] && typeof updateData[field] === 'string') {
@@ -648,29 +754,59 @@ class PhotographerController {
                 }
             });
 
-            // 2. Map flat fields to nested objects (Utility for simple FormData)
-            if (!updateData.basicInfo) updateData.basicInfo = {};
+            // 3. Map flat fields to nested objects (Utility for simple FormData)
+            if (!updateData.basicInfo && (updateData.fullName || updateData.displayName || updateData.phone)) {
+                updateData.basicInfo = {};
+            }
             if (updateData.fullName) updateData.basicInfo.fullName = updateData.fullName;
             if (updateData.displayName) updateData.basicInfo.displayName = updateData.displayName;
             if (updateData.phone) updateData.basicInfo.phone = updateData.phone;
 
-            if (!updateData.professionalDetails) updateData.professionalDetails = {};
-            if (updateData.expertiseLevel) updateData.professionalDetails.expertiseLevel = updateData.expertiseLevel;
+            if (!updateData.professionalDetails && (updateData.expertiseLevel || updateData.yearsOfExperience || updateData.primaryLocation || updateData.photographerType)) {
+                updateData.professionalDetails = {};
+            }
+            if (updateData.expertiseLevel) {
+                const levelMap = { "Beginner": "INITIO", "Expert": "ELITE", "Master": "PRO" };
+                const level = updateData.expertiseLevel;
+                updateData.professionalDetails.expertiseLevel = levelMap[level] || level.toUpperCase();
+            }
             if (updateData.yearsOfExperience) updateData.professionalDetails.yearsOfExperience = updateData.yearsOfExperience;
             if (updateData.primaryLocation) updateData.professionalDetails.primaryLocation = updateData.primaryLocation;
+            if (updateData.photographerType) updateData.professionalDetails.photographerType = updateData.photographerType;
 
-            // 3. Handle Profile Photo Upload
+            // 4. Sanitize Bank Details
+            if (updateData.bank_ifsc) {
+                updateData.bank_ifsc = updateData.bank_ifsc.trim().toUpperCase();
+            }
+
+            // 5. Bank Details Validation (Confirm Account Number)
+            if (updateData.bank_account_number && updateData.confirm_account_number) {
+                if (updateData.bank_account_number !== updateData.confirm_account_number) {
+                    return res.status(400).json({
+                        success: false,
+                        message: "Account number and Confirm account number do not match."
+                    });
+                }
+            }
+
+            // 6. Handle Profile Photo Upload
             if (req.file) {
+                if (!updateData.basicInfo) updateData.basicInfo = {};
                 updateData.basicInfo.profilePhoto = `/uploads/${req.file.filename}`;
             }
 
-            // 4. Flatten the object for deep partial updates (Avoid overwriting whole nested objects)
+            // 7. Handle Password update
+            if (updateData.password) {
+                const salt = await bcrypt.genSalt(10);
+                updateData.password = await bcrypt.hash(updateData.password, salt);
+            }
+
+            // 8. Flatten and Apply Updates
             const flatten = (obj, prefix = '') => {
                 let flattened = {};
                 for (let key in obj) {
                     if (obj.hasOwnProperty(key)) {
                         const newKey = prefix ? `${prefix}.${key}` : key;
-                        // Only flatten objects, not arrays or special types like Date/ObjectId
                         if (obj[key] && typeof obj[key] === 'object' && !Array.isArray(obj[key]) && !(obj[key] instanceof Date) && !(obj[key] instanceof mongoose.Types.ObjectId)) {
                             Object.assign(flattened, flatten(obj[key], newKey));
                         } else {
@@ -682,22 +818,27 @@ class PhotographerController {
             };
 
             const flatUpdateData = flatten(updateData);
+            console.log("Applying updates to photographer:", JSON.stringify(flatUpdateData, null, 2));
 
-            // Handle password update if present
-            if (updateData.password) {
-                const salt = await bcrypt.genSalt(10);
-                const hashedPassword = await bcrypt.hash(updateData.password, salt);
-                flatUpdateData.password = hashedPassword;
-            }
-
-            const photographer = await Photographer.findByIdAndUpdate(id, { $set: flatUpdateData }, {
-                new: true,
-                runValidators: true
+            // Use set for partial updates on the document object to allow validation
+            // We iterate to ensure dot-notation paths are handled correctly by the document instance
+            Object.keys(flatUpdateData).forEach((path) => {
+                photographer.set(path, flatUpdateData[path]);
             });
 
-            if (!photographer) {
-                return res.status(200).json({ message: "Photographer not found" });
+            // 9. Profile Completeness Validation (Only for self-updates /me)
+            if (!req.params.id) {
+                const missing = this._validateProfileCompleteness(photographer);
+                if (missing.length > 0) {
+                    return res.status(200).json({
+                        success: false,
+                        message: `Profile update failed. The following required fields are missing: ${missing.join(", ")}`,
+                        missingFields: missing
+                    });
+                }
             }
+
+            await photographer.save();
 
             // Prepend Base URL to Photo in response
             const photographerObj = photographer.toObject();
@@ -706,21 +847,56 @@ class PhotographerController {
                 photographerObj.basicInfo.profilePhoto = `${baseUrl}/${photographerObj.basicInfo.profilePhoto.replace(/\\/g, "/").replace(/^\//, "")}`;
             }
 
-            res.status(200).json({ message: "Photographer updated successfully", photographer: photographerObj });
+            res.status(200).json({ success: true, message: "Photographer updated successfully", photographer: photographerObj });
         } catch (error) {
-            res.status(500).json({ message: "Failed to update photographer", error: error.message });
+            console.error("Update Photographer Error:", error);
+            
+            // Determine status code (use 400 for validation errors, 500 otherwise)
+            const statusCode = error.name === "ValidationError" || error.message.includes("validation failed") ? 400 : 500;
+            
+            // Construct a concise, professional message incorporating the technical error
+            const professionalMessage = `Profile update failed: ${error.message}. Please check your details and try again.`;
+
+            res.status(statusCode).json({ 
+                success: false, 
+                message: professionalMessage 
+            });
         }
     }
 
-    // delete photographer (Admin Only)
+
+    // delete photographer (Admin Only - moves to unverified instead of deleting)
     async deletePhotographer(req, res) {
         try {
             const { id } = req.params;
-            const photographer = await Photographer.findByIdAndDelete(id);
+            const photographer = await Photographer.findById(id);
             if (!photographer) {
-                return res.status(200).json({ message: "Photographer not found" });
+                return res.status(200).json({ success: false, message: "Photographer not found" });
             }
-            res.status(200).json({ success: true, message: "Photographer deleted successfully", photographer });
+
+            // Message and Notification content
+            const successMessage = "Photographer account successfully moved to unverified status. Data preserved.";
+            const staticOtpNumbers = ["9322046187", "9325983803", "9096698947"];
+            const isStatic = staticOtpNumbers.includes(photographer.mobileNumber);
+
+            // 1. Create a notification in the database
+            await Notification.create({
+                photographer_id: photographer._id,
+                notification_type: "account_status",
+                notification_message: "Account Deactivated. Status: Unverified."
+            }).catch(err => console.error("Notification failed in deletePhotographer:", err.message));
+
+            // 2. Only update status if NOT a static number
+            if (!isStatic) {
+                photographer.status = "pending";
+                await photographer.save();
+            }
+
+            res.status(200).json({ 
+                success: true, 
+                message: isStatic ? "Photographer account successfully moved to unverified status. Data preserved. (Static Protected)" : successMessage, 
+                photographer 
+            });
         } catch (error) {
             res.status(500).json({ success: false, message: "Failed to delete photographer", error: error.message });
         }
@@ -729,35 +905,68 @@ class PhotographerController {
     async updateCommissions(req, res) {
         try {
             const { initio, elite, pro } = req.body;
+            const { partnerType } = req.params;
+
+            // Mapping from URL param to Internal Types
+            const typeMap = {
+                "photographers": { dbType: null, settingsType: "photographer_commissions" },
+                "videographers": { dbType: "Videographer", settingsType: "videographer_commissions" },
+                "editors": { dbType: "Editor", settingsType: "editor_commissions" },
+                "lighting-setups": { dbType: "Lighting Setup", settingsType: "lighting_setups_commissions" }
+            };
+
+            const config = typeMap[partnerType] || typeMap["photographers"];
+
+            // --- Commission Validation ---
+            const validate = (val, name) => {
+                if (val === "" || val === undefined || val === null) return `${name} cannot be empty`;
+                const num = Number(val);
+                if (isNaN(num)) return `${name} must be a number`;
+                if (num < 0) return `${name} cannot be negative`;
+                if (num > 100) return `${name} cannot more than 100`;
+                return null;
+            };
+
+            const errors = [
+                validate(initio, "Initio commission"),
+                validate(elite, "Elite commission"),
+                validate(pro, "Pro commission")
+            ].filter(Boolean);
+
+            if (errors.length > 0) {
+                return res.status(400).json({ success: false, message: errors[0] });
+            }
+            // -----------------------------
 
             const updates = [];
+            const baseQuery = config.dbType ? { "professionalDetails.photographerType": config.dbType } : {};
 
             if (initio !== undefined) {
                 updates.push(Photographer.updateMany(
-                    { "professionalDetails.expertiseLevel": "INITIO" },
+                    { ...baseQuery, "professionalDetails.expertiseLevel": "INITIO" },
                     { $set: { commissionPercentage: initio } }
                 ));
             }
 
             if (elite !== undefined) {
                 updates.push(Photographer.updateMany(
-                    { "professionalDetails.expertiseLevel": "ELITE" },
+                    { ...baseQuery, "professionalDetails.expertiseLevel": "ELITE" },
                     { $set: { commissionPercentage: elite } }
                 ));
             }
 
             if (pro !== undefined) {
                 updates.push(Photographer.updateMany(
-                    { "professionalDetails.expertiseLevel": "PRO" },
+                    { ...baseQuery, "professionalDetails.expertiseLevel": "PRO" },
                     { $set: { commissionPercentage: pro } }
                 ));
             }
 
             await Promise.all(updates);
 
-            // Update Global Settings
+            // Update Global Settings for this specific type
             await PlatformSettings.findOneAndUpdate(
-                { type: "commissions" },
+                { type: config.settingsType },
                 {
                     $set: {
                         ...(initio !== undefined && { initio }),
@@ -768,17 +977,35 @@ class PhotographerController {
                 { upsert: true, new: true }
             );
 
-            res.status(200).json({ success: true, message: "Commissions updated successfully" });
+            res.status(200).json({ 
+                success: true, 
+                message: `${partnerType.replace("-", " ")} commissions updated successfully` 
+            });
         } catch (error) {
             console.error("Error updating commissions:", error);
             res.status(500).json({ success: false, message: "Failed to update commissions", error: error.message });
         }
     }
+
     async getCommissions(req, res) {
         try {
-            const settings = await PlatformSettings.findOne({ type: "commissions" }).lean();
+            const { partnerType } = req.params;
+            const typeMap = {
+                "photographers": { settingsType: "photographer_commissions" },
+                "videographers": { settingsType: "videographer_commissions" },
+                "editors": { settingsType: "editor_commissions" },
+                "lighting-setups": { settingsType: "lighting_setups_commissions" }
+            };
 
-            // Explicitly filter only the new fields to ignore old ones in the DB
+            const config = typeMap[partnerType] || typeMap["photographers"];
+
+            // Find settings. If not found for new type, fallback to legacy 'commissions' for photographers
+            let settings = await PlatformSettings.findOne({ type: config.settingsType }).lean();
+            
+            if (!settings && partnerType === "photographers") {
+                settings = await PlatformSettings.findOne({ type: "commissions" }).lean();
+            }
+
             const commissions = settings ? {
                 initio: settings.initio || 0,
                 elite: settings.elite || 0,
@@ -787,6 +1014,7 @@ class PhotographerController {
 
             res.status(200).json({
                 success: true,
+                message: "Commissions fetched successfully",
                 commissions
             });
         } catch (error) {
@@ -795,152 +1023,172 @@ class PhotographerController {
         }
     }
 
-    async getSortedPhotographers(req, res) {
-        try {
-            const { bookingId } = req.query; // New Param
-            const page = Math.max(1, parseInt(req.query.page) || 1);
-            const limit = Math.max(1, parseInt(req.query.limit) || 10);
-            const skip = (page - 1) * limit;
+  async getSortedPhotographers(req, res, next) {
+    return this._getSortedPhotographersInternal(req, res, "Photographer");
+  }
 
-            const pipeline = [
-                { $match: { status: "active" } },
-                {
-                    $lookup: {
-                        from: "photographerratingsgivenbyadminandusers",
-                        localField: "_id",
-                        foreignField: "photographerId",
-                        as: "ratings"
-                    }
+  async getSortedVideographers(req, res, next) {
+    return this._getSortedPhotographersInternal(req, res, "Videographer");
+  }
+
+  async getSortedLightingSetups(req, res, next) {
+    return this._getSortedPhotographersInternal(req, res, "Lighting Setup");
+  }
+
+  async getSortedEditors(req, res, next) {
+    return this._getSortedPhotographersInternal(req, res, "Editor");
+  }
+
+  async _getSortedPhotographersInternal(req, res, typeFilter) {
+    try {
+      const { bookingId } = req.query;
+      const page = Math.max(1, parseInt(req.query.page) || 1);
+      const limit = Math.max(1, parseInt(req.query.limit) || 10);
+      const skip = (page - 1) * limit;
+
+      const matchStage = { status: "active" };
+      if (typeFilter) {
+        matchStage["professionalDetails.photographerType"] = typeFilter;
+      }
+
+      const pipeline = [
+        { $match: matchStage },
+        {
+          $lookup: {
+            from: "photographerratingsgivenbyadminandusers",
+            localField: "_id",
+            foreignField: "photographerId",
+            as: "ratings"
+          }
+        },
+        {
+          $addFields: {
+            avgRating: { $ifNull: [{ $avg: "$ratings.rating" }, 0] },
+            extractedCategories: {
+              $map: {
+                input: {
+                  $filter: {
+                    input: { $objectToArray: { $ifNull: ["$servicesAndStyles.services", {}] } },
+                    as: "item",
+                    cond: { $eq: ["$$item.v", true] }
+                  }
                 },
-                {
-                    $addFields: {
-                        avgRating: { $ifNull: [{ $avg: "$ratings.rating" }, 0] },
-                        // Extract category names (keys) where value is true
-                        extractedCategories: {
-                            $map: {
-                                input: {
-                                    $filter: {
-                                        input: { $objectToArray: { $ifNull: ["$servicesAndStyles.services", {}] } },
-                                        as: "item",
-                                        cond: { $eq: ["$$item.v", true] }
-                                    }
-                                },
-                                as: "c",
-                                in: "$$c.k"
-                            }
-                        }
-                    }
-                },
-                {
-                    $project: {
-                        _id: 1,
-                        "basicInfo.fullName": 1,
-                        "basicInfo.profilePhoto": 1,
-                        "professionalDetails.expertiseLevel": 1,
-                        "servicesAndStyles.services": 1,
-                        commissionPercentage: 1,
-                        avgRating: 1,
-                        categories: { $ifNull: ["$extractedCategories", []] },
-                        createdAt: 1
-                    }
-                }
-            ];
-
-            const [photographersAgg, settings] = await Promise.all([
-                Photographer.aggregate(pipeline),
-                PlatformSettings.findOne({ type: "commissions" })
-            ]);
-
-            const globalCommissions = settings || { initio: 0, elite: 0, pro: 0 };
-            const levelOrder = { "INITIO": 1, "ELITE": 2, "PRO": 3 };
-
-            // Fetch booking assignment details if bookingId is provided
-            let assignedPhotographerId = null;
-            let bookingStatus = null;
-            if (bookingId) {
-                const booking = await ServiceBooking.findById(bookingId)
-                    .select("photographer_id bookingStatus status");
-                if (booking) {
-                    // Only treat as assigned if booking is NOT canceled
-                    if (booking.status !== "canceled") {
-                        assignedPhotographerId = booking.photographer_id?.toString();
-                        bookingStatus = booking.bookingStatus;
-                    }
-                }
+                as: "c",
+                in: "$$c.k"
+              }
             }
-
-            // --- Custom Sort Logic for priority ---
-            let sortedPhotographers = photographersAgg;
-            if (assignedPhotographerId && bookingStatus === "accepted") {
-                sortedPhotographers = photographersAgg.sort((a, b) => {
-                    const isAssignedA = a._id.toString() === assignedPhotographerId;
-                    const isAssignedB = b._id.toString() === assignedPhotographerId;
-                    if (isAssignedA) return -1;
-                    if (isAssignedB) return 1;
-
-                    const levelA = levelOrder[a.professionalDetails?.expertiseLevel] || 99;
-                    const levelB = levelOrder[b.professionalDetails?.expertiseLevel] || 99;
-                    return levelA - levelB || b.createdAt - a.createdAt;
-                });
-            } else {
-                sortedPhotographers = photographersAgg.sort((a, b) => {
-                    const levelA = levelOrder[a.professionalDetails?.expertiseLevel] || 99;
-                    const levelB = levelOrder[b.professionalDetails?.expertiseLevel] || 99;
-                    return levelA - levelB || b.createdAt - a.createdAt;
-                });
-            }
-
-            const total = sortedPhotographers.length;
-            const paginatedItems = sortedPhotographers.slice(skip, skip + limit);
-
-            const result = paginatedItems.map(p => {
-                const level = p.professionalDetails?.expertiseLevel || "N/A";
-                let comm = p.commissionPercentage;
-
-                if (!comm) {
-                    if (level === "INITIO") comm = globalCommissions.initio;
-                    else if (level === "ELITE") comm = globalCommissions.elite;
-                    else if (level === "PRO") comm = globalCommissions.pro;
-                }
-
-                const baseUrl = `${req.protocol}://${req.get("host")}`;
-                let photo = p.basicInfo?.profilePhoto || "";
-                if (photo && !photo.startsWith("http")) {
-                    photo = `${baseUrl}/${photo.replace(/\\/g, "/").replace(/^\//, "")}`;
-                }
-
-                return {
-                    _id: p._id,
-                    name: p.basicInfo?.fullName || "N/A",
-                    level: level,
-                    profilePhoto: photo,
-                    commissionPercentage: comm || 0,
-                    avgRating: parseFloat((p.avgRating || 0).toFixed(1)),
-                    categories: p.categories || [],
-                    isAssigned: assignedPhotographerId === p._id.toString() && bookingStatus === "accepted"
-                };
-            });
-
-            const isLock = assignedPhotographerId !== null && bookingStatus === "accepted";
-            let finalData = result;
-            let finalTotal = total;
-
-            if (isLock) {
-                finalData = result.filter(p => p.isAssigned);
-                finalTotal = finalData.length;
-            }
-
-            res.status(200).json({
-                success: true,
-                isLock: isLock,
-                data: finalData,
-                meta: { total: finalTotal, page, limit }
-            });
-        } catch (error) {
-            console.error("Error fetching sorted photographers:", error);
-            res.status(500).json({ success: false, message: "Failed to fetch photographers", error: error.message });
+          }
+        },
+        {
+          $project: {
+            _id: 1,
+            "basicInfo.fullName": 1,
+            "basicInfo.profilePhoto": 1,
+            "professionalDetails.expertiseLevel": 1,
+            "professionalDetails.photographerType": 1,
+            "servicesAndStyles.services": 1,
+            commissionPercentage: 1,
+            avgRating: 1,
+            categories: { $ifNull: ["$extractedCategories", []] },
+            createdAt: 1
+          }
         }
+      ];
+
+      const [photographersAgg, settings] = await Promise.all([
+        Photographer.aggregate(pipeline),
+        PlatformSettings.findOne({ type: "commissions" })
+      ]);
+
+      const globalCommissions = settings || { initio: 0, elite: 0, pro: 0 };
+      const levelOrder = { "INITIO": 1, "ELITE": 2, "PRO": 3 };
+
+      let assignedPhotographerId = null;
+      let bookingStatus = null;
+      let bookingDate = null;
+      if (bookingId) {
+        const booking = await ServiceBooking.findById(bookingId)
+          .select("photographer_id bookingStatus status bookingDate");
+        if (booking && booking.status !== "canceled") {
+          assignedPhotographerId = booking.photographer_id?.toString();
+          bookingStatus = booking.bookingStatus;
+          bookingDate = booking.bookingDate;
+        }
+      }
+
+      let sortedPhotographers = photographersAgg;
+      if (assignedPhotographerId && bookingStatus === "accepted") {
+        sortedPhotographers = photographersAgg.sort((a, b) => {
+          const isAssignedA = a._id.toString() === assignedPhotographerId;
+          const isAssignedB = b._id.toString() === assignedPhotographerId;
+          if (isAssignedA) return -1;
+          if (isAssignedB) return 1;
+
+          const levelA = levelOrder[a.professionalDetails?.expertiseLevel] || 99;
+          const levelB = levelOrder[b.professionalDetails?.expertiseLevel] || 99;
+          return levelA - levelB || b.createdAt - a.createdAt;
+        });
+      } else {
+        sortedPhotographers = photographersAgg.sort((a, b) => {
+          const levelA = levelOrder[a.professionalDetails?.expertiseLevel] || 99;
+          const levelB = levelOrder[b.professionalDetails?.expertiseLevel] || 99;
+          return levelA - levelB || b.createdAt - a.createdAt;
+        });
+      }
+
+      const total = sortedPhotographers.length;
+      const paginatedItems = sortedPhotographers.slice(skip, skip + limit);
+
+      const result = paginatedItems.map(p => {
+        const level = p.professionalDetails?.expertiseLevel || "N/A";
+        let comm = p.commissionPercentage;
+
+        if (!comm) {
+          if (level === "INITIO") comm = globalCommissions.initio;
+          else if (level === "ELITE") comm = globalCommissions.elite;
+          else if (level === "PRO") comm = globalCommissions.pro;
+        }
+
+        const baseUrl = `${req.protocol}://${req.get("host")}`;
+        let photo = p.basicInfo?.profilePhoto || "";
+        if (photo && !photo.startsWith("http")) {
+          photo = `${baseUrl}/${photo.replace(/\\/g, "/").replace(/^\//, "")}`;
+        }
+
+        return {
+          _id: p._id,
+          name: p.basicInfo?.fullName || "N/A",
+          level: level,
+          profilePhoto: photo,
+          photographerType: p.professionalDetails?.photographerType || "",
+          commissionPercentage: comm || 0,
+          avgRating: parseFloat((p.avgRating || 0).toFixed(1)),
+          categories: p.categories || [],
+          isAssigned: assignedPhotographerId === p._id.toString() && bookingStatus === "accepted"
+        };
+      });
+
+      const isLock = assignedPhotographerId !== null && bookingStatus === "accepted";
+      let finalData = result;
+      let finalTotal = total;
+
+      if (isLock) {
+        finalData = result.filter(p => p.isAssigned);
+        finalTotal = finalData.length;
+      }
+
+      res.status(200).json({
+        success: true,
+        isLock: isLock,
+        bookingDate: bookingDate,
+        data: finalData,
+        meta: { total: finalTotal, page, limit }
+      });
+    } catch (error) {
+      console.error("Error fetching sorted photographers:", error);
+      res.status(500).json({ success: false, message: "Failed to fetch photographers", error: error.message });
     }
+  }
 
     // Sort photographers based on categories, expertise, and rating
     async getSortPhotographers(req, res) {
@@ -1103,6 +1351,74 @@ class PhotographerController {
                 message: "Failed to sort photographers",
                 error: error.message
             });
+        }
+    }
+
+    // Delete Account (moves to unverified status instead of deleting)
+    async deleteAccount(req, res) {
+        try {
+            // Priority: Auth User ID (Self, 'id' from token) -> Auth Photographer ID
+            const id = req.user?.id || req.user?._id || req.photographer?._id;
+
+            if (!id) {
+                return res.status(400).json({ success: false, message: "Photographer ID required" });
+            }
+
+            const photographer = await Photographer.findById(id);
+            if (!photographer) {
+                return res.status(404).json({ success: false, message: "Photographer not found" });
+            }
+
+            // Message and Notification content
+            const successMessage = "Account deactivated and moved to unverified status successfully";
+            const staticOtpNumbers = ["9322046187", "9325983803", "9096698947"];
+            const isStatic = staticOtpNumbers.includes(photographer.mobileNumber);
+
+            // 1. Create a notification in the database
+            await Notification.create({
+                photographer_id: photographer._id,
+                notification_type: "account_status",
+                notification_message: "Account Deactivated. Per your request."
+            }).catch(err => console.error("Notification failed in deleteAccount:", err.message));
+
+            // 2. Only update status if NOT a static number
+            if (!isStatic) {
+                photographer.status = "pending";
+                await photographer.save();
+            }
+
+            res.status(200).json({
+                success: true,
+                message: isStatic ? "Account deactivated successfully (Static Protected)" : successMessage,
+            });
+        } catch (error) {
+            res.status(500).json({ success: false, message: "Failed to delete account", error: error.message });
+        }
+    }
+
+    // Toggle Push Notification
+    async togglePushNotification(req, res) {
+        try {
+            const id = req.user?.id || req.user?._id || req.photographer?._id;
+            if (!id) {
+                return res.status(401).json({ success: false, message: "Authentication required" });
+            }
+
+            const photographer = await Photographer.findById(id);
+            if (!photographer) {
+                return res.status(404).json({ success: false, message: "Photographer not found" });
+            }
+
+            photographer.pushNotification = !photographer.pushNotification;
+            await photographer.save();
+
+            res.status(200).json({
+                success: true,
+                message: `Push notifications ${photographer.pushNotification ? 'enabled' : 'disabled'} successfully`,
+                pushNotification: photographer.pushNotification
+            });
+        } catch (error) {
+            res.status(500).json({ success: false, message: "Failed to toggle push notification", error: error.message });
         }
     }
 }

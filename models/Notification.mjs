@@ -12,12 +12,14 @@ const notificationSchema = new mongoose.Schema(
     notification_type: {
       type: String,
       required: [true, "Notification type is required"],
-      enum: ["job_update", "payment", "review", "system", "reminder"],
+      enum: ["job_update", "payment", "review", "system", "reminder", "booking_assigned", "booking_invite", "booking_status_update"],
     },
     notification_message: {
       type: String,
       required: [true, "Notification message is required"],
     },
+    booking_id: { type: mongoose.Schema.Types.ObjectId, ref: "ServiceBooking" },
+    screen: { type: String },
     sent_at: {
       type: Date,
       default: Date.now,

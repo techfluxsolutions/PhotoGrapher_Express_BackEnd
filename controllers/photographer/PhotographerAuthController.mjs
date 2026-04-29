@@ -10,7 +10,7 @@ class PhotographerAuthController {
   // Login
   async login(req, res) {
     try {
-      const { email, password } = req.body;
+      const { email, password, fcmToken } = req.body;
 
       if (!email || !password) {
         return sendErrorResponse(res, "Email and password are required", 400);
@@ -149,6 +149,34 @@ class PhotographerAuthController {
 
     } catch (error) {
       console.error("Reset password error:", error);
+      return sendErrorResponse(res, error.message, 500);
+    }
+  }
+  // ... existing methods ...
+
+  // Logout
+  async logout(req, res) {
+    try {
+      const { fcmToken } = req.body;
+      const id = req.user?.id || req.user?._id;
+
+      if (id) {
+        // Find the photographer to check if the token matches (optional security)
+        const photographer = await PhotographerDB.findById(id);
+        
+        if (photographer && photographer.fcmToken === fcmToken) {
+          // Clear the FCM token from DB
+          await PhotographerDB.findByIdAndUpdate(id, { $unset: { fcmToken: "" } });
+          console.log(`[Logout] Successfully cleared matching FCM token for photographer: ${id}`);
+        } else {
+          console.log(`[Logout] FCM token did not match or already cleared for photographer: ${id}`);
+        }
+      }
+
+      res.clearCookie("token");
+      return sendSuccessResponse(res, null, "Logged out successfully");
+    } catch (error) {
+      console.error("Logout error:", error);
       return sendErrorResponse(res, error.message, 500);
     }
   }

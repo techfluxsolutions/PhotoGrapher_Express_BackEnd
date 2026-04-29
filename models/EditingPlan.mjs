@@ -1,0 +1,30 @@
+import mongoose from "mongoose";
+
+const editingPlanSchema = new mongoose.Schema({
+    numberOfVideos: {
+        type: Number,
+        required: [true, "Number of videos is required"]
+    },
+    subtitle: {
+        type: String,
+    },
+    planName: {
+        type: String,
+        trim: true,
+    },
+    price: {
+        type: Number,
+        required: true
+    },
+    features: {
+        type: Array,
+    },
+    planCategory: {
+        type: String,
+        enum: ["standard", "premium"],
+        lowercase: true
+    }
+});
+
+export default mongoose.model("EditingPlan", editingPlanSchema);
+

@@ -51,8 +51,22 @@ class MobileBookingController {
       const limit = Math.max(1, parseInt(req.query.limit) || 20);
       const skip = (page - 1) * limit;
 
+      const now = new Date();
+      const istNow = new Date(now.getTime() + (5.5 * 60 * 60 * 1000));
+      const todayStr = istNow.toISOString().split("T")[0];
+      const todayStartIST = new Date(`${todayStr}T00:00:00.000+05:30`);
+
+      const query = { 
+        client_id: id,
+        paymentStatus: { $ne: "pending" },
+        $or: [
+          { bookingDate: { $gte: todayStartIST } },
+          { startDate: { $gte: todayStr } }
+        ]
+      };
+
       const [items, total] = await Promise.all([
-        ServiceBooking.find({ client_id: id })
+        ServiceBooking.find(query)
           .skip(skip)
           .limit(limit)
           .sort({ createdAt: -1 })
@@ -139,6 +153,8 @@ class MobileBookingController {
         "cancellationCharge",
         "cancellationDate",
         "cancellationReason",
+        "cancelReason",
+        "cancelledBy"
       ];
 
       const updates = {};
@@ -147,12 +163,32 @@ class MobileBookingController {
           updates[field] = req.body[field];
         }
       });
+      updates.cancelledBy = "user";
 
       if (Object.keys(updates).length === 0) {
         return res.status(400).json({
           success: false,
           message: "No valid fields provided for update",
         });
+      }
+
+      const bookingFound = await ServiceBooking.findById(id);
+      if (!bookingFound) {
+        return res.status(404).json({ success: false, message: "ServiceBooking not found" });
+      }
+
+      // Check if 48 hours have passed after acceptance
+      if (bookingFound.bookingStatus === "accepted" && bookingFound.acceptedAt) {
+        const acceptedTime = new Date(bookingFound.acceptedAt);
+        const currentTime = new Date();
+        const diffInHours = (currentTime - acceptedTime) / (1000 * 60 * 60);
+
+        if (diffInHours > 48) {
+          return res.status(400).json({
+            success: false,
+            message: "Booking cannot be canceled after 48 hours of acceptance",
+          });
+        }
       }
 
       const booking = await ServiceBooking.findByIdAndUpdate(
@@ -303,12 +339,14 @@ class MobileBookingController {
             ]
           },
           { status: { $nin: ["completed", "canceled"] } },
+          { bookingStatus: "accepted" },
           {
             $or: [
               { bookingDate: { $gte: tomorrowStartIST } },      // Tomorrow or Future (Date object)
               { startDate: { $gte: tomorrowStr } }             // Tomorrow or Future (String)
             ]
-          }
+          },
+          { paymentStatus: { $in: ["partially paid", "fully paid"] } }
         ]
       };
 

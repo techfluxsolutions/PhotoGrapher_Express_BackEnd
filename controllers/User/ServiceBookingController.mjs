@@ -68,18 +68,51 @@ class ServiceBookingController {
       const limit = Math.max(1, parseInt(req.query.limit) || 20);
       const skip = (page - 1) * limit;
 
+      const now = new Date();
+      const istNow = new Date(now.getTime() + (5.5 * 60 * 60 * 1000));
+      const todayStr = istNow.toISOString().split("T")[0];
+      const todayStartIST = new Date(`${todayStr}T00:00:00.000+05:30`);
+
+      const query = {
+        client_id: id,
+        $and: [
+          {
+            $or: [
+              { paymentStatus: { $ne: "pending" } },
+              { bookingStatus: { $in: ["pending", "rejected"] } }
+            ]
+          },
+          {
+            $or: [
+              { bookingDate: { $gte: todayStartIST } },
+              { startDate: { $gte: todayStr } },
+              { status: "canceled" }
+            ]
+          }
+        ]
+      };
+
       const [items, total] = await Promise.all([
-        ServiceBooking.find({ client_id: id })
+        ServiceBooking.find(query)
           .skip(skip)
           .limit(limit)
           .sort({ createdAt: -1 })
           .populate("service_id", "serviceName"),
-        ServiceBooking.countDocuments({ client_id: id }),
+        ServiceBooking.countDocuments(query),
       ]);
 
       const formattedItems = items.map((item) => {
         const doc = item.toObject();
         doc.eventType = item.shootType || item.service_id?.serviceName || "";
+        doc.bookingStatus = item.bookingStatus || "pending";
+
+        let displayStatus = item.status || "pending";
+        if (displayStatus === "canceled") {
+          displayStatus = "Cancelled";
+        } else {
+          displayStatus = displayStatus.charAt(0).toUpperCase() + displayStatus.slice(1);
+        }
+        doc.status = displayStatus;
         return doc;
       });
 
@@ -108,7 +141,12 @@ class ServiceBookingController {
           .status(404)
           .json({ success: false, message: "ServiceBooking not found" });
       }
-      return res.json({ success: true, data: booking, photographer });
+
+      const bookingObj = booking.toObject();
+      bookingObj.bookingStatus = booking.bookingStatus || "pending";
+      bookingObj.status = booking.status || "pending";
+
+      return res.json({ success: true, data: bookingObj, photographer });
     } catch (err) {
       return next(err);
     }
@@ -159,6 +197,8 @@ class ServiceBookingController {
         "cancellationCharge",
         "cancellationDate",
         "cancellationReason",
+        "cancelReason",
+        "cancelledBy"
       ];
 
       // pick only allowed fields from payload
@@ -176,6 +216,25 @@ class ServiceBookingController {
         });
       }
 
+      const bookingFound = await ServiceBooking.findById(id);
+      if (!bookingFound) {
+        return res.status(404).json({ success: false, message: "ServiceBooking not found" });
+      }
+
+      if (bookingFound.bookingStatus === "accepted" && bookingFound.acceptedAt) {
+        const acceptedTime = new Date(bookingFound.acceptedAt);
+        const currentTime = new Date();
+        const diffInHours = (currentTime - acceptedTime) / (1000 * 60 * 60);
+
+        if (diffInHours > 48) {
+          return res.status(400).json({
+            success: false,
+            message: "Booking cannot be canceled after 48 hours of acceptance",
+          });
+        }
+      }
+
+      updates.cancelledBy = "user";
       const booking = await ServiceBooking.findByIdAndUpdate(
         id,
         { $set: updates },
@@ -202,7 +261,7 @@ class ServiceBookingController {
     try {
       const { id } = req.params;
       const payload = req.body;
-      
+
       console.log(`--- [updatePaymentStatusBooking] --- ID: ${id}`);
       console.log("Payload received:", JSON.stringify(payload, null, 2));
 
@@ -211,11 +270,11 @@ class ServiceBookingController {
       if (payload.bookingDate) {
         payload.bookingDate = parseDDMMYYYY(payload.bookingDate);
       }
-      
+
       // Ensure paymentStatus, full_Payment, partial_Payment are synchronized
       if (
-        payload.paymentStatus === "paid" || 
-        payload.paymentStatus === "fully paid" || 
+        payload.paymentStatus === "paid" ||
+        payload.paymentStatus === "fully paid" ||
         payload.full_Payment === true ||
         (payload.outStandingAmount !== undefined && Number(payload.outStandingAmount) === 0 && payload.totalAmount)
       ) {
@@ -225,8 +284,8 @@ class ServiceBookingController {
         payload.partial_Payment = false;
         payload.outStandingAmount = 0;
       } else if (
-        payload.paymentStatus === "partially paid" || 
-        payload.partial_Payment === true || 
+        payload.paymentStatus === "partially paid" ||
+        payload.partial_Payment === true ||
         (payload.outStandingAmount && Number(payload.outStandingAmount) > 0)
       ) {
         payload.paymentStatus = "partially paid";
@@ -302,7 +361,15 @@ class ServiceBookingController {
         .sort({ bookingDate: -1, createdAt: -1 }) // Show most recent past bookings first
         .populate("service_id", "serviceName");
 
-      return res.json({ success: true, data: bookings });
+      const formattedBookings = bookings.map((item) => {
+        const doc = item.toObject();
+        doc.eventType = item.shootType || item.service_id?.serviceName || "";
+        doc.bookingStatus = item.bookingStatus || "pending";
+        doc.status = item.status || "pending";
+        return doc;
+      });
+
+      return res.json({ success: true, data: formattedBookings });
     } catch (err) {
       return next(err);
     }
@@ -312,7 +379,69 @@ class ServiceBookingController {
     try {
       const { id } = req.user;
       const bookings = await ServiceBooking.find({ client_id: id, is_Incomplete: true });
-      return res.json({ success: true, data: bookings });
+      const formattedBookings = bookings.map((item) => {
+        const doc = item.toObject();
+        doc.bookingStatus = item.bookingStatus || "pending";
+        doc.status = item.status || "pending";
+        return doc;
+      });
+      return res.json({ success: true, data: formattedBookings });
+    } catch (err) {
+      return next(err);
+    }
+  }
+
+  async reschedule(req, res, next) {
+    try {
+      const { id } = req.params;
+      const { startDate, endDate } = req.body;
+      const { id: userId } = req.user;
+
+      if (!startDate) {
+        return res.status(400).json({ success: false, message: "startDate is required" });
+      }
+
+      // Find booking first to see if it exists
+      const booking = await ServiceBooking.findById(id);
+
+      if (!booking) {
+        return res.status(404).json({ success: false, message: "Booking not found" });
+      }
+
+      // Check authorization: Owner, Assigned Photographer, or Admin
+      const isOwner = booking.client_id && booking.client_id.toString() === userId;
+      const isAssignedPhotographer = booking.photographer_id && booking.photographer_id.toString() === userId;
+      const isAdmin = req.user.isAdmin === true;
+
+      if (!isOwner && !isAssignedPhotographer && !isAdmin) {
+        return res.status(403).json({
+          success: false,
+          message: "You are not authorized to reschedule this booking"
+        });
+      }
+
+      // Check if booking is in a state that allows rescheduling
+      if (["completed", "canceled"].includes(booking.status)) {
+        return res.status(400).json({
+          success: false,
+          message: `Cannot reschedule a ${booking.status} booking`
+        });
+      }
+
+      // Update dates
+      booking.startDate = startDate;
+      if (endDate) booking.endDate = endDate;
+
+      // Update the Date object as well for consistent querying
+      booking.bookingDate = parseDDMMYYYY(startDate);
+
+      await booking.save();
+
+      return res.json({
+        success: true,
+        message: "Booking rescheduled successfully",
+        data: booking
+      });
     } catch (err) {
       return next(err);
     }
