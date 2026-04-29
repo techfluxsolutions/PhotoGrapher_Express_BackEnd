@@ -181,6 +181,7 @@ router.get("/servicebookings/:id", (req, res, next) => ServiceBookingController.
 router.put("/servicebookings/:id", (req, res, next) => ServiceBookingController.cancelBooking(req, res, next));
 router.get("/getpreviousbookings", (req, res, next) => ServiceBookingController.getPreviousBookings(req, res, next));
 router.put("/reschedule/:id", (req, res, next) => ServiceBookingController.reschedule(req, res, next));
+router.put("/bookings/:id/media", (req, res, next) => ServiceBookingController.updateBookingMedia(req, res, next));
 
 
 

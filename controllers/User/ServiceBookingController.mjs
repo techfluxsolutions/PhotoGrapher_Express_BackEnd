@@ -443,6 +443,36 @@ class ServiceBookingController {
       return next(err);
     }
   }
+  
+  async updateBookingMedia(req, res, next) {
+    try {
+      const { id } = req.params;
+      const { fileKeys } = req.body;
+
+      const booking = await ServiceBooking.findById(id);
+      if (!booking) {
+        // Also check HourlyShootBooking if not found
+        const HourlyShootBooking = (await import("../../models/HourlyShootBooking.mjs")).default;
+        const hourlyBooking = await HourlyShootBooking.findById(id);
+        if (!hourlyBooking) {
+          return res.status(404).json({ success: false, message: "Booking not found" });
+        }
+        
+        hourlyBooking.galleryStatus = "Photos Uploaded";
+        await hourlyBooking.save();
+        return res.json({ success: true, message: "Media status updated for hourly booking", data: hourlyBooking });
+      }
+
+      booking.galleryStatus = "Photos Uploaded";
+      // If the model has fileKeys field, we could save them here, 
+      // but for now we've saved them in DataLinks.
+      await booking.save();
+
+      return res.json({ success: true, message: "Media status updated successfully", data: booking });
+    } catch (err) {
+      return next(err);
+    }
+  }
 }
 
 export default new ServiceBookingController();

@@ -259,16 +259,20 @@ class EditingController {
     async startUpload(req, res) {
         try {
             const { fileName, fileType, relativePath, veroaBookingId, fileSize } = req.body;
+            const userId = req.user.id;
 
-            if (!fileName || !fileType || !veroaBookingId) {
-                return res.status(400).json({ error: "fileName, fileType, and veroaBookingId are required." });
+            if (!fileName || !fileType) {
+                return res.status(400).json({ error: "fileName and fileType are required." });
             }
+
+            // Fallback to userId if veroaBookingId is missing (e.g. Add to Cart flow)
+            const folderId = veroaBookingId || `user-${userId}`;
 
             let key;
             if (relativePath) {
-                key = `editing-raw/${veroaBookingId}/${relativePath}`;
+                key = `editing-raw/${folderId}/${relativePath}`;
             } else {
-                key = `editing-raw/${veroaBookingId}/${Date.now()}-${fileName.replace(/\s+/g, "-")}`;
+                key = `editing-raw/${folderId}/${Date.now()}-${fileName.replace(/\s+/g, "-")}`;
             }
 
             const STRATEGY_THRESHOLD = 100 * 1024 * 1024; // 100MB
