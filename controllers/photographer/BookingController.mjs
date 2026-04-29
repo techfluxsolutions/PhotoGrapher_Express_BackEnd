@@ -290,7 +290,7 @@ class BookingController {
         }
     }
 
-    // Get ALL bookings for the photographer (Assignments + Invitations, No date limits)
+    // Get ALL bookings for the photographer (Assigned only, excludes Pending requests)
     async getAllMyBookings(req, res) {
         try {
             const page = Math.max(1, parseInt(req.query.page) || 1);
@@ -304,10 +304,8 @@ class BookingController {
             const photographerId = new mongoose.Types.ObjectId(myId);
 
             const filter = {
-                $or: [
-                    { photographer_id: photographerId },
-                    { photographerIds: { $in: [photographerId] } }
-                ]
+                photographer_id: photographerId,
+                bookingStatus: { $ne: "pending" }
             };
 
             const [bookings, total] = await Promise.all([
