@@ -4,7 +4,12 @@ const serviceBookingSchema = new mongoose.Schema(
     service_id: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Service",
-      required: true,
+      required: false
+    },
+    serviceCategory: {
+      type: String,
+      enum: ["hourly", "editing", "service"],
+      default: "service"
     },
     additionalServicesId: {
       type: mongoose.Schema.Types.ObjectId,
@@ -213,6 +218,47 @@ const serviceBookingSchema = new mongoose.Schema(
     cancelReason: {
       type: String,
       required: false,
+    },
+    hours: {
+      type: Number,
+      required: false,
+    },
+    cartId: {
+      type: mongoose.Types.ObjectId,
+      ref: "Cart"
+    },
+    couponApplied: {
+      type: Boolean,
+      default: false
+    },
+    couponId: {
+      type: mongoose.Types.ObjectId,
+      ref: "Coupon"
+    },
+    discountAmount: {
+      type: Number,
+      default: 0
+    },
+    finalAmount: {
+      type: Number,
+      default: 0
+    },
+    date: {
+      type: String,
+      required: false,
+    },
+    time: {
+      type: String,
+      required: false,
+    },
+    hourlyShootService_id: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "HourlyShootService",
+      required: false,
+    },
+    requirements: {
+      type: String,
+      default: "",
     },
   }, { timestamps: true }
 );

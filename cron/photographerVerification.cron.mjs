@@ -1,8 +1,6 @@
 import cron from "node-cron";
 import Photographer from "../models/Photographer.mjs";
 import ServiceBooking from "../models/ServiceBookings.mjs";
-import HourlyShootBooking from "../models/HourlyShootBooking.mjs";
-
 export const photographerVerificationCron = () => {
     // Run every day at midnight
     cron.schedule("0 0 * * *", async () => {
@@ -24,14 +22,7 @@ export const photographerVerificationCron = () => {
                     updatedAt: { $gte: thirtyDaysAgo }
                 });
 
-                // Count canceled/rejected HourlyShootBookings in the last 30 days
-                const hourlyCancellations = await HourlyShootBooking.countDocuments({
-                    photographer_id: photographer._id,
-                    $or: [{ status: "canceled" }, { bookingStatus: "rejected" }],
-                    updatedAt: { $gte: thirtyDaysAgo }
-                });
-
-                const totalCancellations = serviceCancellations + hourlyCancellations;
+                const totalCancellations = serviceCancellations;
 
                 if (totalCancellations >= 3) {
                     photographer.isVerified = false;

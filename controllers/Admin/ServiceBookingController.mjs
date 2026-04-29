@@ -10,7 +10,7 @@ import Counter from "../../models/Counter.mjs";
 import Notification from "../../models/Notification.mjs";
 import { emitNotificationCount } from "../../services/SocketService.mjs";
 import admin from "../../utils/firebaseAdmin.mjs";
-import HourlyShootBooking from "../../models/HourlyShootBooking.mjs";
+// Removed HourlyShootBooking import
 
 const parseDDMMYYYY = (dateStr) => {
   if (!dateStr || dateStr instanceof Date) return dateStr;
@@ -1269,14 +1269,15 @@ class ServiceBookingController {
       const limit = Math.max(1, parseInt(req.query.limit) || 20);
       const skip = (page - 1) * limit;
 
+      const filter = { serviceCategory: "hourly" };
       const [items, total] = await Promise.all([
-        HourlyShootBooking.find()
+        ServiceBooking.find(filter)
           .populate("client_id", "username mobileNumber email")
           .populate("photographer_id", "basicInfo.fullName professionalDetails")
           .sort({ createdAt: -1 })
           .skip(skip)
           .limit(limit),
-        HourlyShootBooking.countDocuments()
+        ServiceBooking.countDocuments(filter)
       ]);
 
       const formattedBookings = items.map(booking => {
