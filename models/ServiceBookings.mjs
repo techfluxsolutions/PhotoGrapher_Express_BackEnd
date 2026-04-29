@@ -205,27 +205,15 @@ const serviceBookingSchema = new mongoose.Schema(
       type: [String],
       default: []
     },
-    hourlyPackages: [
-      {
-        category: { type: String },
-        hours: { type: String },
-        services: [
-          {
-            name: { type: String },
-            qty: { type: Number },
-            price: { type: Number }
-          }
-        ]
-      }
-    ],
-    editingPackages: [
-      {
-        planName: { type: String },
-        category: { type: String },
-        videos: { type: Number },
-        price: { type: Number }
-      }
-    ]
+    cancelledBy: {
+      type: String,
+      enum: ["user", "photographer", "admin"],
+      required: false,
+    },
+    cancelReason: {
+      type: String,
+      required: false,
+    },
   }, { timestamps: true }
 );
 

@@ -1,6 +1,10 @@
 import mongoose from "mongoose";
 const hourlyShootBookingSchema = new mongoose.Schema(
   {
+    serviceId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Services",
+    },
     veroaBookingId: {
       type: String,
       unique: true,

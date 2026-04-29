@@ -1024,7 +1024,7 @@ class PhotographerController {
     }
 
   async getSortedPhotographers(req, res, next) {
-    return this._getSortedPhotographersInternal(req, res, null);
+    return this._getSortedPhotographersInternal(req, res, "Photographer");
   }
 
   async getSortedVideographers(req, res, next) {
@@ -1035,8 +1035,8 @@ class PhotographerController {
     return this._getSortedPhotographersInternal(req, res, "Lighting Setup");
   }
 
-  async getSortedCinematographers(req, res, next) {
-    return this._getSortedPhotographersInternal(req, res, "Cinematographer");
+  async getSortedEditors(req, res, next) {
+    return this._getSortedPhotographersInternal(req, res, "Editor");
   }
 
   async _getSortedPhotographersInternal(req, res, typeFilter) {

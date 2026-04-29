@@ -4,7 +4,7 @@ process.on("uncaughtException", (err) => {
   console.error(err.name, err.message, err.stack);
   process.exit(1);
 });
-
+import { photographerVerificationCron } from "./cron/photographerVerification.cron.mjs";
 import "dotenv/config";
 import express from "express";
 import mongoose from "mongoose";
@@ -56,7 +56,7 @@ app.use(morgan("combined", { stream: { write: (message) => logger.info(message.t
 app.use(helmet({
   crossOriginResourcePolicy: { policy: "cross-origin" } // Required if serving assets across origins
 }));
-
+photographerVerificationCron();
 // Limit requests from same API (prevent brute force / DDoS)
 const limiter = rateLimit({
   max: 1500, // Generous limit for APIs

@@ -127,6 +127,9 @@ router.post('/cart/payment/verify', (req, res, next) => PaymentController.verify
 //create hourlyshoot
 router.post('/createhourlyshootBooking', (req, res, next) => HourlyShootBookingController.createHourlyBooking(req, res, next));
 
+// Create Hourly & Editing Quotes
+router.post('/hourly-shoot-quote', (req, res, next) => HourlyShootBookingController.createhourlyShookQuote(req, res, next));
+
 // --- Quotes ---
 router.post("/quotes", (req, res, next) => QuoteController.create(req, res, next));
 router.get("/quotes", (req, res, next) => QuoteController.getAll(req, res, next));
