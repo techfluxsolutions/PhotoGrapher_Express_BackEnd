@@ -1,6 +1,7 @@
 import mongoose from "mongoose";
 import HourlyShootBooking from "../../models/HourlyShootBooking.mjs";
 import Counter from "../../models/Counter.mjs";
+import Quote from "../../models/Quote.mjs";
 
 class HourlyShootBookingController {
 
@@ -319,6 +320,101 @@ class HourlyShootBookingController {
                 success: false,
                 message: error.message,
             });
+        }
+    }
+
+    /* ---------------------------------------------------------
+     CREATE QUOTE BY USER AND ADMIN  
+ --------------------------------------------------------- */
+
+    async createhourlyShookQuote(req, res) {
+        try {
+            const {
+                name,
+                category,
+                date,
+                city,
+                requirement,
+                additionalDetails,
+                // Fallbacks in case frontend still sends older keys
+                clientName,
+                eventType,
+                startDate,
+                location,
+                photographyRequirements
+            } = req.body;
+
+            const clientId = req.user?.id || req.body.clientId;
+
+            if (!clientId) {
+                return res.status(400).json({ success: false, message: "Client ID is required." });
+            }
+
+            const finalName = name || clientName;
+            const finalCity = city || location;
+            let finalCategory = category || eventType;
+
+            const payload = {
+                clientId,
+                clientName: finalName,
+                city: finalCity,
+                location: finalCity,
+                bStatus: "pending",
+                quoteStatus: "pending",
+                quoteType: "personalizedQuotes" // Matching the Quote schema enum
+            };
+
+            // Formatting Date for Hourly (Editing might not have date)
+            const finalDate = date || startDate;
+            if (finalDate) {
+                const parseDate = (d) => {
+                    if (d.includes("-")) {
+                        const parts = d.split("-");
+                        if (parts[2]?.length === 4) return new Date(`${parts[2]}-${parts[1]}-${parts[0]}`); // DD-MM-YYYY
+                    }
+                    return new Date(d);
+                };
+                payload.startDate = parseDate(finalDate);
+                payload.eventDate = payload.startDate;
+            }
+
+            // Format Requirements Array
+            let reqArray = [];
+            if (Array.isArray(requirement)) {
+                reqArray = requirement;
+            } else if (requirement) {
+                reqArray = [requirement];
+            } else if (photographyRequirements && typeof photographyRequirements === 'string') {
+                reqArray = [photographyRequirements]; // fallback for frontend
+            } else if (Array.isArray(photographyRequirements)) {
+                reqArray = photographyRequirements;
+            }
+
+            payload.requirements = reqArray;
+
+            // Differentiate between Hourly and Editing
+            if (finalCategory) {
+                // Hourly Case (or if category is explicitly provided)
+                payload.eventType = finalCategory;
+            } else {
+                // Editing Case (category is missing)
+                payload.eventType = "Editing";
+                payload.editingPreferences = true;
+                if (additionalDetails) {
+                    payload.photographyRequirements = additionalDetails;
+                }
+            }
+
+            const quote = await Quote.create(payload);
+
+            return res.status(201).json({
+                success: true,
+                message: "Quote created successfully",
+                data: quote
+            });
+        } catch (error) {
+            console.error("Error creating hourly/editing quote:", error);
+            return res.status(500).json({ success: false, message: error.message || "Failed to create quote" });
         }
     }
 }

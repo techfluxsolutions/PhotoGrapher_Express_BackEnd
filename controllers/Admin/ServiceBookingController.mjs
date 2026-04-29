@@ -615,6 +615,7 @@ class ServiceBookingController {
           payload.bookingStatus = "rejected";
           payload.photographerIds = [];
           payload.bookingOtp = null;
+          payload.cancelledBy = "admin";
       }
 
       // 📸 Snapshot the old booking BEFORE update (so we can detect changes)
@@ -697,7 +698,9 @@ class ServiceBookingController {
           bookingStatus: "rejected", // Mark as rejected/canceled for the photographer
           photographer_id: null,      // Clear assignment
           photographerIds: [],        // Clear any pending invitations
-          bookingOtp: null            // Clear OTP
+          bookingOtp: null,           // Clear OTP
+          cancelledBy: "admin",
+          cancelReason: req.body?.cancelReason || req.body?.cancellationReason || "Canceled by admin"
         },
         { new: true }
       );

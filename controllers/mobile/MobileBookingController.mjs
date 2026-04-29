@@ -153,6 +153,8 @@ class MobileBookingController {
         "cancellationCharge",
         "cancellationDate",
         "cancellationReason",
+        "cancelReason",
+        "cancelledBy"
       ];
 
       const updates = {};
@@ -161,6 +163,7 @@ class MobileBookingController {
           updates[field] = req.body[field];
         }
       });
+      updates.cancelledBy = "user";
 
       if (Object.keys(updates).length === 0) {
         return res.status(400).json({

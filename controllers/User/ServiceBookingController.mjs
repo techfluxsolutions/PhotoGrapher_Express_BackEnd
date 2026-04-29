@@ -73,8 +73,8 @@ class ServiceBookingController {
       const todayStr = istNow.toISOString().split("T")[0];
       const todayStartIST = new Date(`${todayStr}T00:00:00.000+05:30`);
 
-      const query = { 
-        client_id: id, 
+      const query = {
+        client_id: id,
         $and: [
           {
             $or: [
@@ -197,6 +197,8 @@ class ServiceBookingController {
         "cancellationCharge",
         "cancellationDate",
         "cancellationReason",
+        "cancelReason",
+        "cancelledBy"
       ];
 
       // pick only allowed fields from payload
@@ -232,6 +234,7 @@ class ServiceBookingController {
         }
       }
 
+      updates.cancelledBy = "user";
       const booking = await ServiceBooking.findByIdAndUpdate(
         id,
         { $set: updates },
@@ -258,7 +261,7 @@ class ServiceBookingController {
     try {
       const { id } = req.params;
       const payload = req.body;
-      
+
       console.log(`--- [updatePaymentStatusBooking] --- ID: ${id}`);
       console.log("Payload received:", JSON.stringify(payload, null, 2));
 
@@ -267,11 +270,11 @@ class ServiceBookingController {
       if (payload.bookingDate) {
         payload.bookingDate = parseDDMMYYYY(payload.bookingDate);
       }
-      
+
       // Ensure paymentStatus, full_Payment, partial_Payment are synchronized
       if (
-        payload.paymentStatus === "paid" || 
-        payload.paymentStatus === "fully paid" || 
+        payload.paymentStatus === "paid" ||
+        payload.paymentStatus === "fully paid" ||
         payload.full_Payment === true ||
         (payload.outStandingAmount !== undefined && Number(payload.outStandingAmount) === 0 && payload.totalAmount)
       ) {
@@ -281,8 +284,8 @@ class ServiceBookingController {
         payload.partial_Payment = false;
         payload.outStandingAmount = 0;
       } else if (
-        payload.paymentStatus === "partially paid" || 
-        payload.partial_Payment === true || 
+        payload.paymentStatus === "partially paid" ||
+        payload.partial_Payment === true ||
         (payload.outStandingAmount && Number(payload.outStandingAmount) > 0)
       ) {
         payload.paymentStatus = "partially paid";
@@ -387,7 +390,7 @@ class ServiceBookingController {
       return next(err);
     }
   }
-  
+
   async reschedule(req, res, next) {
     try {
       const { id } = req.params;
@@ -411,33 +414,33 @@ class ServiceBookingController {
       const isAdmin = req.user.isAdmin === true;
 
       if (!isOwner && !isAssignedPhotographer && !isAdmin) {
-        return res.status(403).json({ 
-          success: false, 
-          message: "You are not authorized to reschedule this booking" 
+        return res.status(403).json({
+          success: false,
+          message: "You are not authorized to reschedule this booking"
         });
       }
 
       // Check if booking is in a state that allows rescheduling
       if (["completed", "canceled"].includes(booking.status)) {
-        return res.status(400).json({ 
-          success: false, 
-          message: `Cannot reschedule a ${booking.status} booking` 
+        return res.status(400).json({
+          success: false,
+          message: `Cannot reschedule a ${booking.status} booking`
         });
       }
 
       // Update dates
       booking.startDate = startDate;
       if (endDate) booking.endDate = endDate;
-      
+
       // Update the Date object as well for consistent querying
       booking.bookingDate = parseDDMMYYYY(startDate);
 
       await booking.save();
 
-      return res.json({ 
-        success: true, 
-        message: "Booking rescheduled successfully", 
-        data: booking 
+      return res.json({
+        success: true,
+        message: "Booking rescheduled successfully",
+        data: booking
       });
     } catch (err) {
       return next(err);

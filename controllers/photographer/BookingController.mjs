@@ -532,7 +532,11 @@ class BookingController {
 
             const booking = await ServiceBooking.findByIdAndUpdate(
                 id,
-                { status: "canceled" },
+                { 
+                    status: "canceled",
+                    cancelledBy: "photographer",
+                    cancelReason: req.body?.cancelReason || req.body?.cancellationReason || "Deleted by photographer"
+                },
                 { new: true }
             );
 
@@ -824,6 +828,8 @@ class BookingController {
                     updateData.status = "canceled";
                     updateData.photographer_id = null; // Remove as assigned photographer
                     updateData.bookingOtp = null;      // Clear OTP
+                    updateData.cancelledBy = "photographer";
+                    updateData.cancelReason = req.body.cancelReason || req.body.cancellationReason || "Rejected by photographer";
                 } else if (isInvited) {
                     // Just rejecting an invitation - remove me from the list so it disappears from my pending list
                     await ServiceBooking.findByIdAndUpdate(id, { $pull: { photographerIds: myId } });
