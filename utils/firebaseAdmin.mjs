@@ -21,10 +21,14 @@ if (!admin.apps.length) {
       credential: admin.credential.cert(serviceAccount),
     });
 
-    console.log("Firebase Admin initialized using .env");
+    console.log("✅ Firebase Admin initialized using .env");
+    console.log("Project ID:", serviceAccount.projectId);
+    console.log("Client Email:", serviceAccount.clientEmail);
   } catch (error) {
-    console.error("Firebase Admin init error:", error);
+    console.error("❌ Firebase Admin init error:", error);
   }
+} else {
+  console.log("ℹ️ Firebase Admin already initialized. Apps:", admin.apps.map(app => app.name));
 }
 
 export default admin;

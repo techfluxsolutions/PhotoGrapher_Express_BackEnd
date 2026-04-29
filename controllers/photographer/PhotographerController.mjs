@@ -1024,7 +1024,7 @@ class PhotographerController {
     }
 
   async getSortedPhotographers(req, res, next) {
-    return this._getSortedPhotographersInternal(req, res, null);
+    return this._getSortedPhotographersInternal(req, res, "Photographer");
   }
 
   async getSortedVideographers(req, res, next) {
