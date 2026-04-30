@@ -428,6 +428,7 @@ export const uploadController = {
             // ✅ Fetch paginated keys
             const files = await DataLinks.find({ bookingid: bookingId })
                 .select("key")
+                .sort({ _id: -1 })
                 .skip(skip)
                 .limit(limitNum)
                 .lean();
