@@ -377,8 +377,8 @@ export const uploadController = {
             const skip = (pageNum - 1) * limitNum;
 
             const query = { bookingid: bookingId };
-            // Regular users only see published photos
-            if (req.user && req.user.userType === "user") {
+            // Hide unpublished photos from both Users and Admins (Only Photographers see everything)
+            if (req.user && req.user.userType !== "photographer") {
                 query.isPublished = true;
             }
 
