@@ -24,6 +24,10 @@ const DataLinksSchema = new mongoose.Schema({
     },
     folderPath: {
         type: String
+    },
+    isPublished: {
+        type: Boolean,
+        default: false
     }
 }, { collection: 'datalinks' });
 

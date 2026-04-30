@@ -716,6 +716,12 @@ class BookingController {
                 });
             }
 
+            // ✅ Bulk-update all photos for this booking to be published
+            await DataLinks.updateMany(
+                { bookingid: id },
+                { $set: { isPublished: true } }
+            );
+
             // Also update the booking status
             await ServiceBooking.findByIdAndUpdate(id, {
                 galleryStatus: "Photos Uploaded",
