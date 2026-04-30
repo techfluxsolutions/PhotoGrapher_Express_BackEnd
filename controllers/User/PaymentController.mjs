@@ -6,7 +6,7 @@ import crypto from "crypto";
 import Message from "../../models/Message.mjs";
 import Conversation from "../../models/Conversation.mjs";
 import Cart from "../../models/Cart.mjs";
-import HourlyShootBooking from "../../models/HourlyShootBooking.mjs";
+// Removed HourlyShootBooking import
 import Payout from "../../models/Payout.mjs";
 import Counter from "../../models/Counter.mjs";
 import Coupon from "../../models/Coupon.model.mjs";
@@ -253,7 +253,7 @@ class PaymentController {
     if (newOutstandingAmount < 0) newOutstandingAmount = 0;
 
     // Update Payment collection (similar to your verify function)
-    let paymentRecord = await Payment.findOne({ job_id: booking._id });
+    let paymentRecord = await Payment.findOne({ job_id: booking._id, payment_status: "pending" });
 
     if (!paymentRecord) {
       paymentRecord = await Payment.create({
@@ -505,9 +505,10 @@ class PaymentController {
           const formattedNumber = String(counter.seq).padStart(6, "0");
           const veroaBookingId = `VEROA-BK-${formattedNumber}`;
 
-          // Create HourlyShootBooking
-          const booking = await HourlyShootBooking.create({
+          // Create HourlyShootBooking using ServiceBooking
+          const booking = await ServiceBooking.create({
             veroaBookingId,
+            serviceCategory: "hourly",
             client_id: userId,
             date: date || "TBD",
             time: time || "TBD",

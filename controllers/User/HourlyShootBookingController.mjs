@@ -1,5 +1,5 @@
 import mongoose from "mongoose";
-import HourlyShootBooking from "../../models/HourlyShootBooking.mjs";
+import ServiceBooking from "../../models/ServiceBookings.mjs";
 import Counter from "../../models/Counter.mjs";
 import Quote from "../../models/Quote.mjs";
 
@@ -54,15 +54,16 @@ class HourlyShootBookingController {
     }
 
     async paginateBookings(filter, page, limit, skip) {
+        filter.serviceCategory = "hourly";
 
         const [bookings, total] = await Promise.all([
-            HourlyShootBooking.find(filter)
+            ServiceBooking.find(filter)
                 .populate("client_id", "username mobileNumber email avatar")
                 .sort({ createdAt: -1 })
                 .skip(skip)
                 .limit(limit),
 
-            HourlyShootBooking.countDocuments(filter),
+            ServiceBooking.countDocuments(filter),
         ]);
 
         return {
@@ -97,8 +98,9 @@ class HourlyShootBookingController {
             const formattedNumber = String(nextNumber).padStart(6, "0");
 
             payload.veroaBookingId = `VEROA-BK-${formattedNumber}`;
+            payload.serviceCategory = "hourly";
 
-            const booking = await HourlyShootBooking.create(payload);
+            const booking = await ServiceBooking.create(payload);
 
             return res.status(201).json({
                 success: true,
@@ -267,7 +269,7 @@ class HourlyShootBookingController {
 
     async getHourlyBookingById(req, res) {
         try {
-            const booking = await HourlyShootBooking.findById(req.params.id)
+            const booking = await ServiceBooking.findOne({ _id: req.params.id, serviceCategory: "hourly" })
                 .populate("client_id", "username mobileNumber email avatar");
 
             if (!booking)
@@ -297,8 +299,8 @@ class HourlyShootBookingController {
         try {
             const { id } = req.params;
 
-            const updated = await HourlyShootBooking.findByIdAndUpdate(
-                id,
+            const updated = await ServiceBooking.findOneAndUpdate(
+                { _id: id, serviceCategory: "hourly" },
                 req.body,
                 { new: true, runValidators: true }
             );
