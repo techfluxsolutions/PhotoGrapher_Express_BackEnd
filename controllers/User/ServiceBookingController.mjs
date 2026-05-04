@@ -57,6 +57,16 @@ class ServiceBookingController {
 
       payload.veroaBookingId = `VEROA-BK-${formattedNumber}`;
 
+      if (!payload.serviceCategory) {
+        if (payload.totalEditingVideos > 0 || (payload.editingbookings && payload.editingbookings.length > 0)) {
+          payload.serviceCategory = "editing";
+        } else if (payload.hourlyPackages && payload.hourlyPackages.length > 0) {
+          payload.serviceCategory = "hourly";
+        } else {
+          payload.serviceCategory = "service";
+        }
+      }
+
       const booking = await ServiceBooking.create(payload);
 
       return res.status(201).json({
@@ -89,7 +99,7 @@ class ServiceBookingController {
           {
             $or: [
               { paymentStatus: { $ne: "pending" } },
-              { bookingStatus: { $in: ["pending", "rejected"] } }
+              { bookingStatus: { $in: ["pending", "rejected", "accepted"] } }
             ]
           },
           {

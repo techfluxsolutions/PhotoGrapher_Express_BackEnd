@@ -103,7 +103,7 @@ class HourlyShootBookingController {
             const formattedNumber = String(nextNumber).padStart(6, "0");
 
             payload.veroaBookingId = `VEROA-BK-${formattedNumber}`;
-            payload.serviceCategory = "hourly";
+            payload.serviceCategory = payload.serviceCategory || (payload.totalEditingVideos > 0 || (payload.editingbookings && payload.editingbookings.length > 0) ? "editing" : "hourly");
 
             // Ensure bookingDate is set for sorting/filtering
             if (payload.date) {
@@ -118,7 +118,7 @@ class HourlyShootBookingController {
             return res.status(201).json({
                 success: true,
                 data: booking,
-                message: "Hourly booking created successfully",
+                message: `${payload.serviceCategory.charAt(0).toUpperCase() + payload.serviceCategory.slice(1)} booking created successfully`,
             });
 
         } catch (error) {

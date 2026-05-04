@@ -1341,7 +1341,13 @@ class ServiceBookingController {
       const limit = Math.max(1, parseInt(req.query.limit) || 20);
       const skip = (page - 1) * limit;
 
-      const filter = { serviceCategory: "hourly" };
+      const filter = { 
+        $or: [
+          { serviceCategory: "hourly" },
+          { eventType: { $regex: /photography|shoot/i } },
+          { shootType: { $regex: /photography|shoot/i } }
+        ]
+      };
       const [items, total] = await Promise.all([
         ServiceBooking.find(filter)
           .populate("client_id", "username mobileNumber email")
@@ -1531,6 +1537,8 @@ class ServiceBookingController {
             { editingPackages: { $exists: true, $not: { $size: 0 } } },
             { editingbookings: { $exists: true, $not: { $size: 0 } } },
             { serviceCategory: "editing" },
+            { eventType: "Editing" },
+            { shootType: "Editing" },
             { media: { $elemMatch: { $regex: /editing/i } } }
           ]
         })
@@ -1545,6 +1553,8 @@ class ServiceBookingController {
             { editingPackages: { $exists: true, $not: { $size: 0 } } },
             { editingbookings: { $exists: true, $not: { $size: 0 } } },
             { serviceCategory: "editing" },
+            { eventType: "Editing" },
+            { shootType: "Editing" },
             { media: { $elemMatch: { $regex: /editing/i } } }
           ]
         })

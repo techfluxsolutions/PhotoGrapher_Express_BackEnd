@@ -276,7 +276,9 @@ class QuoteController {
       // 🧠 Step 2: Create booking using quote details
       const booking = await ServiceBooking.create({
         veroaBookingId: veroaBookingId,
-        serviceCategory: quote.serviceCategory,
+        serviceCategory: quote.serviceCategory || (quote.eventType === "Editing" ? "editing" : (quote.eventType?.toLowerCase().includes("photography") ? "hourly" : "service")),
+        eventType: quote.eventType || "",
+        shootType: quote.eventType || "",
         service_id: quote.service_id,
         client_id: quote.clientId,
         bookingDate: leanedData.eventDate || leanedData.startDate, // Keep as Date object
