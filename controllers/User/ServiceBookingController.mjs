@@ -1,12 +1,22 @@
 import ServiceBooking from "../../models/ServiceBookings.mjs";
+import mongoose from "mongoose";
 import Quote from "../../models/Quote.mjs";
 import Payment from "../../models/Payment.mjs";
 import Photographer from "../../models/Photographer.mjs";
 import Counter from "../../models/Counter.mjs";
-const parseDDMMYYYY = (dateStr) => {
+import EditingPlan from "../../models/EditingPlan.mjs";
+const parseDateFlexible = (dateStr) => {
   if (!dateStr) return dateStr;
-  const [day, month, year] = dateStr.split("-");
-  return new Date(`${year}-${month}-${day}`);
+  
+  // Try DD-MM-YYYY first
+  if (/^\d{1,2}-\d{1,2}-\d{4}$/.test(dateStr)) {
+    const [day, month, year] = dateStr.split("-");
+    return new Date(`${year}-${month}-${day}`);
+  }
+  
+  // Try standard Date constructor (handles "April 25, 2024", "2024-04-25", etc.)
+  const d = new Date(dateStr);
+  return !isNaN(d.getTime()) ? d : dateStr;
 };
 
 class ServiceBookingController {
@@ -32,7 +42,7 @@ class ServiceBookingController {
   async create(req, res, next) {
     try {
       const payload = req.body;
-      payload.bookingDate = parseDDMMYYYY(payload.bookingDate);
+      payload.bookingDate = parseDateFlexible(payload.bookingDate || payload.date);
 
       // Get next booking sequence atomically
       const counter = await Counter.findByIdAndUpdate(
@@ -73,8 +83,8 @@ class ServiceBookingController {
       const todayStr = istNow.toISOString().split("T")[0];
       const todayStartIST = new Date(`${todayStr}T00:00:00.000+05:30`);
 
-      const query = {
-        client_id: id,
+      const query = { 
+        client_id: id, 
         $and: [
           {
             $or: [
@@ -86,7 +96,10 @@ class ServiceBookingController {
             $or: [
               { bookingDate: { $gte: todayStartIST } },
               { startDate: { $gte: todayStr } },
-              { status: "canceled" }
+              { status: "canceled" },
+              { createdAt: { $gte: todayStartIST } }, // Show recently created bookings
+              { bookingDate: { $exists: false } },
+              { bookingDate: null }
             ]
           }
         ]
@@ -97,13 +110,19 @@ class ServiceBookingController {
           .skip(skip)
           .limit(limit)
           .sort({ createdAt: -1 })
-          .populate("service_id", "serviceName"),
+          .populate("service_id", "serviceName")
+          .populate({
+            path: "cartId",
+            populate: { path: "items.planId" }
+          }),
         ServiceBooking.countDocuments(query),
       ]);
 
       const formattedItems = items.map((item) => {
         const doc = item.toObject();
-        doc.eventType = item.shootType || item.service_id?.serviceName || "";
+        doc.eventType = item.shootType || item.service_id?.serviceName || 
+                        (item.serviceCategory === 'hourly' ? 'Hourly Shoot' : 
+                         item.serviceCategory === 'editing' ? 'Editing Service' : "");
         doc.bookingStatus = item.bookingStatus || "pending";
 
         let displayStatus = item.status || "pending";
@@ -113,6 +132,13 @@ class ServiceBookingController {
           displayStatus = displayStatus.charAt(0).toUpperCase() + displayStatus.slice(1);
         }
         doc.status = displayStatus;
+
+        const cartItem = item.cartId?.items?.[0] || {};
+        const editingData = item.editingbookings?.[0] || item.editingPackages?.[0] || {};
+        const hourlyData = item.hourlyPackages?.[0] || {};
+        doc.subCategoryName = cartItem.subCategoryName || editingData.subCategoryName || hourlyData.subCategoryName || "";
+        doc.subCategoryType = cartItem.subCategoryType || editingData.subCategoryType || editingData.category || hourlyData.subCategoryType || hourlyData.category || "";
+
         return doc;
       });
 
@@ -130,11 +156,23 @@ class ServiceBookingController {
   async getById(req, res, next) {
     try {
       const { id } = req.params;
-      const booking = await ServiceBooking.findById(id).populate(
-        "service_id client_id"
-      );
+      let booking;
 
-      const photographer = await Photographer.findById(booking.photographer_id).select("basicInfo");
+      if (mongoose.Types.ObjectId.isValid(id)) {
+        booking = await ServiceBooking.findById(id).populate(
+          "service_id client_id cartId"
+        ).populate({
+          path: "cartId",
+          populate: { path: "items.planId" }
+        });
+      } else {
+        booking = await ServiceBooking.findOne({ veroaBookingId: id }).populate(
+          "service_id client_id cartId"
+        ).populate({
+          path: "cartId",
+          populate: { path: "items.planId" }
+        });
+      }
 
       if (!booking) {
         return res
@@ -142,9 +180,22 @@ class ServiceBookingController {
           .json({ success: false, message: "ServiceBooking not found" });
       }
 
+      const photographer = booking.photographer_id 
+        ? await Photographer.findById(booking.photographer_id).select("basicInfo")
+        : null;
+
       const bookingObj = booking.toObject();
+      bookingObj.eventType = booking.shootType || booking.service_id?.serviceName || 
+                             (booking.serviceCategory === 'hourly' ? 'Hourly Shoot' : 
+                              booking.serviceCategory === 'editing' ? 'Editing Service' : "");
       bookingObj.bookingStatus = booking.bookingStatus || "pending";
       bookingObj.status = booking.status || "pending";
+
+      const cartItem = booking.cartId?.items?.[0] || {};
+      const editingData = booking.editingbookings?.[0] || booking.editingPackages?.[0] || {};
+      const hourlyData = booking.hourlyPackages?.[0] || {};
+      bookingObj.subCategoryName = cartItem.subCategoryName || editingData.subCategoryName || hourlyData.subCategoryName || "";
+      bookingObj.subCategoryType = cartItem.subCategoryType || editingData.subCategoryType || editingData.category || hourlyData.subCategoryType || hourlyData.category || "";
 
       return res.json({ success: true, data: bookingObj, photographer });
     } catch (err) {
@@ -197,8 +248,6 @@ class ServiceBookingController {
         "cancellationCharge",
         "cancellationDate",
         "cancellationReason",
-        "cancelReason",
-        "cancelledBy"
       ];
 
       // pick only allowed fields from payload
@@ -234,7 +283,6 @@ class ServiceBookingController {
         }
       }
 
-      updates.cancelledBy = "user";
       const booking = await ServiceBooking.findByIdAndUpdate(
         id,
         { $set: updates },
@@ -261,20 +309,20 @@ class ServiceBookingController {
     try {
       const { id } = req.params;
       const payload = req.body;
-
+      
       console.log(`--- [updatePaymentStatusBooking] --- ID: ${id}`);
       console.log("Payload received:", JSON.stringify(payload, null, 2));
 
       let booking;
       let quote;
-      if (payload.bookingDate) {
-        payload.bookingDate = parseDDMMYYYY(payload.bookingDate);
+      if (payload.bookingDate || payload.date) {
+        payload.bookingDate = parseDateFlexible(payload.bookingDate || payload.date);
       }
-
+      
       // Ensure paymentStatus, full_Payment, partial_Payment are synchronized
       if (
-        payload.paymentStatus === "paid" ||
-        payload.paymentStatus === "fully paid" ||
+        payload.paymentStatus === "paid" || 
+        payload.paymentStatus === "fully paid" || 
         payload.full_Payment === true ||
         (payload.outStandingAmount !== undefined && Number(payload.outStandingAmount) === 0 && payload.totalAmount)
       ) {
@@ -284,8 +332,8 @@ class ServiceBookingController {
         payload.partial_Payment = false;
         payload.outStandingAmount = 0;
       } else if (
-        payload.paymentStatus === "partially paid" ||
-        payload.partial_Payment === true ||
+        payload.paymentStatus === "partially paid" || 
+        payload.partial_Payment === true || 
         (payload.outStandingAmount && Number(payload.outStandingAmount) > 0)
       ) {
         payload.paymentStatus = "partially paid";
@@ -359,13 +407,26 @@ class ServiceBookingController {
         ]
       })
         .sort({ bookingDate: -1, createdAt: -1 }) // Show most recent past bookings first
-        .populate("service_id", "serviceName");
+        .populate("service_id", "serviceName")
+        .populate({
+          path: "cartId",
+          populate: { path: "items.planId" }
+        });
 
       const formattedBookings = bookings.map((item) => {
         const doc = item.toObject();
-        doc.eventType = item.shootType || item.service_id?.serviceName || "";
+        doc.eventType = item.eventType || item.service_id?.serviceName || 
+                        (item.serviceCategory === 'hourly' ? 'Hourly Shoot' : 
+                         item.serviceCategory === 'editing' ? 'Editing Service' : "");
         doc.bookingStatus = item.bookingStatus || "pending";
         doc.status = item.status || "pending";
+        
+        const cartItem = item.cartId?.items?.[0] || {};
+        const editingData = item.editingbookings?.[0] || item.editingPackages?.[0] || {};
+        const hourlyData = item.hourlyPackages?.[0] || {};
+        doc.subCategoryName = cartItem.subCategoryName || editingData.subCategoryName || hourlyData.subCategoryName || "";
+        doc.subCategoryType = cartItem.subCategoryType || editingData.subCategoryType || editingData.category || hourlyData.subCategoryType || hourlyData.category || "";
+
         return doc;
       });
 
@@ -390,7 +451,7 @@ class ServiceBookingController {
       return next(err);
     }
   }
-
+  
   async reschedule(req, res, next) {
     try {
       const { id } = req.params;
@@ -414,64 +475,98 @@ class ServiceBookingController {
       const isAdmin = req.user.isAdmin === true;
 
       if (!isOwner && !isAssignedPhotographer && !isAdmin) {
-        return res.status(403).json({
-          success: false,
-          message: "You are not authorized to reschedule this booking"
+        return res.status(403).json({ 
+          success: false, 
+          message: "You are not authorized to reschedule this booking" 
         });
       }
 
       // Check if booking is in a state that allows rescheduling
       if (["completed", "canceled"].includes(booking.status)) {
-        return res.status(400).json({
-          success: false,
-          message: `Cannot reschedule a ${booking.status} booking`
+        return res.status(400).json({ 
+          success: false, 
+          message: `Cannot reschedule a ${booking.status} booking` 
         });
       }
 
       // Update dates
       booking.startDate = startDate;
       if (endDate) booking.endDate = endDate;
-
+      
       // Update the Date object as well for consistent querying
       booking.bookingDate = parseDDMMYYYY(startDate);
 
       await booking.save();
 
-      return res.json({
-        success: true,
-        message: "Booking rescheduled successfully",
-        data: booking
+      return res.json({ 
+        success: true, 
+        message: "Booking rescheduled successfully", 
+        data: booking 
       });
     } catch (err) {
       return next(err);
     }
   }
-  
-  async updateBookingMedia(req, res, next) {
+  async updateMedia(req, res, next) {
     try {
       const { id } = req.params;
-      const { fileKeys } = req.body;
+      const { fileKeys, bookingId } = req.body;
+      const targetId = id || bookingId;
 
-      const booking = await ServiceBooking.findById(id);
-      if (!booking) {
-        // Also check HourlyShootBooking if not found
-        const HourlyShootBooking = (await import("../../models/HourlyShootBooking.mjs")).default;
-        const hourlyBooking = await HourlyShootBooking.findById(id);
-        if (!hourlyBooking) {
-          return res.status(404).json({ success: false, message: "Booking not found" });
-        }
-        
-        hourlyBooking.galleryStatus = "Photos Uploaded";
-        await hourlyBooking.save();
-        return res.json({ success: true, message: "Media status updated for hourly booking", data: hourlyBooking });
+      if (!fileKeys || !Array.isArray(fileKeys)) {
+        return res.status(400).json({ success: false, message: "fileKeys must be an array" });
       }
 
-      booking.galleryStatus = "Photos Uploaded";
-      // If the model has fileKeys field, we could save them here, 
-      // but for now we've saved them in DataLinks.
+      // Find by _id first (if it's a valid ObjectId), then veroaBookingId
+      let booking;
+      if (mongoose.Types.ObjectId.isValid(targetId)) {
+        booking = await ServiceBooking.findById(targetId);
+      }
+      
+      if (!booking) {
+        booking = await ServiceBooking.findOne({ veroaBookingId: targetId });
+      }
+
+      if (!booking) {
+        return res.status(404).json({ success: false, message: "Booking not found" });
+      }
+
+      // Update media array
+      booking.media = [...(booking.media || []), ...fileKeys];
       await booking.save();
 
-      return res.json({ success: true, message: "Media status updated successfully", data: booking });
+      return res.json({ success: true, message: "Media updated successfully", data: booking });
+    } catch (err) {
+      return next(err);
+    }
+  }
+
+  async getBookingPlansByVeroaId(req, res, next) {
+    try {
+      const { veroaBookingId } = req.params;
+      const booking = await ServiceBooking.findOne({ veroaBookingId }).lean();
+
+      if (!booking) {
+        return res.status(404).json({ success: false, message: "Booking not found" });
+      }
+
+      const rawPkgs = booking.editingPackages || booking.editingbookings || [];
+      const plans = [];
+
+      for (const pkg of rawPkgs) {
+        if (pkg.planId) {
+          const plan = await EditingPlan.findById(pkg.planId).lean();
+          if (plan) {
+            plans.push({ ...pkg, ...plan });
+          } else {
+            plans.push(pkg);
+          }
+        } else {
+          plans.push(pkg);
+        }
+      }
+
+      return res.json({ success: true, data: plans });
     } catch (err) {
       return next(err);
     }

@@ -55,8 +55,8 @@ class CartController {
     async addToCart(req, res, next) {
         try {
             const { userId } = req.user;
-            const { name, category, price, quantity } = req.body;
-            const cart = new Cart({ userId, items: { name, category, price, quantity } });
+            const { name, category, price, quantity, subCategoryType, subCategoryName } = req.body;
+            const cart = new Cart({ userId, items: [{ name, category, price, quantity, subCategoryType, subCategoryName }] });
             await cart.save();
             res.status(201).json({ success: true, data: cart });
         } catch (error) {

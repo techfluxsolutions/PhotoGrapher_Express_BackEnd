@@ -127,9 +127,6 @@ router.post('/cart/payment/verify', (req, res, next) => PaymentController.verify
 //create hourlyshoot
 router.post('/createhourlyshootBooking', (req, res, next) => HourlyShootBookingController.createHourlyBooking(req, res, next));
 
-// Create Hourly & Editing Quotes
-router.post('/hourly-shoot-quote', (req, res, next) => HourlyShootBookingController.createhourlyShookQuote(req, res, next));
-
 // --- Quotes ---
 router.post("/quotes", (req, res, next) => QuoteController.create(req, res, next));
 router.get("/quotes", (req, res, next) => QuoteController.getAll(req, res, next));
@@ -184,7 +181,8 @@ router.get("/servicebookings/:id", (req, res, next) => ServiceBookingController.
 router.put("/servicebookings/:id", (req, res, next) => ServiceBookingController.cancelBooking(req, res, next));
 router.get("/getpreviousbookings", (req, res, next) => ServiceBookingController.getPreviousBookings(req, res, next));
 router.put("/reschedule/:id", (req, res, next) => ServiceBookingController.reschedule(req, res, next));
-router.put("/bookings/:id/media", (req, res, next) => ServiceBookingController.updateBookingMedia(req, res, next));
+router.put("/bookings/:id/media", (req, res, next) => ServiceBookingController.updateMedia(req, res, next));
+router.post("/editing/booking/update-media", (req, res, next) => ServiceBookingController.updateMedia(req, res, next));
 
 
 
@@ -265,5 +263,9 @@ router.post("/cart/update-quantity", (req, res, next) => EditingController.updat
 
 // validate coupon 
 
-router.post("/coupon/validate", CouponController.validateCoupon);
+router.post("/coupon/validate", (req, res, next) => CouponController.validateCoupon(req, res, next));
+
+// Booking Plans Api
+router.get("/bookings/plans/:veroaBookingId", (req, res, next) => ServiceBookingController.getBookingPlansByVeroaId(req, res, next));
+
 export default router;

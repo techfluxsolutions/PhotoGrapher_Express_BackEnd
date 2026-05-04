@@ -260,6 +260,34 @@ const serviceBookingSchema = new mongoose.Schema(
       type: String,
       default: "",
     },
+    media: {
+      type: [String],
+      default: []
+    },
+    editingPackages: {
+      type: Array,
+      default: []
+    },
+    editingbookings: {
+      type: Array,
+      default: []
+    },
+    hourlyPackages: {
+      type: Array,
+      default: []
+    },
+    standardEditingVideos: {
+      type: Number,
+      default: 0
+    },
+    premiumEditingVideos: {
+      type: Number,
+      default: 0
+    },
+    totalEditingVideos: {
+      type: Number,
+      default: 0
+    },
   }, { timestamps: true }
 );
 
