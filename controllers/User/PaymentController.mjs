@@ -505,21 +505,42 @@ class PaymentController {
           const formattedNumber = String(counter.seq).padStart(6, "0");
           const veroaBookingId = `VEROA-BK-${formattedNumber}`;
 
-          // Create HourlyShootBooking using ServiceBooking
-          const booking = await ServiceBooking.create({
+          // Prepare booking data
+          const bookingData = {
             veroaBookingId,
-            serviceCategory: "hourly",
+            serviceCategory: item.category === "editing" ? "editing" : "hourly",
             client_id: userId,
             date: date || "TBD",
             time: time || "TBD",
-            hours: item.quantity || 1,
-            address: "N/A", // Will be updated by user later if needed
             totalAmount: item.price * item.quantity,
             paymentStatus: "paid",
             status: "confirmed",
-            paymentMethod: "COD",
-            requirements: specialInstructions || ""
-          });
+            requirements: specialInstructions || "",
+            cartId: cartId
+          };
+
+          // Attach package details based on category
+          if (item.category === "editing") {
+            bookingData.editingbookings = [{
+              planId: item.planId,
+              planName: item.name,
+              price: item.price,
+              category: item.subCategoryType || "standard",
+              subCategoryType: item.subCategoryType || "standard",
+              subCategoryName: item.subCategoryName || item.name
+            }];
+          } else {
+            bookingData.hourlyPackages = [{
+              planId: item.planId,
+              hours: item.quantity || 1,
+              price: item.price,
+              category: item.subCategoryType || "standard",
+              subCategoryType: item.subCategoryType || "standard",
+              subCategoryName: item.subCategoryName || item.name
+            }];
+          }
+
+          const booking = await ServiceBooking.create(bookingData);
 
           if (couponId && couponId !== "" && couponId !== null) {
             const coupon = await Coupon.findById(couponId);

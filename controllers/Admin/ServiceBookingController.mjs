@@ -10,7 +10,15 @@ import Counter from "../../models/Counter.mjs";
 import Notification from "../../models/Notification.mjs";
 import { emitNotificationCount } from "../../services/SocketService.mjs";
 import admin from "../../utils/firebaseAdmin.mjs";
-// Removed HourlyShootBooking import
+import PhotographyPlan from "../../models/PhotographyPlan.mjs";
+import EditingPlan from "../../models/EditingPlan.mjs";
+import TeamShootPlan from "../../models/TeamShootPlan.mjs";
+import Package from "../../models/Package.mjs";
+import Service from "../../models/Service.mjs";
+import HourlyShootService from "../../models/HourlyShootService.mjs";
+import Cart from "../../models/Cart.mjs";
+import DataLinks from "../../models/DataLinks.js";
+import { s3Service } from "../../lib/s3Service.js";
 
 const parseDDMMYYYY = (dateStr) => {
   if (!dateStr || dateStr instanceof Date) return dateStr;
@@ -113,7 +121,11 @@ class ServiceBookingController {
           .skip(skip)
           .limit(limit)
           .sort({ createdAt: -1 })
-          .populate("service_id client_id photographer_id quoteId"),
+          .populate("service_id client_id photographer_id quoteId cartId")
+          .populate({
+            path: "cartId",
+            populate: { path: "items.planId" }
+          }),
         ServiceBooking.countDocuments(filter),
       ]);
 
@@ -151,6 +163,8 @@ class ServiceBookingController {
           paymentStatus: booking.paymentStatus,
           bookingStatus: booking.bookingStatus || booking.status,
           galleryStatus: booking.galleryStatus || "Upload Pending",
+          subCategoryName: (booking.cartId?.items?.[0]?.subCategoryName || booking.editingbookings?.[0]?.subCategoryName || booking.editingPackages?.[0]?.subCategoryName || booking.hourlyPackages?.[0]?.subCategoryName || ""),
+          subCategoryType: (booking.cartId?.items?.[0]?.subCategoryType || booking.editingbookings?.[0]?.subCategoryType || booking.editingbookings?.[0]?.category || booking.editingPackages?.[0]?.subCategoryType || booking.editingPackages?.[0]?.category || booking.hourlyPackages?.[0]?.subCategoryType || booking.hourlyPackages?.[0]?.category || ""),
         };
       });
 
@@ -341,7 +355,10 @@ class ServiceBookingController {
       }
 
       const [items, total] = await Promise.all([
-        ServiceBooking.find(filter).skip(skip).limit(limit).sort({ createdAt: -1 }).populate("service_id client_id photographer_id quoteId"),
+        ServiceBooking.find(filter).skip(skip).limit(limit).sort({ createdAt: -1 }).populate("service_id client_id photographer_id quoteId cartId").populate({
+          path: "cartId",
+          populate: { path: "items.planId" }
+        }),
         ServiceBooking.countDocuments(filter),
       ]);
 
@@ -379,6 +396,8 @@ class ServiceBookingController {
           paymentStatus: booking.paymentStatus,
           bookingStatus: booking.bookingStatus || booking.status,
           galleryStatus: booking.galleryStatus || "Upload Pending",
+          subCategoryName: (booking.cartId?.items?.[0]?.subCategoryName || booking.editingbookings?.[0]?.subCategoryName || booking.editingPackages?.[0]?.subCategoryName || booking.hourlyPackages?.[0]?.subCategoryName || ""),
+          subCategoryType: (booking.cartId?.items?.[0]?.subCategoryType || booking.editingbookings?.[0]?.subCategoryType || booking.editingbookings?.[0]?.category || booking.editingPackages?.[0]?.subCategoryType || booking.editingPackages?.[0]?.category || booking.hourlyPackages?.[0]?.subCategoryType || booking.hourlyPackages?.[0]?.category || ""),
         };
       });
 
@@ -494,7 +513,10 @@ class ServiceBookingController {
       }
 
       const [items, total] = await Promise.all([
-        ServiceBooking.find(filter).skip(skip).limit(limit).sort({ createdAt: -1 }).populate("service_id client_id photographer_id quoteId"),
+        ServiceBooking.find(filter).skip(skip).limit(limit).sort({ createdAt: -1 }).populate("service_id client_id photographer_id quoteId cartId").populate({
+          path: "cartId",
+          populate: { path: "items.planId" }
+        }),
         ServiceBooking.countDocuments(filter),
       ]);
 
@@ -532,6 +554,8 @@ class ServiceBookingController {
           paymentStatus: booking.paymentStatus,
           bookingStatus: booking.bookingStatus || booking.status,
           galleryStatus: booking.galleryStatus || "Upload Pending",
+          subCategoryName: (booking.cartId?.items?.[0]?.subCategoryName || booking.editingbookings?.[0]?.subCategoryName || booking.editingPackages?.[0]?.subCategoryName || booking.hourlyPackages?.[0]?.subCategoryName || ""),
+          subCategoryType: (booking.cartId?.items?.[0]?.subCategoryType || booking.editingbookings?.[0]?.subCategoryType || booking.editingbookings?.[0]?.category || booking.editingPackages?.[0]?.subCategoryType || booking.editingPackages?.[0]?.category || booking.hourlyPackages?.[0]?.subCategoryType || booking.hourlyPackages?.[0]?.category || ""),
         };
       });
 
@@ -549,9 +573,23 @@ class ServiceBookingController {
   async getById(req, res, next) {
     try {
       const { id } = req.params;
+      let booking;
 
-      const booking = await ServiceBooking.findById(id)
-        .populate("service_id client_id photographer_id quoteId");
+      if (mongoose.Types.ObjectId.isValid(id)) {
+        booking = await ServiceBooking.findById(id)
+          .populate("service_id client_id photographer_id quoteId cartId")
+          .populate({
+            path: "cartId",
+            populate: { path: "items.planId" }
+          });
+      } else {
+        booking = await ServiceBooking.findOne({ veroaBookingId: id })
+          .populate("service_id client_id photographer_id quoteId cartId")
+          .populate({
+            path: "cartId",
+            populate: { path: "items.planId" }
+          });
+      }
 
       if (!booking) {
         return res.status(404).json({
@@ -560,9 +598,17 @@ class ServiceBookingController {
         });
       }
 
+      const bookingData = booking.toObject();
+      const cartItem = bookingData.cartId?.items?.[0] || {};
+      const editingData = bookingData.editingbookings?.[0] || bookingData.editingPackages?.[0] || {};
+      const hourlyData = bookingData.hourlyPackages?.[0] || {};
+      
+      bookingData.subCategoryName = cartItem.subCategoryName || editingData.subCategoryName || hourlyData.subCategoryName || "";
+      bookingData.subCategoryType = cartItem.subCategoryType || editingData.subCategoryType || editingData.category || hourlyData.subCategoryType || hourlyData.category || "";
+
       return res.json({
         success: true,
-        data: booking
+        data: bookingData
       });
     } catch (err) {
       return next(err);
@@ -575,8 +621,14 @@ class ServiceBookingController {
    */
   async update(req, res, next) {
     try {
-      const { id } = req.params;
+      let { id } = req.params;
       const payload = req.body;
+
+      // Resolve database _id if veroaBookingId is provided
+      if (!mongoose.Types.ObjectId.isValid(id)) {
+        const found = await ServiceBooking.findOne({ veroaBookingId: id }).select("_id");
+        if (found) id = found._id;
+      }
 
       // Parse booking date if provided in DD-MM-YYYY format
       if (payload.bookingDate && typeof payload.bookingDate === 'string') {
@@ -689,7 +741,13 @@ class ServiceBookingController {
    */
   async delete(req, res, next) {
     try {
-      const { id } = req.params;
+      let { id } = req.params;
+
+      // Resolve database _id if veroaBookingId is provided
+      if (!mongoose.Types.ObjectId.isValid(id)) {
+        const found = await ServiceBooking.findOne({ veroaBookingId: id }).select("_id");
+        if (found) id = found._id;
+      }
 
       const booking = await ServiceBooking.findByIdAndUpdate(
         id,
@@ -819,7 +877,14 @@ class ServiceBookingController {
   async assignPhotographer(req, res, next) {
     try {
       const { photographerId, bookingId, photographerIds, _id } = req.body;
-      const finalBookingId = bookingId || _id || req.params.id;
+      const finalBookingIdRaw = bookingId || _id || req.params.id;
+      let finalBookingId = finalBookingIdRaw;
+
+      // Resolve database _id if veroaBookingId is provided
+      if (finalBookingId && !mongoose.Types.ObjectId.isValid(finalBookingId)) {
+        const found = await ServiceBooking.findOne({ veroaBookingId: finalBookingId }).select("_id");
+        if (found) finalBookingId = found._id;
+      }
       const finalPhotographerId = photographerId !== undefined ? photographerId : req.body.photographer_id;
 
       const updateData = {};
@@ -1053,7 +1118,14 @@ class ServiceBookingController {
    */
   async getGalleryByBookingId(req, res, next) {
     try {
-      const { id } = req.params;
+      let { id } = req.params;
+
+      // Resolve database _id if veroaBookingId is provided
+      if (!mongoose.Types.ObjectId.isValid(id)) {
+        const found = await ServiceBooking.findOne({ veroaBookingId: id }).select("_id");
+        if (found) id = found._id;
+      }
+
       const gallery = await Gallery.findOne({ booking_id: id });
 
       if (!gallery) {
@@ -1274,13 +1346,42 @@ class ServiceBookingController {
         ServiceBooking.find(filter)
           .populate("client_id", "username mobileNumber email")
           .populate("photographer_id", "basicInfo.fullName professionalDetails")
+          .populate("cartId")
           .sort({ createdAt: -1 })
           .skip(skip)
-          .limit(limit),
+          .limit(limit)
+          .lean(),
         ServiceBooking.countDocuments(filter)
       ]);
 
-      const formattedBookings = items.map(booking => {
+      // Force onModel to match category for existing records so population works
+      for (const booking of items) {
+        if (booking.cartId && booking.cartId.items) {
+          for (const item of booking.cartId.items) {
+            let planModel = PhotographyPlan;
+            if (item.category === "editing") planModel = EditingPlan;
+            else if (item.category === "shoot_team") planModel = TeamShootPlan;
+            else if (item.category === "package") planModel = Package;
+            else if (item.category === "service") planModel = Service;
+            else if (item.category === "hourly") planModel = HourlyShootService;
+
+            if (item.planId) {
+              const planData = await planModel.findById(item.planId).lean();
+              if (planData) {
+                item.planId = planData;
+              }
+            }
+          }
+        }
+      }
+
+      // Group bookings by cartId or veroaBookingId to avoid duplicates in the UI
+      const groupedMap = new Map();
+
+      items.forEach(booking => {
+        // Use cart ID as the primary key for grouping if it exists, fallback to veroaBookingId
+        const groupKey = booking.cartId?._id?.toString() || booking.veroaBookingId || booking._id.toString();
+
         const addressParts = [
           booking.flatOrHouseNo,
           booking.streetName,
@@ -1292,7 +1393,59 @@ class ServiceBookingController {
         const eDate = booking.date || "N/A";
         const eTime = booking.time || "N/A";
 
-        return {
+        const packagesMap = {};
+        
+        // 1. Try to use hourlyPackages from the booking itself (New structure)
+        if (booking.hourlyPackages && booking.hourlyPackages.length > 0) {
+          booking.hourlyPackages.forEach((pkg, idx) => {
+            const cat = pkg.category ? (pkg.category.charAt(0).toUpperCase() + pkg.category.slice(1)) : "Standard";
+            const duration = pkg.hours || (booking.hours ? `${booking.hours} Hours` : "N/A");
+            const key = `pkg-${idx}`;
+            packagesMap[key] = {
+              hours: duration,
+              category: cat,
+              services: pkg.services || [
+                { name: pkg.planName || "Hourly Plan", qty: 1, price: pkg.price || 0 }
+              ]
+            };
+          });
+        }
+        // 2. Fallback to cart items (Old structure)
+        else if (booking.cartId && booking.cartId.items) {
+          booking.cartId.items.forEach(item => {
+            let duration = "N/A";
+            const match = item.name.match(/\((.*?)\)/);
+            if (match) duration = match[1];
+            else if (booking.hours) duration = `${booking.hours} Hours`;
+
+            const cat = item.subCategoryType ? (item.subCategoryType.charAt(0).toUpperCase() + item.subCategoryType.slice(1)) : "Standard";
+            const key = `${duration}-${cat}`;
+            if (!packagesMap[key]) {
+              packagesMap[key] = { hours: duration, category: cat, services: [] };
+            }
+            const cleanName = item.name.split(" (")[0].trim();
+            packagesMap[key].services.push({
+              name: cleanName,
+              qty: item.quantity,
+              price: item.price * item.quantity
+            });
+          });
+        }
+
+        let hourlyPackages = Object.values(packagesMap);
+        if (hourlyPackages.length === 0) {
+          hourlyPackages = [{
+            hours: booking.hours ? `${booking.hours} Hours` : "N/A",
+            category: "Standard",
+            services: [],
+            price: booking.totalAmount || 0,
+            eventDate: eDate,
+            eventTime: eTime,
+            subTotal: booking.totalAmount || 0
+          }];
+        }
+
+        const formatted = {
           bookingId: booking.veroaBookingId || booking._id,
           clientName: booking.client_id?.username || "Unknown",
           eventAddress: eventAddress || booking.address || "N/A",
@@ -1300,23 +1453,61 @@ class ServiceBookingController {
           galleryUpload: booking.galleryStatus === "Photos Uploaded",
           galleryStatus: booking.galleryStatus || "pending",
           bookingStatus: booking.status || "pending",
-          hourlyPackages: [{
-            hours: booking.hours,
-            price: booking.totalAmount,
-            eventDate: eDate,
-            eventTime: eTime,
-            services: [],
-            subTotal: booking.totalAmount || 0
-          }],
+          hourlyPackages: hourlyPackages,
           subTotal: booking.totalAmount || 0,
-          totalAmount: booking.totalAmount || 0
+          totalAmount: booking.totalAmount || 0,
+          media: booking.media || [],
+          cart: booking.cartId || null
         };
+
+        if (!groupedMap.has(groupKey)) {
+          // Store the original createdAt for sorting later
+          formatted._createdAt = booking.createdAt;
+          groupedMap.set(groupKey, formatted);
+        } else {
+          // If duplicate cart/booking, merge packages if they are different
+          const existing = groupedMap.get(groupKey);
+          hourlyPackages.forEach(pkg => {
+            const hasPkg = existing.hourlyPackages.some(p => p.hours === pkg.hours && p.category === pkg.category);
+            if (!hasPkg) existing.hourlyPackages.push(pkg);
+          });
+          // Use the more specific address if available
+          if (existing.eventAddress === "N/A" && formatted.eventAddress !== "N/A") {
+            existing.eventAddress = formatted.eventAddress;
+          }
+          // Use the more specific booking ID
+          if (formatted.bookingId > existing.bookingId) {
+            existing.bookingId = formatted.bookingId;
+          }
+          // Keep the newest createdAt
+          if (booking.createdAt > existing._createdAt) {
+            existing._createdAt = booking.createdAt;
+          }
+        }
       });
+
+      // Convert Map to array and sort by _createdAt descending (newest first)
+      const finalBookings = await Promise.all(Array.from(groupedMap.values())
+        .sort((a, b) => new Date(b._createdAt || 0) - new Date(a._createdAt || 0))
+        .map(async b => {
+           const mediaKeys = (b.media || []).filter(m => m && !m.startsWith("http"));
+           const mediaUrls = (b.media || []).filter(m => m && m.startsWith("http"));
+           
+           const signedView = mediaKeys.length > 0 ? await s3Service.getBatchSignedUrls(mediaKeys, 36000, 'inline') : [];
+           const signedDownload = mediaKeys.length > 0 ? await s3Service.getBatchSignedUrls(mediaKeys, 36000, 'attachment') : [];
+           
+           return { 
+             ...b, 
+             media: [...mediaUrls, ...signedView],
+             downloadMedia: [...mediaUrls, ...signedDownload] 
+           };
+        })
+      );
 
       return res.status(200).json({
         success: true,
-        data: formattedBookings,
-        meta: { total, page, limit }
+        data: finalBookings,
+        meta: { total: total, page, limit }
       });
     } catch (error) {
       console.error("Error in getHourlyBookings:", error);
@@ -1336,19 +1527,55 @@ class ServiceBookingController {
 
       const [items, total] = await Promise.all([
         ServiceBooking.find({
-          editingPackages: { $exists: true, $not: { $size: 0 } }
+          $or: [
+            { editingPackages: { $exists: true, $not: { $size: 0 } } },
+            { editingbookings: { $exists: true, $not: { $size: 0 } } },
+            { serviceCategory: "editing" },
+            { media: { $elemMatch: { $regex: /editing/i } } }
+          ]
         })
           .populate("client_id", "username")
           .populate("photographer_id", "basicInfo.fullName")
           .sort({ createdAt: -1 })
           .skip(skip)
-          .limit(limit),
+          .limit(limit)
+          .lean(),
         ServiceBooking.countDocuments({
-          editingPackages: { $exists: true, $not: { $size: 0 } }
+          $or: [
+            { editingPackages: { $exists: true, $not: { $size: 0 } } },
+            { editingbookings: { $exists: true, $not: { $size: 0 } } },
+            { serviceCategory: "editing" },
+            { media: { $elemMatch: { $regex: /editing/i } } }
+          ]
         })
       ]);
 
-      const formattedBookings = items.map(booking => {
+      // Manual population of EditingPlan details
+      for (const booking of items) {
+        const rawPkgs = booking.editingPackages || booking.editingbookings;
+        if (rawPkgs && rawPkgs.length > 0) {
+          for (const pkg of rawPkgs) {
+            if (pkg.planId && !pkg.numberOfVideos) {
+              const plan = await EditingPlan.findById(pkg.planId).lean();
+              if (plan) {
+                Object.assign(pkg, plan);
+              }
+            }
+          }
+        }
+      }
+
+      // Fetch data links for these bookings
+      const bookingVeroaIds = items.map(b => b.veroaBookingId).filter(Boolean);
+      const allLinks = await DataLinks.find({ veroaBookingId: { $in: bookingVeroaIds } }).lean();
+      
+      const linksMap = allLinks.reduce((acc, link) => {
+        if (!acc[link.veroaBookingId]) acc[link.veroaBookingId] = [];
+        acc[link.veroaBookingId].push(link.dataLink);
+        return acc;
+      }, {});
+
+      const formattedBookings = await Promise.all(items.map(async booking => {
         const addressParts = [
           booking.flatOrHouseNo,
           booking.streetName,
@@ -1357,39 +1584,87 @@ class ServiceBookingController {
         ].filter(Boolean);
 
         const eventAddress = addressParts.join(", ") + (booking.postalCode ? ` - ${booking.postalCode}` : "");
-        const eDate = booking.bookingDate ? new Date(booking.bookingDate).toISOString().split('T')[0] : (booking.eventDate || "N/A");
-        const eTime = booking.bookingDate ? new Date(booking.bookingDate).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true }) : "N/A";
+
+        let rawPkgs = booking.editingPackages || booking.editingbookings || [];
+        
+        // Fallback for bookings that are identified as editing but have no package details
+        if (!Array.isArray(rawPkgs) || rawPkgs.length === 0) {
+          rawPkgs = [{
+            planName: "General Editing",
+            price: booking.totalAmount || 0,
+            numberOfVideos: booking.media?.length || 1,
+            planCategory: "Standard",
+            _id: "fallback"
+          }];
+        }
+        
+        const videoPackages = await Promise.all(rawPkgs.map(async pkg => {
+          const bookingLinks = linksMap[booking.veroaBookingId] || [];
+          
+          // Separate keys from full URLs in the media array
+          const mediaKeys = (booking.media || []).filter(m => m && !m.startsWith("http"));
+          const mediaUrls = (booking.media || []).filter(m => m && m.startsWith("http"));
+          
+          // Generate signed URLs for keys
+          const signedViewUrls = mediaKeys.length > 0 
+            ? await s3Service.getBatchSignedUrls(mediaKeys, 36000, 'inline') 
+            : [];
+          
+          const signedDownloadUrls = mediaKeys.length > 0 
+            ? await s3Service.getBatchSignedUrls(mediaKeys, 36000, 'attachment') 
+            : [];
+          
+          const combinedViewMedia = [...mediaUrls, ...signedViewUrls, ...bookingLinks];
+          const combinedDownloadMedia = [...mediaUrls, ...signedDownloadUrls, ...bookingLinks];
+          
+          let vCount = Math.max(parseInt(pkg.numberOfVideos) || 0, combinedViewMedia.length) || 1;
+          
+          // Generate videos list as expected by UI
+          const videos = Array.from({ length: vCount }, (_, i) => ({
+            videoId: `${pkg._id || pkg.planId || 'pkg'}-v${i + 1}`,
+            videoNumber: i + 1,
+            viewUrl: combinedViewMedia[i] || "", 
+            downloadUrl: combinedDownloadMedia[i] || ""
+          }));
+
+          return {
+            packageId: booking.veroaBookingId || booking._id,
+            type: pkg.planCategory || pkg.category || "Standard",
+            price: parseFloat(pkg.price) || 0,
+            videosCount: vCount,
+            videos: videos,
+            planName: pkg.planName || "Editing Plan"
+          };
+        }));
 
         return {
           bookingId: booking.veroaBookingId || booking._id,
           clientName: booking.client_id?.username || "Unknown",
           eventAddress: eventAddress || "N/A",
           assignedPhotographer: booking.photographer_id?.basicInfo?.fullName || "",
-          galleryUpload: booking.galleryStatus === "Photos Uploaded",
           galleryStatus: booking.galleryStatus || "pending",
           bookingStatus: booking.status || "pending",
-          editingPackages: (booking.editingPackages || []).map(pkg => {
-            const pkgPrice = parseFloat(pkg.price) || 0;
-            const servicesSum = (pkg.services || []).reduce((pSum, svc) => pSum + (parseFloat(svc.price) || 0), 0);
-            return {
-              ...pkg.toObject(),
-              eventDate: eDate,
-              eventTime: eTime,
-              subTotal: pkgPrice + servicesSum
-            };
-          }),
-          subTotal: (booking.editingPackages || []).reduce((sum, pkg) => {
-            const pkgPrice = parseFloat(pkg.price) || 0;
-            const servicesSum = (pkg.services || []).reduce((pSum, svc) => pSum + (parseFloat(svc.price) || 0), 0);
-            return sum + pkgPrice + servicesSum;
-          }, 0),
-          totalAmount: booking.totalAmount || 0
+          videoPackages: videoPackages,
+          totalAmount: booking.totalAmount || 0,
+          media: await (async () => {
+            const keys = (booking.media || []).filter(m => m && !m.startsWith("http"));
+            const urls = (booking.media || []).filter(m => m && m.startsWith("http"));
+            const signed = keys.length > 0 ? await s3Service.getBatchSignedUrls(keys, 36000) : [];
+            return [...urls, ...signed];
+          })(),
+          createdAt: booking.createdAt,
+          standardEditingVideos: booking.standardEditingVideos || 0,
+          premiumEditingVideos: booking.premiumEditingVideos || 0,
+          totalEditingVideos: booking.totalEditingVideos || 0
         };
-      });
+      }));
+
+      // Sort final formatted list by createdAt descending (newest first)
+      const finalBookings = formattedBookings.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
 
       return res.status(200).json({
         success: true,
-        data: formattedBookings,
+        data: finalBookings,
         meta: { total, page, limit }
       });
     } catch (error) {

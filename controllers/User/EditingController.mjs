@@ -177,13 +177,21 @@ class EditingController {
                     price: plan.price,
                     quantity,
                     planId: editingPlanId,
-                    selectedroleId: selectedRoleId
-
+                    selectedroleId: selectedRoleId,
+                    subCategoryType: plan.planCategory,
+                    subCategoryName: plan.planName
                 });
             }
 
-            // Recalculate totalAmount
+            // Recalculate totalAmount and sanitize items
             cart.totalAmount = cart.items.reduce((acc, i) => acc + (i.price * i.quantity), 0);
+
+            // Ensure all items have subCategoryType (fix for legacy items)
+            for (let item of cart.items) {
+                if (!item.subCategoryType) {
+                    item.subCategoryType = "standard"; // Default fallback
+                }
+            }
 
             await cart.save();
 

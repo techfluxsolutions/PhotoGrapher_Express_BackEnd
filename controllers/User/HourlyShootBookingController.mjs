@@ -46,7 +46,8 @@ class HourlyShootBookingController {
             status: booking.status,
             bookingStatus: booking.bookingStatus,
             galleryStatus: booking.galleryStatus,
-            daysLeft: this.calculateDaysLeft(booking.date),
+            subCategoryName: (booking.cartId?.items?.[0]?.subCategoryName || booking.editingbookings?.[0]?.subCategoryName || booking.editingPackages?.[0]?.subCategoryName || booking.hourlyPackages?.[0]?.subCategoryName || ""),
+            subCategoryType: (booking.cartId?.items?.[0]?.subCategoryType || booking.editingbookings?.[0]?.subCategoryType || booking.editingPackages?.[0]?.subCategoryType || booking.hourlyPackages?.[0]?.subCategoryType || ""),
             hours: booking.hours,
             address: booking.address,
             requirements: booking.requirements || "No requirements",
@@ -59,6 +60,10 @@ class HourlyShootBookingController {
         const [bookings, total] = await Promise.all([
             ServiceBooking.find(filter)
                 .populate("client_id", "username mobileNumber email avatar")
+                .populate({
+                    path: "cartId",
+                    populate: { path: "items.planId" }
+                })
                 .sort({ createdAt: -1 })
                 .skip(skip)
                 .limit(limit),
@@ -99,6 +104,14 @@ class HourlyShootBookingController {
 
             payload.veroaBookingId = `VEROA-BK-${formattedNumber}`;
             payload.serviceCategory = "hourly";
+
+            // Ensure bookingDate is set for sorting/filtering
+            if (payload.date) {
+                const parsedDate = new Date(payload.date);
+                if (!isNaN(parsedDate.getTime())) {
+                    payload.bookingDate = parsedDate;
+                }
+            }
 
             const booking = await ServiceBooking.create(payload);
 
@@ -270,7 +283,11 @@ class HourlyShootBookingController {
     async getHourlyBookingById(req, res) {
         try {
             const booking = await ServiceBooking.findOne({ _id: req.params.id, serviceCategory: "hourly" })
-                .populate("client_id", "username mobileNumber email avatar");
+                .populate("client_id", "username mobileNumber email avatar")
+                .populate({
+                    path: "cartId",
+                    populate: { path: "items.planId" }
+                });
 
             if (!booking)
                 return res.status(404).json({

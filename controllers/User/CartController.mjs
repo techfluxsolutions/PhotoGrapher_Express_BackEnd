@@ -75,7 +75,7 @@ class CartController {
     async addToCart(req, res, next) {
         try {
             const { id: userId } = req.user;
-            const { name, category, price, quantity } = req.body;
+            const { name, category, price, quantity, subCategoryType, subCategoryName } = req.body;
 
             // Calculate total for this specific item
             const totalAmount = price * (quantity || 1);
@@ -83,7 +83,7 @@ class CartController {
             // Create a new cart entry as per user requirement to keep them separate
             const cart = new Cart({
                 userId,
-                items: [{ name, category, price, quantity: quantity || 1 }],
+                items: [{ name, category, price, quantity: quantity || 1, subCategoryType, subCategoryName }],
                 totalAmount
             });
 
@@ -181,6 +181,14 @@ class CartController {
             }
 
             cart.totalAmount = cart.items.reduce((total, item) => total + (item.price * item.quantity), 0);
+            
+            // Ensure all items have subCategoryType (fix for legacy items)
+            for (let item of cart.items) {
+                if (!item.subCategoryType) {
+                    item.subCategoryType = "standard"; // Default fallback
+                }
+            }
+
             await cart.save();
 
             await cart.populate({

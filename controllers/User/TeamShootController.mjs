@@ -49,6 +49,9 @@ class TeamShootController {
                 let itemName = plan.role;
 
                 if (plan.pricingType === "duration_based") {
+                    if (!plan.pricingOptions || plan.pricingOptions.length === 0) {
+                        return res.status(500).json({ success: false, message: `Pricing options missing for ${plan.role}` });
+                    }
                     // Find matching pricing option by ID
                     const durationOption = plan.pricingOptions.find(opt => opt._id.toString() === selection.selectedroleId);
 
@@ -58,10 +61,10 @@ class TeamShootController {
                             message: `Invalid selection for ${plan.role}`
                         });
                     }
-                    itemPrice = durationOption.price;
+                    itemPrice = durationOption.price || 0;
                     itemName = `${plan.role} (${durationOption.durationText})`;
                 } else if (plan.pricingType === "fixed") {
-                    itemPrice = plan.fixedPrice;
+                    itemPrice = plan.fixedPrice || 0;
                 }
 
                 // Check if already in cart by planId and selectedroleId (or just name if fixed)
@@ -82,13 +85,26 @@ class TeamShootController {
                         price: itemPrice,
                         quantity: selection.quantity || 1,
                         planId: selection.planId,
-                        selectedroleId: selection.selectedroleId
+                        selectedroleId: selection.selectedroleId,
+                        subCategoryType: plan.teamCategory,
+                        subCategoryName: plan.role
                     });
                 }
             }
 
-            // Recalculate total Amount
-            cart.totalAmount = cart.items.reduce((acc, item) => acc + (item.price * item.quantity), 0);
+            // Recalculate total Amount and sanitize items
+            cart.totalAmount = cart.items.reduce((acc, item) => {
+                const price = Number(item.price) || 0;
+                const qty = Number(item.quantity) || 0;
+                return acc + (price * qty);
+            }, 0);
+
+            // Ensure all items have subCategoryType (fix for legacy items)
+            for (let item of cart.items) {
+                if (!item.subCategoryType) {
+                    item.subCategoryType = "standard"; // Default fallback
+                }
+            }
 
             await cart.save();
 
@@ -99,8 +115,11 @@ class TeamShootController {
             });
 
         } catch (error) {
-            console.error("Team Shoot add to cart error:", error);
-            res.status(500).json({ success: false, message: "Server error" });
+            console.error("Team Shoot add to cart error:", error.stack || error);
+            if (error.name === "CastError") {
+                return res.status(400).json({ success: false, message: "Invalid ID format" });
+            }
+            res.status(500).json({ success: false, message: error.message || "Server error" });
         }
     }
 }
