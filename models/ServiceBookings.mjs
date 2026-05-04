@@ -9,7 +9,7 @@ const serviceBookingSchema = new mongoose.Schema(
     serviceCategory: {
       type: String,
       enum: ["hourly", "editing", "service"],
-      default: "service"
+      default: "Service"
     },
     additionalServicesId: {
       type: mongoose.Schema.Types.ObjectId,
