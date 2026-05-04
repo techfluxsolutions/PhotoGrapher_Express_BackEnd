@@ -130,6 +130,7 @@ router.post('/createhourlyshootBooking', (req, res, next) => HourlyShootBookingC
 // Create Hourly & Editing Quotes
 router.post('/hourly-shoot-quote', (req, res, next) => HourlyShootBookingController.createhourlyShookQuote(req, res, next));
 
+
 // --- Quotes ---
 router.post("/quotes", (req, res, next) => QuoteController.create(req, res, next));
 router.get("/quotes", (req, res, next) => QuoteController.getAll(req, res, next));
