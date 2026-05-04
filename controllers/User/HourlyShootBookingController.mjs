@@ -360,7 +360,8 @@ class HourlyShootBookingController {
                 eventType,
                 startDate,
                 location,
-                photographyRequirements
+                photographyRequirements,
+                serviceCategory
             } = req.body;
 
             const clientId = req.user?.id || req.body.clientId;
@@ -380,6 +381,7 @@ class HourlyShootBookingController {
                 location: finalCity,
                 bStatus: "pending",
                 quoteStatus: "pending",
+                serviceCategory: serviceCategory || "hourly",
                 quoteType: "personalizedQuotes" // Matching the Quote schema enum
             };
 
@@ -418,6 +420,7 @@ class HourlyShootBookingController {
             } else {
                 // Editing Case (category is missing)
                 payload.eventType = "Editing";
+                payload.serviceCategory = "editing";
                 payload.editingPreferences = true;
                 if (additionalDetails) {
                     payload.photographyRequirements = additionalDetails;

@@ -6,6 +6,11 @@ const quoteSchema = new mongoose.Schema(
       ref: "Service",
       sparse: true
     },
+    serviceCategory: {
+      type: String,
+      enum: ["hourly", "editing", "service"],
+      default: "service"
+    },
     eventType: {
       type: String,
       required: true,
