@@ -15,6 +15,11 @@ const quoteSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
+    serviceCategory: {
+      type: String,
+      enum: ["hourly", "editing", "service"],
+      default: "service"
+    },
     startDate: {
       type: Date,
       required: false,

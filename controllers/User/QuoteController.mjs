@@ -275,7 +275,7 @@ class QuoteController {
       // 🧠 Step 2: Create booking using quote details
       const booking = await ServiceBooking.create({
         veroaBookingId: veroaBookingId,
-
+        serviceCategory: quote.serviceCategory,
         service_id: quote.service_id,
         client_id: quote.clientId,
         bookingDate: leanedData.eventDate || leanedData.startDate, // Keep as Date object
@@ -333,10 +333,10 @@ class QuoteController {
 
           if (linkedConv) {
             console.log(`✅ Conversation ${linkedConv._id} for quote ${quote._id} linked to booking ${booking._id}`);
-            
+
             // Check if the quote has already been paid
             const existingPayment = await Payment.findOne({ quote_id: quote._id, payment_status: "paid" });
-            
+
             if (existingPayment) {
               console.log(`ℹ️ Payment already detected for quote ${quote._id}. Removing payment cards.`);
               await Message.deleteMany({ conversationId: linkedConv._id, messageType: "paymentCard" });
