@@ -235,8 +235,7 @@ class QuoteController {
         lat,
         lng,
         address,
-        totalAmount,
-        serviceCategory
+        totalAmount
       } = req.body;
 
       // 🔎 Step 1: Find quote by _id AND clientId
@@ -276,7 +275,7 @@ class QuoteController {
       // 🧠 Step 2: Create booking using quote details
       const booking = await ServiceBooking.create({
         veroaBookingId: veroaBookingId,
-        serviceCategory: serviceCategory || "Service",
+        serviceCategory: quote.serviceCategory,
         service_id: quote.service_id,
         client_id: quote.clientId,
         bookingDate: leanedData.eventDate || leanedData.startDate, // Keep as Date object
