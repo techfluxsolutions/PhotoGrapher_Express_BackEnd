@@ -361,7 +361,8 @@ class HourlyShootBookingController {
                 startDate,
                 location,
                 photographyRequirements,
-                serviceCategory
+                serviceCategory,
+                subCategory
             } = req.body;
 
             const clientId = req.user?.id || req.body.clientId;
@@ -382,6 +383,7 @@ class HourlyShootBookingController {
                 bStatus: "pending",
                 quoteStatus: "pending",
                 serviceCategory: serviceCategory || "hourly",
+                subCategory: subCategory || "",
                 quoteType: "personalizedQuotes" // Matching the Quote schema enum
             };
 

@@ -23,6 +23,7 @@ class QuoteController {
       payload.endDate = parseDDMMYYYY(payload.endDate);
       payload.eventDate = parseDDMMYYYY(payload.eventDate);
       payload.clientId = id;
+      payload.subCategory = req.body.subCategory || "";
 
       if (payload.budget && !payload.currentBudget) {
         payload.currentBudget = payload.budget;
