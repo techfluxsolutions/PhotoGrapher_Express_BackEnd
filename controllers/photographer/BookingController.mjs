@@ -13,6 +13,7 @@ import fs from 'fs';
 import path from 'path';
 import { sendBookingSMS, sendMessageCentral, retryMessageCentral, verifyMessageCentral } from "../../utils/messageCentral.mjs";
 import { downloadInvoice, downloadPartnerInvoice } from "../../controllers/Admin/InvoiceController.mjs";
+import DataLinks from "../../models/DataLinks.js";
 
 class BookingController {
     // Helper to calculate days left until the event
@@ -694,12 +695,32 @@ class BookingController {
             // Find Gallery by booking_id
             let gallery = await Gallery.findOne({ booking_id: id });
 
-            if (!gallery) {
+            // ✅ Fallback: Check if photos exist in DataLinks (new cloud storage)
+            const dataLinksCount = await DataLinks.countDocuments({ bookingid: id });
+
+            if (!gallery && dataLinksCount === 0) {
                 return sendErrorResponse(res, { message: "Gallery not found for this booking. Please upload photos first." }, 404);
             }
 
-            gallery.isShared = true;
-            await gallery.save();
+            if (gallery) {
+                gallery.isShared = true;
+                await gallery.save();
+            } else {
+                // If photos exist in DataLinks but no Gallery record, we create one 
+                // to maintain 'isShared' state for other parts of the system.
+                gallery = await Gallery.create({
+                    booking_id: id,
+                    isShared: true,
+                    gallery: [],
+                    storageType: "cloud"
+                });
+            }
+
+            // ✅ Bulk-update all photos for this booking to be published
+            await DataLinks.updateMany(
+                { bookingid: id },
+                { $set: { isPublished: true } }
+            );
 
             // Also update the booking status
             await ServiceBooking.findByIdAndUpdate(id, {

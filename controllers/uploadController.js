@@ -3,6 +3,7 @@ import DataLinks from "../models/DataLinks.js";
 import ServiceBooking from "../models/ServiceBookings.mjs";
 import CloudPlans from "../models/CloudPlans.mjs";
 import CloudPayment from "../models/CloudPayment.mjs";
+import Gallery from "../models/Gallery.mjs";
 import archiver from "archiver";
 import mongoose from "mongoose";
 export const uploadController = {
@@ -375,15 +376,21 @@ export const uploadController = {
             const limitNum = Number(limit);
             const skip = (pageNum - 1) * limitNum;
 
-            // ✅ Check if any photos exist for this booking (used for legacy fallback)
-            const total = await DataLinks.countDocuments({ bookingid: bookingId });
-            // Fetch booking status to determine isblur
-            const booking = await ServiceBooking.findById(bookingId).select("paymentStatus full_Payment firstPhotoUploadedAt fullyPaidAt");
-            // Check if any active cloud plans exist for this booking in CloudPayment
-            const activeCloudPlan = await CloudPayment.findOne({
-                booking_id: bookingId,
-                payment_status: "paid"
-            }).sort({ expiry_date: -1 });
+            const query = { bookingid: bookingId };
+            // Hide unpublished photos from both Users and Admins (Only Photographers see everything)
+            if (req.user && req.user.userType !== "photographer") {
+                query.isPublished = true;
+            }
+
+            // Fetch total count, booking status, and active cloud plan in parallel
+            const [total, booking, activeCloudPlan] = await Promise.all([
+                DataLinks.countDocuments(query),
+                ServiceBooking.findById(bookingId).select("paymentStatus full_Payment firstPhotoUploadedAt fullyPaidAt createdAt"),
+                CloudPayment.findOne({
+                    booking_id: bookingId,
+                    payment_status: "paid"
+                }).sort({ expiry_date: -1 })
+            ]);
 
             let isblur = false;
             let remainingDays = 0;
@@ -424,10 +431,10 @@ export const uploadController = {
                 }
             }
 
-
             // ✅ Fetch paginated keys
-            const files = await DataLinks.find({ bookingid: bookingId })
+            const files = await DataLinks.find(query)
                 .select("key")
+                .sort({ _id: -1 })
                 .skip(skip)
                 .limit(limitNum)
                 .lean();
