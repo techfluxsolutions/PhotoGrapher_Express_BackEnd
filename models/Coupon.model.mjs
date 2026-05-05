@@ -65,8 +65,29 @@ const CouponSchema = new mongoose.Schema(
             type: Boolean,
             default: true,
         },
+
+        applicableCategories: [{
+            type: String,
+            enum: ["service", "package", "duration", "editing", "shoot_team"],
+        }],
     },
     { timestamps: true }
 );
+
+CouponSchema.pre("save", function () {
+    if (this.isModified("couponType") || this.isNew) {
+        if (this.couponType === "HourlyShoot") {
+            this.applicableCategories = ["shoot_team"];
+        } else if (this.couponType === "PhotoEditing") {
+            this.applicableCategories = ["editing"];
+        } else if (this.couponType === "Service") {
+            this.applicableCategories = ["service"];
+        } else if (this.couponType === "CustomizeBooking") {
+            this.applicableCategories = ["duration", "package"];
+        } else {
+            this.applicableCategories = [];
+        }
+    }
+});
 
 export default mongoose.model("Coupon", CouponSchema);

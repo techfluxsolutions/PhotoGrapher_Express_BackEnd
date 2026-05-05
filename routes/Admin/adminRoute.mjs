@@ -190,13 +190,13 @@ router.get("/partner-invoices/:bookingId", (req, res, next) => downloadPartnerIn
 
 
 //Coupon Routes
-router.post("/coupon", CouponController.createCoupon);
-router.get("/coupon", CouponController.getAllCoupons);
-router.get("/coupon/:id", CouponController.getCouponById);
-router.put("/coupon/:id", CouponController.updateCoupon);
-router.delete("/coupon/:id", CouponController.deleteCoupon);
-router.patch("/coupon/toggle/:id", CouponController.toggleCouponStatus);
-router.post("/coupon/validate", CouponController.validateCoupon);
+router.post("/coupon", (req, res, next) => CouponController.createCoupon(req, res, next));
+router.get("/coupon", (req, res, next) => CouponController.getAllCoupons(req, res, next));
+router.get("/coupon/:id", (req, res, next) => CouponController.getCouponById(req, res, next));
+router.put("/coupon/:id", (req, res, next) => CouponController.updateCoupon(req, res, next));
+router.delete("/coupon/:id", (req, res, next) => CouponController.deleteCoupon(req, res, next));
+router.patch("/coupon/toggle/:id", (req, res, next) => CouponController.toggleCouponStatus(req, res, next));
+router.post("/coupon/validate", (req, res, next) => CouponController.validateCoupon(req, res, next));
 //Subscriber
 
 
