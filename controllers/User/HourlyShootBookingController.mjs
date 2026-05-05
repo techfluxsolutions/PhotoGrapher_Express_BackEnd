@@ -99,7 +99,7 @@ class HourlyShootBookingController {
             );
             const nextNumber = counter.seq;
 
-            // Pad number to 6 digits
+            // Pad number to 6 digit
             const formattedNumber = String(nextNumber).padStart(6, "0");
 
             payload.veroaBookingId = `VEROA-BK-${formattedNumber}`;
