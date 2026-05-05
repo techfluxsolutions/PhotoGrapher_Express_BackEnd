@@ -358,11 +358,23 @@ class EditingController {
             const savedDatalink = await DataLinks.create({
                 dataLink: fileUrl,
                 key: key,
-                folderPath, // Note: This should be added to DataLinks schema if not present
+                folderPath,
                 bookingid,
                 clientId: userId,
-                veroaBookingId
+                veroaBookingId,
+                isPublished: true // User uploads should be visible in gallery
             });
+
+            // ✅ Also Link to ServiceBooking directly
+            const bookingFilter = mongoose.Types.ObjectId.isValid(bookingid) 
+                ? { _id: bookingid } 
+                : { veroaBookingId: veroaBookingId || bookingid };
+            
+            await ServiceBooking.findOneAndUpdate(
+                bookingFilter,
+                { $addToSet: { media: key } },
+                { new: true }
+            );
 
             res.status(200).json({
                 message: "Upload complete successfully",

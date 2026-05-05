@@ -376,11 +376,12 @@ export const uploadController = {
             const limitNum = Number(limit);
             const skip = (pageNum - 1) * limitNum;
 
-            const query = { bookingid: bookingId };
-            // Hide unpublished photos from both Users and Admins (Only Photographers see everything)
-            if (req.user && req.user.userType !== "photographer") {
-                query.isPublished = true;
-            }
+            const query = { 
+                $or: [
+                    { bookingid: bookingId },
+                    { veroaBookingId: bookingId }
+                ]
+            };
 
             // Fetch total count, booking status, and active cloud plan in parallel
             const [total, booking, activeCloudPlan] = await Promise.all([
@@ -433,7 +434,7 @@ export const uploadController = {
 
             // ✅ Fetch paginated keys
             const files = await DataLinks.find(query)
-                .select("key")
+                .select("key clientId photographerId")
                 .sort({ _id: -1 })
                 .skip(skip)
                 .limit(limitNum)
@@ -461,11 +462,22 @@ export const uploadController = {
             // ✅ Generate signed URLs
             const signedUrls = await s3Service.getBatchSignedUrls(keys);
 
+            // ✅ Create a lookup map for signed URLs
+            const urlMap = {};
+            keys.forEach((key, index) => {
+                urlMap[key] = signedUrls[index];
+            });
+
             // ✅ Combine key + URL
-            const data = keys.map((key, index) => ({
-                key,
-                imageUrl: signedUrls[index] || null
+            const data = files.map(f => ({
+                key: f.key,
+                imageUrl: urlMap[f.key] || null,
+                clientId: f.clientId,
+                photographerId: f.photographerId
             }));
+
+            console.log("Gallery Query:", JSON.stringify(query, null, 2));
+            console.log(`Found ${files.length} files for gallery.`);
 
             return res.status(200).json({
                 success: true,
