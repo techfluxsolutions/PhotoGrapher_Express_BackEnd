@@ -337,7 +337,7 @@ class EditingController {
 
     async completeUpload(req, res) {
         try {
-            const { key, uploadId, parts, bookingid, veroaBookingId } = req.body;
+            const { key, uploadId, parts, bookingid, veroaBookingId, category } = req.body;
             const userId = req.user.id;
 
             if (!key || !parts || !Array.isArray(parts)) {
@@ -362,7 +362,8 @@ class EditingController {
                 bookingid,
                 clientId: userId,
                 veroaBookingId,
-                isPublished: true // User uploads should be visible in gallery
+                isPublished: true, // User uploads should be visible in gallery
+                category: category || 'standard'
             });
 
             // ✅ Also Link to ServiceBooking directly

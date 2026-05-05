@@ -434,7 +434,7 @@ export const uploadController = {
 
             // ✅ Fetch paginated keys
             const files = await DataLinks.find(query)
-                .select("key clientId photographerId")
+                .select("key clientId photographerId category")
                 .sort({ _id: -1 })
                 .skip(skip)
                 .limit(limitNum)
@@ -473,7 +473,8 @@ export const uploadController = {
                 key: f.key,
                 imageUrl: urlMap[f.key] || null,
                 clientId: f.clientId,
-                photographerId: f.photographerId
+                photographerId: f.photographerId,
+                category: f.category
             }));
 
             console.log("Gallery Query:", JSON.stringify(query, null, 2));
@@ -925,6 +926,32 @@ export const uploadController = {
     //     }
     // },
 
+
+    deleteSingleFile: async (req, res) => {
+        try {
+            const { key, bookingId } = req.body;
+            if (!key || !bookingId) {
+                return res.status(400).json({ error: "Missing key or bookingId" });
+            }
+
+            await s3Service.deleteFile(key);
+            
+            await DataLinks.deleteOne({ 
+                $or: [ { bookingid: bookingId }, { veroaBookingId: bookingId } ],
+                key: key 
+            });
+
+            await ServiceBooking.updateOne(
+                { $or: [ { _id: bookingId }, { veroaBookingId: bookingId } ] },
+                { $pull: { media: key, userMedia: key } }
+            );
+
+            res.status(200).json({ success: true, message: "File deleted successfully." });
+        } catch (error) {
+            console.error("Delete file error:", error);
+            res.status(500).json({ success: false, error: error.message });
+        }
+    },
 
     deleteAllS3Files: async (req, res) => {
         try {

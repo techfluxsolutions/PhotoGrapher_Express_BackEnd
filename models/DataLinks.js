@@ -28,6 +28,9 @@ const DataLinksSchema = new mongoose.Schema({
     isPublished: {
         type: Boolean,
         default: false
+    },
+    category: {
+        type: String
     }
 }, { collection: 'datalinks' });
 
