@@ -5,6 +5,7 @@ import Payment from "../../models/Payment.mjs";
 import Photographer from "../../models/Photographer.mjs";
 import Counter from "../../models/Counter.mjs";
 import EditingPlan from "../../models/EditingPlan.mjs";
+import TeamShootPlan from "../../models/TeamShootPlan.mjs";
 const parseDateFlexible = (dateStr) => {
   if (!dateStr) return dateStr;
   
@@ -195,6 +196,105 @@ class ServiceBookingController {
         : null;
 
       const bookingObj = booking.toObject();
+
+      // Manual population of editingbookings and hourlyPackages
+      const rawEditing = bookingObj.editingbookings || bookingObj.editingPackages || [];
+      const rawHourly = bookingObj.hourlyPackages || [];
+      
+      const enrichedEditing = [];
+      for (const item of rawEditing) {
+        if (item.planId) {
+          const plan = await EditingPlan.findById(item.planId).lean();
+          enrichedEditing.push({ ...item, planId: plan || item.planId });
+        } else {
+          enrichedEditing.push(item);
+        }
+      }
+      bookingObj.editingbookings = enrichedEditing;
+
+      const enrichedHourly = [];
+      for (const item of rawHourly) {
+        if (item.planId) {
+          const plan = await TeamShootPlan.findById(item.planId).lean();
+          enrichedHourly.push({ ...item, planId: plan || item.planId });
+        } else {
+          enrichedHourly.push(item);
+        }
+      }
+      bookingObj.hourlyPackages = enrichedHourly;
+
+      // Initialize Summary Object
+      const createRangeObject = () => ({
+        totalQuantity: 0,
+        photographer: 0,
+        videographer: 0,
+        "lightning setup": 0,
+        editing: 0
+      });
+
+      const planSummary = {
+        standard: {
+          "0-3": createRangeObject(),
+          "5": createRangeObject(),
+          "8": createRangeObject()
+        },
+        premium: {
+          "0-3": createRangeObject(),
+          "5": createRangeObject(),
+          "8": createRangeObject()
+        }
+      };
+
+      const processPlan = (item) => {
+        if (!item) return;
+        const cat = (item.subCategoryType || item.planCategory || item.planId?.planCategory || item.planId?.teamCategory || item.category || "standard").toLowerCase();
+        const categoryTarget = (cat === "premium" || cat.includes("premium")) ? planSummary.premium : planSummary.standard;
+        
+        const qty = item.quantity || 1;
+
+        // Determine Duration/Range
+        let duration = item.durationValue || item.planId?.pricingOptions?.[0]?.durationValue || item.planId?.numberOfVideos || item.numberOfVideos;
+        if (duration === undefined && item.name) {
+          const match = item.name.match(/(\d+)\s*(Hours|Videos)/i);
+          if (match) duration = parseInt(match[1]);
+        }
+
+        let rangeKey = "0-3";
+        if (duration !== undefined) {
+          if (duration === 5) rangeKey = "5";
+          else if (duration === 8) rangeKey = "8";
+        }
+
+        const target = categoryTarget[rangeKey];
+        target.totalQuantity += (qty * (duration || 0));
+
+        // Team roles
+        const role = (item.subCategoryName || item.role || item.planId?.role || item.name || "").toLowerCase();
+        if (role.includes("photographer")) target.photographer += qty;
+        else if (role.includes("videographer") || role.includes("cinematographer")) target.videographer += qty;
+        else if (role.includes("light") || role.includes("lightning")) target["lightning setup"] += qty;
+        else if (role.includes("editor") || role.includes("editing") || item.category === "editing" || cat === "editing") target.editing += qty;
+      };
+
+      // Process all plans from various possible sources
+      enrichedEditing.forEach(processPlan);
+      enrichedHourly.forEach(processPlan);
+      
+      if (bookingObj.cartId && bookingObj.cartId.items) {
+        bookingObj.cartId.items.forEach(processPlan);
+      }
+
+      // Add summary to response
+      bookingObj.planSummary = planSummary;
+
+      // Calculate total counts for standard and premium
+      bookingObj.standardCount = planSummary.standard["0-3"].totalQuantity + 
+                                planSummary.standard["5"].totalQuantity + 
+                                planSummary.standard["8"].totalQuantity;
+      bookingObj.premiumCount = planSummary.premium["0-3"].totalQuantity + 
+                               planSummary.premium["5"].totalQuantity + 
+                               planSummary.premium["8"].totalQuantity;
+
       bookingObj.eventType = booking.shootType || booking.service_id?.serviceName || 
                              (booking.serviceCategory === 'hourly' ? 'Hourly Shoot' : 
                               booking.serviceCategory === 'editing' ? 'Editing Service' : "");
@@ -202,8 +302,8 @@ class ServiceBookingController {
       bookingObj.status = booking.status || "pending";
 
       const cartItem = booking.cartId?.items?.[0] || {};
-      const editingData = booking.editingbookings?.[0] || booking.editingPackages?.[0] || {};
-      const hourlyData = booking.hourlyPackages?.[0] || {};
+      const editingData = enrichedEditing[0] || {};
+      const hourlyData = enrichedHourly[0] || {};
       bookingObj.subCategoryName = cartItem.subCategoryName || editingData.subCategoryName || hourlyData.subCategoryName || "";
       bookingObj.subCategoryType = cartItem.subCategoryType || editingData.subCategoryType || editingData.category || hourlyData.subCategoryType || hourlyData.category || "";
 
