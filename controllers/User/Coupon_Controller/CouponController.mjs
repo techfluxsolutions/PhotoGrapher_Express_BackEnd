@@ -182,7 +182,7 @@ class CouponController {
      */
     async validateCoupon(req, res) {
         try {
-            const { code, amount, couponType } = req.body;
+            let { code, amount, couponType, items } = req.body;
 
             const coupon = await Coupon.findOne({
                 code: code.toUpperCase(),
@@ -195,6 +195,35 @@ class CouponController {
                     success: false,
                     message: "Invalid coupon",
                 });
+
+            // Calculate eligible amount if items are provided (secure backend validation)
+            if (items && Array.isArray(items) && items.length > 0) {
+                let eligibleAmount = 0;
+                items.forEach(item => {
+                    const cat = item.category?.toLowerCase();
+                    
+                    // Use model's applicableCategories, fallback to defaults for older coupons
+                    const validCategories = coupon.applicableCategories && coupon.applicableCategories.length > 0 
+                        ? coupon.applicableCategories 
+                        : (coupon.couponType === "HourlyShoot" ? ["shoot_team"] 
+                          : coupon.couponType === "PhotoEditing" ? ["editing"] 
+                          : coupon.couponType === "Service" ? ["service"] 
+                          : coupon.couponType === "CustomizeBooking" ? ["duration", "package", "custom"]
+                          : []);
+                          
+                    if (validCategories.includes(cat)) {
+                        eligibleAmount += item.price * (item.quantity || 1);
+                    }
+                });
+
+                if (eligibleAmount === 0) {
+                    return res.status(400).json({
+                        success: false,
+                        message: "Coupon is not applicable to the items in your cart",
+                    });
+                }
+                amount = eligibleAmount;
+            }
 
             const now = new Date();
 
@@ -224,7 +253,7 @@ class CouponController {
                 if (coupon.maxDiscountAmount)
                     discount = Math.min(discount, coupon.maxDiscountAmount);
             } else {
-                discount = coupon.discountValue;
+                discount = Math.min(coupon.discountValue, amount);
             }
 
             res.json({
