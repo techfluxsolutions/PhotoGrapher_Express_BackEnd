@@ -207,10 +207,12 @@ router.get("/getReviewAndRating", (req, res, next) => ReviewAndRatingController.
 // s3 Stream (Protected: Only Client/Photographer linked to the file/booking can view)
 router.get("/stream/:bookingId/*key", (req, res, next) => uploadController.streamProtectedFile(req, res, next));
 router.post("/downloadZip", (req, res, next) => uploadController.downloadZip(req, res, next));
+router.get("/downloadZip", (req, res, next) => uploadController.downloadZip(req, res, next));
 router.post("/downloadZiponFourtyPlus", (req, res, next) => uploadController.downloadZiponFourtyPlus(req, res, next));
+router.get("/downloadZiponFourtyPlus", (req, res, next) => uploadController.downloadZiponFourtyPlus(req, res, next));
 router.post("/downloadSingleFile", (req, res, next) => uploadController.downloadSingleFile(req, res, next));
+router.get("/downloadSingleFile", (req, res, next) => uploadController.downloadSingleFile(req, res, next));
 router.post("/downloadMultipleFiles", (req, res, next) => uploadController.downloadMultipleFiles(req, res, next));
-router.post("/downloadSingleFile", (req, res, next) => uploadController.downloadSingleFile(req, res, next));
 
 router.get("/getArrayImages/:bookingId", (req, res, next) => uploadController.getUrlsListArray(req, res, next));
 router.post("/delete-media", (req, res, next) => uploadController.deleteSingleFile(req, res, next));

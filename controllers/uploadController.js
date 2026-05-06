@@ -637,7 +637,8 @@ export const uploadController = {
                 if (pId) query.photographerId = pId;
             }
 
-            const { category, galleryType } = req.body;
+            const category = (req.body && req.body.category) || req.query.category;
+            const galleryType = (req.body && req.body.galleryType) || req.query.galleryType;
             if (category) query.category = category;
             
             if (galleryType === 'sent') {
