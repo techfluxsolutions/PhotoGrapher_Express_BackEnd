@@ -35,9 +35,7 @@ const upload = multer({
 import HourlyShootBookingController from "../controllers/User/HourlyShootBookingController.mjs";
 // Partner Registration (Public)
 router.post("/partner-registration", (req, res, next) => PartnerRegistrationController.create(req, res, next));
-router.get("/partner-registration", (req, res, next) => PartnerRegistrationController.getAll(req, res, next));
-
-// Contact Us (Public)
+router.get("/partner-registration", (req, res, next) => PartnerRegistrationController.getAll(req, res, next));// Contact Us (Public)
 router.post("/contact-us", (req, res, next) => ContactUsController.create(req, res, next));
 router.get("/contact-us", (req, res, next) => ContactUsController.getAll(req, res, next));
 // router.use(authMiddleware); // Removed global auth middleware to allow public routes
