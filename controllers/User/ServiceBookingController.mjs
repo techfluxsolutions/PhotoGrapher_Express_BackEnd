@@ -236,12 +236,14 @@ class ServiceBookingController {
         standard: {
           "0-3": createRangeObject(),
           "5": createRangeObject(),
-          "8": createRangeObject()
+          "8": createRangeObject(),
+          "10": createRangeObject()
         },
         premium: {
           "0-3": createRangeObject(),
           "5": createRangeObject(),
-          "8": createRangeObject()
+          "8": createRangeObject(),
+          "10": createRangeObject()
         }
       };
 
@@ -263,6 +265,7 @@ class ServiceBookingController {
         if (duration !== undefined) {
           if (duration === 5) rangeKey = "5";
           else if (duration === 8) rangeKey = "8";
+          else if (duration === 10) rangeKey = "10";
         }
 
         const target = categoryTarget[rangeKey];
@@ -290,10 +293,14 @@ class ServiceBookingController {
       // Calculate total counts for standard and premium
       bookingObj.standardCount = planSummary.standard["0-3"].totalQuantity + 
                                 planSummary.standard["5"].totalQuantity + 
-                                planSummary.standard["8"].totalQuantity;
+                                planSummary.standard["8"].totalQuantity +
+                                planSummary.standard["10"].totalQuantity +
+                                (bookingObj.standardEditingVideos || 0);
       bookingObj.premiumCount = planSummary.premium["0-3"].totalQuantity + 
                                planSummary.premium["5"].totalQuantity + 
-                               planSummary.premium["8"].totalQuantity;
+                               planSummary.premium["8"].totalQuantity +
+                               planSummary.premium["10"].totalQuantity +
+                               (bookingObj.premiumEditingVideos || 0);
 
       bookingObj.eventType = booking.shootType || booking.service_id?.serviceName || 
                              (booking.serviceCategory === 'hourly' ? 'Hourly Shoot' : 
