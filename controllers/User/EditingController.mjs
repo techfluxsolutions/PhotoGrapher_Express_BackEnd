@@ -230,7 +230,7 @@ class EditingController {
     async getplanBynumberOfVideos(req, res) {
         try {
             const numberOfVideos = req.params.numberOfvideos;
-            const plans = await EditingPlan.find({ numberOfVideos: numberOfVideos });
+            const plans = await EditingPlan.find({ numberOfVideos: numberOfVideos }).lean().sort({ numberOfVideos: -1 });
             if (!plans) {
                 return res.status(404).json({ success: false, message: "Editing plans not found" });
             }
@@ -366,10 +366,10 @@ class EditingController {
             });
 
             // ✅ Also Link to ServiceBooking directly
-            const bookingFilter = mongoose.Types.ObjectId.isValid(bookingid) 
-                ? { _id: bookingid } 
+            const bookingFilter = mongoose.Types.ObjectId.isValid(bookingid)
+                ? { _id: bookingid }
                 : { veroaBookingId: veroaBookingId || bookingid };
-            
+
             await ServiceBooking.findOneAndUpdate(
                 bookingFilter,
                 { $addToSet: { media: key } },
