@@ -49,11 +49,17 @@ class PayoutController {
             const payouts = await Payout.find(filter)
                 .populate({
                     path: "booking_id",
-                    select: "veroaBookingId bookingDate eventDate eventType totalAmount status bookingStatus",
-                    populate: {
-                        path: "client_id",
-                        select: "username email" 
-                    }
+                    select: "veroaBookingId bookingDate eventDate eventType totalAmount status bookingStatus service_id",
+                    populate: [
+                        {
+                            path: "client_id",
+                            select: "username email" 
+                        },
+                        {
+                            path: "service_id",
+                            select: "serviceName"
+                        }
+                    ]
                 })
                 .sort({ createdAt: -1 });
 
@@ -90,12 +96,22 @@ class PayoutController {
                     year: "numeric"
                 }) : "N/A";
 
+                // Determine Event Type Label
+                let eventTypeLabel = p.booking_id?.eventType || p.booking_id?.service_id?.serviceName || p.booking_id?.shootType || p.shootType || p.booking_id?.serviceCategory || "N/A";
+                
+                // Format for display
+                if (eventTypeLabel === "HourlyShoot") eventTypeLabel = "Hourly Shoot";
+                else if (eventTypeLabel === "PhotoEditing") eventTypeLabel = "Photo Editing";
+                else if (eventTypeLabel === "service") eventTypeLabel = "Service";
+                else if (eventTypeLabel === "hourly") eventTypeLabel = "Hourly Shoot";
+                else if (eventTypeLabel === "editing") eventTypeLabel = "Photo Editing";
+
                 return {
                     _id: p._id,
                     client_name: p.booking_id?.client_id?.username || "N/A",
                     veroa_id: p.booking_id?.veroaBookingId || "N/A",
                     event_date: formattedEventDate,
-                    event_type: p.booking_id?.eventType || "N/A",
+                    event_type: eventTypeLabel,
                     total_amount: p.total_amount,
                     paid_amount: p.paid_amount,
                     pending_amount: p.pending_amount,
@@ -127,11 +143,17 @@ class PayoutController {
             const payout = await Payout.findOne({ _id: id, photographer_id: photographerId })
                 .populate({
                     path: "booking_id",
-                    select: "veroaBookingId bookingDate eventDate eventType totalAmount status",
-                    populate: {
-                        path: "client_id",
-                        select: "username email"
-                    }
+                    select: "veroaBookingId bookingDate eventDate eventType totalAmount status service_id",
+                    populate: [
+                        {
+                            path: "client_id",
+                            select: "username email"
+                        },
+                        {
+                            path: "service_id",
+                            select: "serviceName"
+                        }
+                    ]
                 });
 
             if (!payout) {
@@ -148,12 +170,22 @@ class PayoutController {
                 year: "numeric"
             }) : "N/A";
 
+            // Determine Event Type Label
+            let eventTypeLabel = p.booking_id?.eventType || p.booking_id?.service_id?.serviceName || p.booking_id?.shootType || p.shootType || p.booking_id?.serviceCategory || "N/A";
+            
+            // Format for display
+            if (eventTypeLabel === "HourlyShoot") eventTypeLabel = "Hourly Shoot";
+            else if (eventTypeLabel === "PhotoEditing") eventTypeLabel = "Photo Editing";
+            else if (eventTypeLabel === "service") eventTypeLabel = "Service";
+            else if (eventTypeLabel === "hourly") eventTypeLabel = "Hourly Shoot";
+            else if (eventTypeLabel === "editing") eventTypeLabel = "Photo Editing";
+
             const cleanedPayout = {
                 _id: p._id,
                 client_name: p.booking_id?.client_id?.username || "N/A",
                 veroa_id: p.booking_id?.veroaBookingId || "N/A",
                 event_date: formattedEventDate,
-                event_type: p.booking_id?.eventType || "N/A",
+                event_type: eventTypeLabel,
                 total_amount: p.total_amount,
                 paid_amount: p.paid_amount,
                 pending_amount: p.pending_amount,
