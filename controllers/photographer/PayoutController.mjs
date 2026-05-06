@@ -45,11 +45,11 @@ class PayoutController {
                 };
             }
 
-            // Populate details to match the requested view (Client Name, Event Type, etc.)
+            // Populate details and filter by booking status
             const payouts = await Payout.find(filter)
                 .populate({
                     path: "booking_id",
-                    select: "veroaBookingId bookingDate eventDate eventType totalAmount status",
+                    select: "veroaBookingId bookingDate eventDate eventType totalAmount status bookingStatus",
                     populate: {
                         path: "client_id",
                         select: "username email" 
@@ -57,8 +57,30 @@ class PayoutController {
                 })
                 .sort({ createdAt: -1 });
 
+            // console.log(`[Payout] Found ${payouts.length} raw payouts for photographer ${photographerId}`);
+
+            // Filter out canceled bookings or those that are not 'accepted'
+            const filteredPayouts = payouts.filter(payout => {
+                const booking = payout.booking_id;
+                if (!booking) {
+                    // console.log(`[Payout] Payout ${payout._id} has no associated booking.`);
+                    return false;
+                }
+                
+                // Only show accepted bookings and hide canceled ones
+                // Note: We might want to allow 'pending' if they are assigned but not yet confirmed? 
+                // But the user said "only accepted by him or assign him". 
+                // Assignment usually sets status to 'accepted'.
+                const isAccepted = booking.bookingStatus === "accepted";
+                const isNotCanceled = booking.status !== "canceled";
+                
+                return isAccepted && isNotCanceled;
+            });
+
+            // console.log(`[Payout] ${filteredPayouts.length} payouts remaining after filtering.`);
+
             // Return only specific fields for a cleaner response
-            const cleanedPayouts = payouts.map(payout => {
+            const cleanedPayouts = filteredPayouts.map(payout => {
                 const p = payout.toObject();
                 // Format event date (DD/MM/YYYY)
                 const rawDate = p.booking_id?.eventDate || p.booking_id?.bookingDate;
