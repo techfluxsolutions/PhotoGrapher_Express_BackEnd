@@ -6,17 +6,21 @@ const DataLinksSchema = new mongoose.Schema({
     },
     clientId: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: "User"
+        ref: "User",
+        index: true
     },
     photographerId: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: "User"
+        ref: "User",
+        index: true
     },
     bookingid: {
-        type: String
+        type: String,
+        index: true
     },
     veroaBookingId: {
-        type: String
+        type: String,
+        index: true
     },
     key: {
         type: String,
@@ -28,7 +32,14 @@ const DataLinksSchema = new mongoose.Schema({
     isPublished: {
         type: Boolean,
         default: false
+    },
+    category: {
+        type: String
     }
 }, { collection: 'datalinks' });
+
+// Compound index for booking + category/type filters
+DataLinksSchema.index({ bookingid: 1, photographerId: 1 });
+DataLinksSchema.index({ veroaBookingId: 1, photographerId: 1 });
 
 export default mongoose.model("DataLinks", DataLinksSchema);

@@ -242,7 +242,7 @@ class EditingController {
 
     async getplanByPlanCategory(req, res) {
         try {
-            const plansDetails = await EditingPlan.find({}).select('numberOfVideos price subtitle');
+            const plansDetails = await EditingPlan.find({});
 
             if (!plansDetails || plansDetails.length === 0) {
                 return res.status(200).json({ success: true, message: "No plan found please contact admin", plansDetails: [] });
@@ -337,7 +337,7 @@ class EditingController {
 
     async completeUpload(req, res) {
         try {
-            const { key, uploadId, parts, bookingid, veroaBookingId } = req.body;
+            const { key, uploadId, parts, bookingid, veroaBookingId, category } = req.body;
             const userId = req.user.id;
 
             if (!key || !parts || !Array.isArray(parts)) {
@@ -362,7 +362,8 @@ class EditingController {
                 bookingid,
                 clientId: userId,
                 veroaBookingId,
-                isPublished: true // User uploads should be visible in gallery
+                isPublished: true, // User uploads should be visible in gallery
+                category: category || 'standard'
             });
 
             // ✅ Also Link to ServiceBooking directly
