@@ -255,10 +255,17 @@ class ServiceBookingController {
         const qty = item.quantity || 1;
 
         // Determine Duration/Range
-        let duration = item.durationValue || item.planId?.pricingOptions?.[0]?.durationValue || item.planId?.numberOfVideos || item.numberOfVideos;
+        let duration = item.durationValue;
+        
+        // Try to parse from name first as it's the most reliable source for cart items
         if (duration === undefined && item.name) {
-          const match = item.name.match(/(\d+)\s*(Hours|Videos)/i);
+          const match = item.name.match(/(\d+)\s*(Hours|Videos|Hrs)/i);
           if (match) duration = parseInt(match[1]);
+        }
+
+        // Fallback to plan defaults
+        if (duration === undefined) {
+          duration = item.planId?.pricingOptions?.[0]?.durationValue || item.planId?.numberOfVideos || item.numberOfVideos;
         }
 
         let rangeKey = "0-3";
@@ -291,16 +298,19 @@ class ServiceBookingController {
       bookingObj.planSummary = planSummary;
 
       // Calculate total counts for standard and premium
-      bookingObj.standardCount = planSummary.standard["0-3"].totalQuantity + 
-                                planSummary.standard["5"].totalQuantity + 
-                                planSummary.standard["8"].totalQuantity +
-                                planSummary.standard["10"].totalQuantity +
-                                (bookingObj.standardEditingVideos || 0);
-      bookingObj.premiumCount = planSummary.premium["0-3"].totalQuantity + 
-                               planSummary.premium["5"].totalQuantity + 
-                               planSummary.premium["8"].totalQuantity +
-                               planSummary.premium["10"].totalQuantity +
-                               (bookingObj.premiumEditingVideos || 0);
+      const standardSummaryTotal = planSummary.standard["0-3"].totalQuantity + 
+                                  planSummary.standard["5"].totalQuantity + 
+                                  planSummary.standard["8"].totalQuantity +
+                                  planSummary.standard["10"].totalQuantity;
+      
+      const premiumSummaryTotal = planSummary.premium["0-3"].totalQuantity + 
+                                 planSummary.premium["5"].totalQuantity + 
+                                 planSummary.premium["8"].totalQuantity +
+                                 planSummary.premium["10"].totalQuantity;
+
+      // Use Math.max to avoid double counting if items are present in both cart/packages and snapshot fields
+      bookingObj.standardCount = Math.max(standardSummaryTotal, (bookingObj.standardEditingVideos || 0));
+      bookingObj.premiumCount = Math.max(premiumSummaryTotal, (bookingObj.premiumEditingVideos || 0));
 
       bookingObj.eventType = booking.shootType || booking.service_id?.serviceName || 
                              (booking.serviceCategory === 'hourly' ? 'Hourly Shoot' : 
