@@ -1,5 +1,6 @@
 import PartnerRegistration from "../models/PartnerRegistration.mjs";
-
+import EditingPlan from "../models/EditingPlan.mjs";
+import mongoose from "mongoose";
 class PartnerRegistrationController {
     // Create a new registration (User side)
     async create(req, res, next) {
@@ -95,6 +96,8 @@ class PartnerRegistrationController {
             next(error);
         }
     }
+
+
 }
 
 export default new PartnerRegistrationController();
