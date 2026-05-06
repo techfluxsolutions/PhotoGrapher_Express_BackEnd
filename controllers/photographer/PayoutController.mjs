@@ -73,12 +73,15 @@ class PayoutController {
                     client_name: p.booking_id?.client_id?.username || "N/A",
                     veroa_id: p.booking_id?.veroaBookingId || "N/A",
                     event_date: formattedEventDate,
+                    event_type: p.booking_id?.eventType || "N/A",
                     total_amount: p.total_amount,
                     paid_amount: p.paid_amount,
                     pending_amount: p.pending_amount,
                     status: p.status,
                     payout_status: p.payout_status || "",
                     payout_date: p.payout_date,
+                    photographer_share: p.photographer_share,
+                    booking_id_raw: p.booking_id?._id, // used for invoice download
                     invoice_download_url: p.booking_id?._id ? `/api/photographers/invoices/${p.booking_id._id}` : null
                 };
             });
@@ -128,12 +131,15 @@ class PayoutController {
                 client_name: p.booking_id?.client_id?.username || "N/A",
                 veroa_id: p.booking_id?.veroaBookingId || "N/A",
                 event_date: formattedEventDate,
+                event_type: p.booking_id?.eventType || "N/A",
                 total_amount: p.total_amount,
                 paid_amount: p.paid_amount,
                 pending_amount: p.pending_amount,
                 status: p.status,
                 payout_status: p.payout_status || "", 
                 payout_date: p.payout_date,
+                photographer_share: p.photographer_share,
+                booking_id_raw: p.booking_id?._id, // used for invoice download
                 invoice_download_url: p.booking_id?._id ? `/api/photographers/invoices/${p.booking_id._id}` : null
             };
 

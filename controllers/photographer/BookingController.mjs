@@ -1,6 +1,7 @@
 
 import mongoose from "mongoose";
 import ServiceBooking from "../../models/ServiceBookings.mjs";
+import Payout from "../../models/Payout.mjs";
 import Gallery from "../../models/Gallery.mjs";
 import Photographer from "../../models/Photographer.mjs";
 import User from "../../models/User.mjs";
@@ -859,6 +860,26 @@ class BookingController {
             }
 
             const updatedBooking = await ServiceBooking.findByIdAndUpdate(id, updateData, { new: true });
+
+            // ─── Create or Update Payout Summary ───────────────────────────────
+            if (updatedBooking.photographer_id && bookingStatus === "accepted") {
+                try {
+                    await Payout.findOneAndUpdate(
+                        { booking_id: updatedBooking._id },
+                        {
+                            photographer_id: updatedBooking.photographer_id,
+                            total_amount: updatedBooking.totalAmount,
+                            shootType: updatedBooking.serviceCategory === "editing" ? "PhotoEditing" : (updatedBooking.serviceCategory === "hourly" ? "HourlyShoot" : "Service"),
+                            status: "Pending",
+                        },
+                        { upsert: true, new: true }
+                    );
+                } catch (payoutErr) {
+                    console.error("[Payout] Error syncing payout on acceptance:", payoutErr.message);
+                }
+            }
+            // ─────────────────────────────────────────────────────────────────────
+
             return sendSuccessResponse(res, { booking: updatedBooking }, `Booking updated successfully`);
         } catch (error) {
             return sendErrorResponse(res, error, 500);

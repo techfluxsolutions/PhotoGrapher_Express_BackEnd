@@ -1,4 +1,5 @@
 import ServiceBooking from "../../models/ServiceBookings.mjs";
+import Payout from "../../models/Payout.mjs";
 import Gallery from "../../models/Gallery.mjs";
 import Photographer from "../../models/Photographer.mjs";
 import User from "../../models/User.mjs";
@@ -729,6 +730,25 @@ class ServiceBookingController {
       }
       // ─────────────────────────────────────────────────────────────────────
 
+      // ─── Create or Update Payout Summary ───────────────────────────────
+      if (booking.photographer_id) {
+        try {
+          await Payout.findOneAndUpdate(
+            { booking_id: booking._id },
+            {
+              photographer_id: booking.photographer_id,
+              total_amount: booking.totalAmount,
+              shootType: booking.serviceCategory === "editing" ? "PhotoEditing" : (booking.serviceCategory === "hourly" ? "HourlyShoot" : "Service"),
+              status: "Pending",
+            },
+            { upsert: true, new: true }
+          );
+        } catch (payoutErr) {
+          console.error("[Payout] Error syncing payout on update:", payoutErr.message);
+        }
+      }
+      // ─────────────────────────────────────────────────────────────────────
+
       return res.json({
         success: true,
         data: booking
@@ -1073,6 +1093,25 @@ class ServiceBookingController {
       }
       // ─────────────────────────────────────────────────────────────────────
 
+      // ─── Create or Update Payout Summary ───────────────────────────────
+      if (booking.photographer_id) {
+        try {
+          await Payout.findOneAndUpdate(
+            { booking_id: booking._id },
+            {
+              photographer_id: booking.photographer_id,
+              total_amount: booking.totalAmount,
+              shootType: booking.serviceCategory === "editing" ? "PhotoEditing" : (booking.serviceCategory === "hourly" ? "HourlyShoot" : "Service"),
+              status: "Pending",
+            },
+            { upsert: true, new: true }
+          );
+        } catch (payoutErr) {
+          console.error("[Payout] Error syncing payout on assignment:", payoutErr.message);
+        }
+      }
+      // ─────────────────────────────────────────────────────────────────────
+      
       return res.json({
         success: true,
         message: "Photographer assigned successfully",
