@@ -677,31 +677,36 @@ export const uploadController = {
                 }
             });
 
-            // Fetch files from S3 / Spaces ONE BY ONE
-            // Important: Waiting for the previous stream to end avoids creating 100+ concurrent
-            // connections to S3, which normally results in Socket timeouts / AbortErrors downstream.
-            for (const key of keys) {
-                try {
-                    const s3Data = await s3Service.getFileStream(key);
-                    const fileName = key.split("/").pop();
+            // Fetch files from S3 / Spaces in parallel batches
+            // Using a concurrency limit of 10 to balance speed and stability.
+            const CONCURRENCY = 10;
+            for (let i = 0; i < keys.length; i += CONCURRENCY) {
+                const batch = keys.slice(i, i + CONCURRENCY);
+                await Promise.all(batch.map(async (key) => {
+                    try {
+                        const s3Data = await s3Service.getFileStream(key);
+                        const fileName = key.split("/").pop();
 
-                    archive.append(s3Data.Body, {
-                        name: fileName
-                    });
+                        archive.append(s3Data.Body, {
+                            name: fileName
+                        });
 
-                    // Wait until stream has been fully pulled by archiver before opening the next
-                    await new Promise((resolve, reject) => {
-                        s3Data.Body.on('end', resolve);
-                        s3Data.Body.on('error', reject);
-                    });
-                } catch (err) {
-                    // Log warning and skip the file if it was deleted or lost, keep zipping the rest
-                    if (err.name === 'NoSuchKey') {
-                        console.warn(`File not found in S3, skipping from ZIP: ${key}`);
-                        continue;
+                        // Wait for this specific stream to be consumed by archiver before finishing the batch item
+                        return new Promise((resolve, reject) => {
+                            s3Data.Body.on('end', resolve);
+                            s3Data.Body.on('error', (err) => {
+                                console.warn(`Stream error for key ${key}:`, err.message);
+                                resolve(); // Resolve anyway to continue with other files
+                            });
+                        });
+                    } catch (err) {
+                        if (err.name === 'NoSuchKey') {
+                            console.warn(`File not found in S3, skipping from ZIP: ${key}`);
+                        } else {
+                            console.error(`Error fetching stream for ${key}:`, err.message);
+                        }
                     }
-                    throw err; // For anything else, abort the process
-                }
+                }));
             }
 
             await archive.finalize();
@@ -761,29 +766,36 @@ export const uploadController = {
                 }
             });
 
-            // Iterate sequentially so we only maintain 1 open active stream with S3
-            // This prevents AWS 'AbortError' caused by stream timeouts.
-            for (const key of keys) {
-                try {
-                    const s3Data = await s3Service.getFileStream(key);
-                    const fileName = key.split("/").pop();
+            // Fetch files from S3 / Spaces in parallel batches
+            // Using a concurrency limit of 10 to balance speed and stability.
+            const CONCURRENCY = 10;
+            for (let i = 0; i < keys.length; i += CONCURRENCY) {
+                const batch = keys.slice(i, i + CONCURRENCY);
+                await Promise.all(batch.map(async (key) => {
+                    try {
+                        const s3Data = await s3Service.getFileStream(key);
+                        const fileName = key.split("/").pop();
 
-                    archive.append(s3Data.Body, {
-                        name: fileName
-                    });
+                        archive.append(s3Data.Body, {
+                            name: fileName
+                        });
 
-                    // Safely wait for archiver to slurp the file
-                    await new Promise((resolve, reject) => {
-                        s3Data.Body.on('end', resolve);
-                        s3Data.Body.on('error', reject);
-                    });
-                } catch (err) {
-                    if (err.name === 'NoSuchKey') {
-                        console.warn(`File not found in S3, skipping from ZIP: ${key}`);
-                        continue;
+                        // Wait for this specific stream to be consumed by archiver
+                        return new Promise((resolve) => {
+                            s3Data.Body.on('end', resolve);
+                            s3Data.Body.on('error', (err) => {
+                                console.warn(`Stream error for key ${key}:`, err.message);
+                                resolve();
+                            });
+                        });
+                    } catch (err) {
+                        if (err.name === 'NoSuchKey') {
+                            console.warn(`File not found in S3, skipping from ZIP: ${key}`);
+                        } else {
+                            console.error(`Error fetching stream for ${key}:`, err.message);
+                        }
                     }
-                    throw err;
-                }
+                }));
             }
 
             await archive.finalize();
