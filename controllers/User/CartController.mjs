@@ -75,17 +75,46 @@ class CartController {
     async addToCart(req, res, next) {
         try {
             const { id: userId } = req.user;
-            const { name, category, price, quantity, subCategoryType, subCategoryName } = req.body;
+            const { name, category, price, quantity, subCategoryType, subCategoryName, planId } = req.body;
 
-            // Calculate total for this specific item
-            const totalAmount = price * (quantity || 1);
-
-            // Create a new cart entry as per user requirement to keep them separate
-            const cart = new Cart({
+            // Find or Create Cart
+            let cart = await Cart.findOne({
                 userId,
-                items: [{ name, category, price, quantity: quantity || 1, subCategoryType, subCategoryName }],
-                totalAmount
-            });
+                status: "active",
+            }).sort({ createdAt: -1 });
+
+            if (!cart) {
+                cart = new Cart({
+                    userId,
+                    items: [],
+                    totalAmount: 0
+                });
+            }
+
+            // Check if item already exists in cart
+            const existingItemIndex = cart.items.findIndex(item => 
+                item.name === name && 
+                item.category === category && 
+                item.subCategoryType === subCategoryType &&
+                (planId ? item.planId?.toString() === planId.toString() : true)
+            );
+
+            if (existingItemIndex !== -1) {
+                cart.items[existingItemIndex].quantity += (quantity || 1);
+            } else {
+                cart.items.push({ 
+                    name, 
+                    category, 
+                    price, 
+                    quantity: quantity || 1, 
+                    subCategoryType, 
+                    subCategoryName,
+                    planId
+                });
+            }
+
+            // Recalculate totalAmount
+            cart.totalAmount = cart.items.reduce((total, item) => total + (item.price * (item.quantity || 1)), 0);
 
             await cart.save();
             res.status(201).json({ success: true, data: cart });
@@ -99,7 +128,7 @@ class CartController {
             const { id: userId } = req.user;
 
             const userData = await User.findById(userId)
-                .select("username mobileNumber");
+                .select("username mobileNumber email");
 
             // Get latest active cart
             const cart = await Cart.findOne({
@@ -109,7 +138,7 @@ class CartController {
                 .sort({ createdAt: -1 })
                 .populate({
                     path: "userId",
-                    select: "username mobileNumber"
+                    select: "username mobileNumber email"
                 });
 
             // No cart
@@ -156,7 +185,7 @@ class CartController {
                 return res.status(400).json({ success: false, message: "Invalid action" });
             }
 
-            const cart = await Cart.findOne({ userId, status: "active" });
+            const cart = await Cart.findOne({ userId, status: "active" }).sort({ createdAt: -1 });
 
             if (!cart) {
                 return res.status(404).json({ success: false, message: "Cart not found" });

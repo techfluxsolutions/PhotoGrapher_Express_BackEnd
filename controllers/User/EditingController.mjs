@@ -75,7 +75,7 @@ class EditingController {
             const cart = await Cart.findOne({
                 userId,
                 status: "active",
-            });
+            }).sort({ createdAt: -1 });
 
             if (!cart) {
                 return res.status(404).json({
@@ -153,9 +153,9 @@ class EditingController {
 
             // ✅ Find or Create Cart
             let cart = await Cart.findOne({
-                userId: userId,
+                userId,
                 status: "active",
-            });
+            }).sort({ createdAt: -1 });
 
             if (!cart) {
                 cart = new Cart({
@@ -171,15 +171,17 @@ class EditingController {
             if (existingItem) {
                 existingItem.quantity += quantity;
             } else {
+                const descriptiveName = `${plan.planCategory.charAt(0).toUpperCase() + plan.planCategory.slice(1)} Editing (${plan.numberOfVideos} Videos)`;
                 cart.items.push({
-                    name: plan.planName,
+                    name: descriptiveName,
                     category: "editing",
                     price: plan.price,
                     quantity,
                     planId: editingPlanId,
+                    onModel: 'EditingPlan',
                     selectedroleId: selectedRoleId,
                     subCategoryType: plan.planCategory,
-                    subCategoryName: plan.planName
+                    subCategoryName: descriptiveName
                 });
             }
 

@@ -34,7 +34,7 @@ class TeamShootController {
                 return res.status(400).json({ success: false, message: "Selections cannot be empty" });
             }
 
-            let cart = await Cart.findOne({ userId: userId, status: "active" });
+            let cart = await Cart.findOne({ userId: userId, status: "active" }).sort({ createdAt: -1 });
 
             if (!cart) {
                 cart = new Cart({ userId: userId, items: [] });
@@ -85,6 +85,7 @@ class TeamShootController {
                         price: itemPrice,
                         quantity: selection.quantity || 1,
                         planId: selection.planId,
+                        onModel: 'TeamShootPlan',
                         selectedroleId: selection.selectedroleId,
                         subCategoryType: plan.teamCategory,
                         subCategoryName: plan.role

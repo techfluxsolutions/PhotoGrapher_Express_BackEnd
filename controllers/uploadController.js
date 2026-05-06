@@ -170,7 +170,8 @@ export const uploadController = {
                 bookingid,
                 clientId,
                 photographerId,
-                veroaBookingId
+                veroaBookingId,
+                category
             } = req.body;
 
             if (!key || !parts || !Array.isArray(parts)) {
@@ -199,7 +200,8 @@ export const uploadController = {
                 bookingid,
                 clientId,
                 photographerId,
-                veroaBookingId
+                veroaBookingId,
+                category: category || "standard"
             });
 
             // Update firstPhotoUploadedAt if not already set
@@ -376,19 +378,41 @@ export const uploadController = {
             const limitNum = Number(limit);
             const skip = (pageNum - 1) * limitNum;
 
+            // 1. Resolve actual Booking document (to get _id if a string ID was passed)
+            const bookingFilter = mongoose.Types.ObjectId.isValid(bookingId)
+                ? { _id: bookingId }
+                : { veroaBookingId: bookingId };
+
+            const booking = await ServiceBooking.findOne(bookingFilter)
+                .select("paymentStatus full_Payment firstPhotoUploadedAt fullyPaidAt createdAt veroaBookingId")
+                .lean();
+
+            if (!booking) {
+                // If no booking found, we still return empty gallery with default blur
+                return res.status(200).json({
+                    success: true,
+                    message: "Booking not found",
+                    data: [],
+                    pagination: { page: pageNum, limit: limitNum, total: 0, hasMore: false }
+                });
+            }
+
+            const resolvedBookingId = booking._id;
+
             const query = { 
                 $or: [
-                    { bookingid: bookingId },
-                    { veroaBookingId: bookingId }
+                    { bookingid: resolvedBookingId },
+                    { bookingid: booking.veroaBookingId },
+                    { veroaBookingId: resolvedBookingId },
+                    { veroaBookingId: booking.veroaBookingId }
                 ]
             };
 
-            // Fetch total count, booking status, and active cloud plan in parallel
-            const [total, booking, activeCloudPlan] = await Promise.all([
+            // Fetch total count and active cloud plan in parallel
+            const [total, activeCloudPlan] = await Promise.all([
                 DataLinks.countDocuments(query),
-                ServiceBooking.findById(bookingId).select("paymentStatus full_Payment firstPhotoUploadedAt fullyPaidAt createdAt"),
                 CloudPayment.findOne({
-                    booking_id: bookingId,
+                    booking_id: resolvedBookingId,
                     payment_status: "paid"
                 }).sort({ expiry_date: -1 })
             ]);
@@ -562,7 +586,28 @@ export const uploadController = {
             if (!key) {
                 return res.status(400).json({ error: "Missing required fields." });
             }
-            const isFileExist = await DataLinks.findOne({ bookingid: bookingId, key: key });
+            // 1. Resolve actual Booking document
+            const bookingFilter = mongoose.Types.ObjectId.isValid(bookingId)
+                ? { _id: bookingId }
+                : { veroaBookingId: bookingId };
+
+            const booking = await ServiceBooking.findOne(bookingFilter).select("_id veroaBookingId").lean();
+            if (!booking) {
+                return res.status(404).json({ error: "Booking not found." });
+            }
+
+            const resolvedBookingId = booking._id;
+            const resolvedVeroaId = booking.veroaBookingId;
+
+            const isFileExist = await DataLinks.findOne({
+                $or: [
+                    { bookingid: resolvedBookingId },
+                    { bookingid: resolvedVeroaId },
+                    { veroaBookingId: resolvedBookingId },
+                    { veroaBookingId: resolvedVeroaId }
+                ],
+                key: key
+            });
             if (!isFileExist) {
                 return res.status(404).json({ error: "File not found in S3." });
             }
@@ -617,24 +662,37 @@ export const uploadController = {
                 return res.status(400).json({ error: "Booking ID is required." });
             }
 
-            // Find files for this booking (support both bookingid and veroaBookingId)
+            // 1. Resolve actual Booking document
+            const bookingFilter = mongoose.Types.ObjectId.isValid(bookingid)
+                ? { _id: bookingid }
+                : { veroaBookingId: bookingid };
+
+            const booking = await ServiceBooking.findOne(bookingFilter).select("_id veroaBookingId").lean();
+            if (!booking) {
+                return res.status(404).json({ error: "Booking not found." });
+            }
+
+            const resolvedBookingId = booking._id;
+            const resolvedVeroaId = booking.veroaBookingId;
+
+            // Find files for this booking
             const query = {
                 $or: [
-                    { bookingid: bookingid },
-                    { veroaBookingId: bookingid }
+                    { bookingid: resolvedBookingId },
+                    { bookingid: resolvedVeroaId },
+                    { veroaBookingId: resolvedBookingId },
+                    { veroaBookingId: resolvedVeroaId }
                 ]
             };
 
             // If clientId or photographerId are provided, we can optionally add them to filter 
-            // but for a full "Download Zip" from a gallery, usually we want all files in that gallery.
-            // If they are passed as objects (which happens in frontend sometimes), we extract the ID.
             if (clientId) {
                 const cId = typeof clientId === 'object' ? clientId._id : clientId;
-                if (cId) query.clientId = cId;
+                if (mongoose.Types.ObjectId.isValid(cId)) query.clientId = cId;
             }
             if (photographerId) {
                 const pId = typeof photographerId === 'object' ? photographerId._id : photographerId;
-                if (pId) query.photographerId = pId;
+                if (mongoose.Types.ObjectId.isValid(pId)) query.photographerId = pId;
             }
 
             const category = (req.body && req.body.category) || req.query.category;
@@ -736,10 +794,26 @@ export const uploadController = {
             if (!bookingid || !keys || keys.length === 0) {
                 return res.status(400).json({ error: "Missing required fields." });
             }
-            // Fetch all files for this booking
+            // 1. Resolve actual Booking document
+            const bookingFilter = mongoose.Types.ObjectId.isValid(bookingid)
+                ? { _id: bookingid }
+                : { veroaBookingId: bookingid };
+
+            const booking = await ServiceBooking.findOne(bookingFilter).select("_id veroaBookingId").lean();
+            if (!booking) {
+                return res.status(404).json({ error: "Booking not found." });
+            }
+
+            const resolvedBookingId = booking._id;
+            const resolvedVeroaId = booking.veroaBookingId;
 
             const files = await DataLinks.find({
-                bookingid: bookingid,
+                $or: [
+                    { bookingid: resolvedBookingId },
+                    { bookingid: resolvedVeroaId },
+                    { veroaBookingId: resolvedBookingId },
+                    { veroaBookingId: resolvedVeroaId }
+                ],
                 key: { $in: keys },
             }).select('key');
 
@@ -973,15 +1047,33 @@ export const uploadController = {
                 return res.status(400).json({ error: "Missing key or bookingId" });
             }
 
+            // Resolve booking first to avoid CastError and ensure correct reference
+            const bookingFilter = mongoose.Types.ObjectId.isValid(bookingId)
+                ? { _id: bookingId }
+                : { veroaBookingId: bookingId };
+
+            const booking = await ServiceBooking.findOne(bookingFilter).select("_id veroaBookingId").lean();
+            if (!booking) {
+                return res.status(404).json({ success: false, error: "Booking not found" });
+            }
+
+            const resolvedBookingId = booking._id;
+            const resolvedVeroaId = booking.veroaBookingId;
+
             await s3Service.deleteFile(key);
             
             await DataLinks.deleteOne({ 
-                $or: [ { bookingid: bookingId }, { veroaBookingId: bookingId } ],
+                $or: [ 
+                    { bookingid: resolvedBookingId }, 
+                    { bookingid: resolvedVeroaId },
+                    { veroaBookingId: resolvedBookingId },
+                    { veroaBookingId: resolvedVeroaId }
+                ],
                 key: key 
             });
 
             await ServiceBooking.updateOne(
-                { $or: [ { _id: bookingId }, { veroaBookingId: bookingId } ] },
+                { _id: resolvedBookingId },
                 { $pull: { media: key, userMedia: key } }
             );
 
