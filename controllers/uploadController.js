@@ -613,16 +613,42 @@ export const uploadController = {
             
             console.log("Zip download request for booking:", bookingid)
 
-            if (!bookingid || !clientId || !photographerId) {
-                return res.status(400).json({ error: "Missing required fields." });
+            if (!bookingid) {
+                return res.status(400).json({ error: "Booking ID is required." });
             }
-            // Fetch all files for this booking
 
-            const files = await DataLinks.find({
-                bookingid: bookingid,
-                clientId: clientId,
-                photographerId: photographerId
-            }).select('key').lean();
+            // Find files for this booking (support both bookingid and veroaBookingId)
+            const query = {
+                $or: [
+                    { bookingid: bookingid },
+                    { veroaBookingId: bookingid }
+                ]
+            };
+
+            // If clientId or photographerId are provided, we can optionally add them to filter 
+            // but for a full "Download Zip" from a gallery, usually we want all files in that gallery.
+            // If they are passed as objects (which happens in frontend sometimes), we extract the ID.
+            if (clientId) {
+                const cId = typeof clientId === 'object' ? clientId._id : clientId;
+                if (cId) query.clientId = cId;
+            }
+            if (photographerId) {
+                const pId = typeof photographerId === 'object' ? photographerId._id : photographerId;
+                if (pId) query.photographerId = pId;
+            }
+
+            const { category, galleryType } = req.body;
+            if (category) query.category = category;
+            
+            if (galleryType === 'sent') {
+                // Sent files have no photographerId or it's null (uploaded by client)
+                query.photographerId = { $in: [null, undefined] }; 
+            } else if (galleryType === 'received') {
+                // Received files have a photographerId (uploaded by photographer)
+                query.photographerId = { $ne: null };
+            }
+
+            const files = await DataLinks.find(query).select('key').lean();
 
             if (!files.length) {
                 return res.status(404).json({ error: "No files found for this booking." });
