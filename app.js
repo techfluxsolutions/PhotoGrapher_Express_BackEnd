@@ -118,6 +118,7 @@ app.use("/assests", express.static(path.resolve("assests")));
 const allowedOrigins = [
   "http://localhost:3000",
   "http://localhost:3001",
+  "http://localhost:3002",
   "http://localhost:5173",
   "https://dev.veroastudioz.com",
   "https://veroastudioz.com",

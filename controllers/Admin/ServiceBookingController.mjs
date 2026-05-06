@@ -142,6 +142,7 @@ class ServiceBookingController {
           veroaBookingId: booking.veroaBookingId,
           client_id: booking.client_id?._id || null,
           client_name: booking.client_id?.username || "",
+          photographer_id: booking.photographer_id?._id || null,
           assigned_photographer: (booking.status === "canceled") ? "" : (booking.photographer_id?.basicInfo?.fullName || ""),
           team_studio: (booking.status === "canceled") ? "" : (booking.photographer_id?.professionalDetails?.team_studio || booking.team || ""),
           eventType: booking.service_id?.serviceName || "",
@@ -375,6 +376,7 @@ class ServiceBookingController {
           veroaBookingId: booking.veroaBookingId,
           client_id: booking.client_id?._id || null,
           client_name: booking.client_id?.username || "",
+          photographer_id: booking.photographer_id?._id || null,
           assigned_photographer: (booking.status === "canceled") ? "" : (booking.photographer_id?.basicInfo?.fullName || ""),
           team_studio: (booking.status === "canceled") ? "" : (booking.photographer_id?.professionalDetails?.team_studio || booking.team || ""),
           eventType: booking.service_id?.serviceName || "",
@@ -533,6 +535,7 @@ class ServiceBookingController {
           veroaBookingId: booking.veroaBookingId,
           client_id: booking.client_id?._id || null,
           client_name: booking.client_id?.username || "",
+          photographer_id: booking.photographer_id?._id || null,
           assigned_photographer: (booking.status === "canceled") ? "" : (booking.photographer_id?.basicInfo?.fullName || ""),
           team_studio: (booking.status === "canceled") ? "" : (booking.photographer_id?.professionalDetails?.team_studio || booking.team || ""),
           eventType: booking.service_id?.serviceName || "",
@@ -1341,13 +1344,54 @@ class ServiceBookingController {
       const limit = Math.max(1, parseInt(req.query.limit) || 20);
       const skip = (page - 1) * limit;
 
-      const filter = { 
+      const type = req.query.type || "";
+      const today = new Date();
+      today.setUTCHours(0, 0, 0, 0);
+      const todayStr = today.toISOString().split("T")[0];
+
+      let filter = { 
         $or: [
           { serviceCategory: "hourly" },
           { eventType: { $regex: /photography|shoot/i } },
           { shootType: { $regex: /photography|shoot/i } }
         ]
       };
+
+      if (type === "upcoming") {
+        filter.$and = [
+          {
+            $or: [
+              { endDate: { $exists: true, $ne: null, $ne: "", $gte: todayStr } },
+              { $and: [
+                { $or: [{ endDate: { $exists: false } }, { endDate: null }, { endDate: "" }] },
+                { startDate: { $exists: true, $ne: null, $ne: "", $gte: todayStr } }
+              ]},
+              { $and: [
+                { $or: [{ endDate: { $exists: false } }, { endDate: null }, { endDate: "" }] },
+                { $or: [{ startDate: { $exists: false } }, { startDate: null }, { startDate: "" }] },
+                { date: { $exists: true, $ne: null, $ne: "", $gte: todayStr } }
+              ]}
+            ]
+          }
+        ];
+      } else if (type === "previous") {
+        filter.$and = [
+          {
+            $or: [
+              { endDate: { $exists: true, $ne: null, $ne: "", $lt: todayStr } },
+              { $and: [
+                { $or: [{ endDate: { $exists: false } }, { endDate: null }, { endDate: "" }] },
+                { startDate: { $exists: true, $ne: null, $ne: "", $lt: todayStr } }
+              ]},
+              { $and: [
+                { $or: [{ endDate: { $exists: false } }, { endDate: null }, { endDate: "" }] },
+                { $or: [{ startDate: { $exists: false } }, { startDate: null }, { startDate: "" }] },
+                { date: { $exists: true, $ne: null, $ne: "", $lt: todayStr } }
+              ]}
+            ]
+          }
+        ];
+      }
       const [items, total] = await Promise.all([
         ServiceBooking.find(filter)
           .populate("client_id", "username mobileNumber email")
@@ -1407,12 +1451,15 @@ class ServiceBookingController {
             const cat = pkg.category ? (pkg.category.charAt(0).toUpperCase() + pkg.category.slice(1)) : "Standard";
             const duration = pkg.hours || (booking.hours ? `${booking.hours} Hours` : "N/A");
             const key = `pkg-${idx}`;
+            const services = pkg.services || [
+                { name: pkg.planName || "Hourly Plan", qty: 1, price: pkg.price || 0 }
+              ];
+            const subTotal = services.reduce((sum, s) => sum + (s.price || 0), 0);
             packagesMap[key] = {
               hours: duration,
               category: cat,
-              services: pkg.services || [
-                { name: pkg.planName || "Hourly Plan", qty: 1, price: pkg.price || 0 }
-              ]
+              services: services,
+              subTotal: subTotal
             };
           });
         }
@@ -1436,13 +1483,18 @@ class ServiceBookingController {
               price: item.price * item.quantity
             });
           });
+
+          // Calculate subTotal for each package in fallback structure
+          Object.values(packagesMap).forEach(pkg => {
+            pkg.subTotal = pkg.services.reduce((sum, s) => sum + (s.price || 0), 0);
+          });
         }
 
         let hourlyPackages = Object.values(packagesMap);
         if (hourlyPackages.length === 0) {
           hourlyPackages = [{
             hours: booking.hours ? `${booking.hours} Hours` : "N/A",
-            category: "Standard",
+            category: booking.subCategoryType ? (booking.subCategoryType.charAt(0).toUpperCase() + booking.subCategoryType.slice(1)) : "Standard",
             services: [],
             price: booking.totalAmount || 0,
             eventDate: eDate,
@@ -1453,8 +1505,10 @@ class ServiceBookingController {
 
         const formatted = {
           bookingId: booking.veroaBookingId || booking._id,
+          client_id: booking.client_id?._id || null,
           clientName: booking.client_id?.username || "Unknown",
           eventAddress: eventAddress || booking.address || "N/A",
+          photographer_id: booking.photographer_id?._id || null,
           assignedPhotographer: booking.photographer_id?.basicInfo?.fullName || "",
           galleryUpload: booking.galleryStatus === "Photos Uploaded",
           galleryStatus: booking.galleryStatus || "pending",
@@ -1531,17 +1585,60 @@ class ServiceBookingController {
       const limit = Math.max(1, parseInt(req.query.limit) || 20);
       const skip = (page - 1) * limit;
 
+      const type = req.query.type || "";
+      const today = new Date();
+      today.setUTCHours(0, 0, 0, 0);
+      const todayStr = today.toISOString().split("T")[0];
+
+      let filter = {
+        $or: [
+          { editingPackages: { $exists: true, $not: { $size: 0 } } },
+          { editingbookings: { $exists: true, $not: { $size: 0 } } },
+          { serviceCategory: "editing" },
+          { eventType: "Editing" },
+          { shootType: "Editing" },
+          { media: { $elemMatch: { $regex: /editing/i } } }
+        ]
+      };
+
+      if (type === "upcoming") {
+        filter.$and = [
+          {
+            $or: [
+              { endDate: { $exists: true, $ne: null, $ne: "", $gte: todayStr } },
+              { $and: [
+                { $or: [{ endDate: { $exists: false } }, { endDate: null }, { endDate: "" }] },
+                { startDate: { $exists: true, $ne: null, $ne: "", $gte: todayStr } }
+              ]},
+              { $and: [
+                { $or: [{ endDate: { $exists: false } }, { endDate: null }, { endDate: "" }] },
+                { $or: [{ startDate: { $exists: false } }, { startDate: null }, { startDate: "" }] },
+                { date: { $exists: true, $ne: null, $ne: "", $gte: todayStr } }
+              ]}
+            ]
+          }
+        ];
+      } else if (type === "previous") {
+        filter.$and = [
+          {
+            $or: [
+              { endDate: { $exists: true, $ne: null, $ne: "", $lt: todayStr } },
+              { $and: [
+                { $or: [{ endDate: { $exists: false } }, { endDate: null }, { endDate: "" }] },
+                { startDate: { $exists: true, $ne: null, $ne: "", $lt: todayStr } }
+              ]},
+              { $and: [
+                { $or: [{ endDate: { $exists: false } }, { endDate: null }, { endDate: "" }] },
+                { $or: [{ startDate: { $exists: false } }, { startDate: null }, { startDate: "" }] },
+                { date: { $exists: true, $ne: null, $ne: "", $lt: todayStr } }
+              ]}
+            ]
+          }
+        ];
+      }
+
       const [items, total] = await Promise.all([
-        ServiceBooking.find({
-          $or: [
-            { editingPackages: { $exists: true, $not: { $size: 0 } } },
-            { editingbookings: { $exists: true, $not: { $size: 0 } } },
-            { serviceCategory: "editing" },
-            { eventType: "Editing" },
-            { shootType: "Editing" },
-            { media: { $elemMatch: { $regex: /editing/i } } }
-          ]
-        })
+        ServiceBooking.find(filter)
           .populate("client_id", "username")
           .populate("photographer_id", "basicInfo.fullName")
           .sort({ createdAt: -1 })
@@ -1597,8 +1694,30 @@ class ServiceBookingController {
 
         let rawPkgs = booking.editingPackages || booking.editingbookings || [];
         
-        // Fallback for bookings that are identified as editing but have no package details
-        if (!Array.isArray(rawPkgs) || rawPkgs.length === 0) {
+        // If we have video counts but no explicit package array, generate them
+        if ((!Array.isArray(rawPkgs) || rawPkgs.length === 0)) {
+          if (booking.standardEditingVideos > 0) {
+            rawPkgs.push({
+              planName: "Standard Editing",
+              price: booking.standardEditingPrice || 0,
+              numberOfVideos: booking.standardEditingVideos,
+              planCategory: "Standard",
+              _id: "std-fallback"
+            });
+          }
+          if (booking.premiumEditingVideos > 0) {
+            rawPkgs.push({
+              planName: "Premium Editing",
+              price: booking.premiumEditingPrice || 0,
+              numberOfVideos: booking.premiumEditingVideos,
+              planCategory: "Premium",
+              _id: "prem-fallback"
+            });
+          }
+        }
+
+        // Final fallback if still empty
+        if (rawPkgs.length === 0) {
           rawPkgs = [{
             planName: "General Editing",
             price: booking.totalAmount || 0,
@@ -1639,23 +1758,27 @@ class ServiceBookingController {
 
           return {
             packageId: booking.veroaBookingId || booking._id,
-            type: pkg.planCategory || pkg.category || "Standard",
+            type: pkg.planCategory || pkg.category || (pkg.planName?.toLowerCase().includes("premium") ? "Premium" : "Standard"),
             price: parseFloat(pkg.price) || 0,
-            videosCount: vCount,
+            videosCount: parseInt(pkg.numberOfVideos) || vCount,
             videos: videos,
             planName: pkg.planName || "Editing Plan"
           };
         }));
 
+        const calculatedTotal = rawPkgs.reduce((sum, p) => sum + (parseFloat(p.price) || 0), 0);
+
         return {
           bookingId: booking.veroaBookingId || booking._id,
+          client_id: booking.client_id?._id || null,
           clientName: booking.client_id?.username || "Unknown",
           eventAddress: eventAddress || "N/A",
+          photographer_id: booking.photographer_id?._id || null,
           assignedPhotographer: booking.photographer_id?.basicInfo?.fullName || "",
           galleryStatus: booking.galleryStatus || "pending",
           bookingStatus: booking.status || "pending",
           videoPackages: videoPackages,
-          totalAmount: booking.totalAmount || 0,
+          totalAmount: booking.totalAmount || calculatedTotal || 0,
           media: await (async () => {
             const keys = (booking.media || []).filter(m => m && !m.startsWith("http"));
             const urls = (booking.media || []).filter(m => m && m.startsWith("http"));
