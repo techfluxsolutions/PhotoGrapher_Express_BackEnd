@@ -1103,26 +1103,47 @@ class PhotographerController {
       const globalCommissions = settings || { initio: 0, elite: 0, pro: 0 };
       const levelOrder = { "INITIO": 1, "ELITE": 2, "PRO": 3 };
 
-      let assignedPhotographerId = null;
+      let assignedPhotographerIds = new Set();
       let bookingStatus = null;
       let bookingDate = null;
+
       if (bookingId) {
-        const booking = await ServiceBooking.findById(bookingId)
-          .select("photographer_id bookingStatus status bookingDate");
+        const booking = await ServiceBooking.findOne({
+          $or: [
+            { _id: mongoose.Types.ObjectId.isValid(bookingId) ? bookingId : null },
+            { bookingId: bookingId },
+            { veroaBookingId: bookingId }
+          ].filter(q => q._id !== null || q.bookingId !== undefined || q.veroaBookingId !== undefined)
+        }).select("photographer_id bookingStatus status bookingDate hourlyPackages");
+        
         if (booking && booking.status !== "canceled") {
-          assignedPhotographerId = booking.photographer_id?.toString();
           bookingStatus = booking.bookingStatus;
           bookingDate = booking.bookingDate;
+
+          // 1. Check primary photographer
+          if (booking.photographer_id) {
+            assignedPhotographerIds.add(booking.photographer_id.toString());
+          }
+
+          // 2. Check hourly packages for any role
+          if (booking.hourlyPackages && booking.hourlyPackages.length > 0) {
+            booking.hourlyPackages.forEach(pkg => {
+              if (pkg.assignedPhotographers) pkg.assignedPhotographers.forEach(id => assignedPhotographerIds.add(id.toString()));
+              if (pkg.assignedVideographers) pkg.assignedVideographers.forEach(id => assignedPhotographerIds.add(id.toString()));
+              if (pkg.assignedEditors) pkg.assignedEditors.forEach(id => assignedPhotographerIds.add(id.toString()));
+              if (pkg.assignedLighting) pkg.assignedLighting.forEach(id => assignedPhotographerIds.add(id.toString()));
+            });
+          }
         }
       }
 
       let sortedPhotographers = photographersAgg;
-      if (assignedPhotographerId && bookingStatus === "accepted") {
+      if (assignedPhotographerIds.size > 0 && bookingStatus === "accepted") {
         sortedPhotographers = photographersAgg.sort((a, b) => {
-          const isAssignedA = a._id.toString() === assignedPhotographerId;
-          const isAssignedB = b._id.toString() === assignedPhotographerId;
-          if (isAssignedA) return -1;
-          if (isAssignedB) return 1;
+          const isAssignedA = assignedPhotographerIds.has(a._id.toString());
+          const isAssignedB = assignedPhotographerIds.has(b._id.toString());
+          if (isAssignedA && !isAssignedB) return -1;
+          if (!isAssignedA && isAssignedB) return 1;
 
           const levelA = levelOrder[a.professionalDetails?.expertiseLevel] || 99;
           const levelB = levelOrder[b.professionalDetails?.expertiseLevel] || 99;
@@ -1164,25 +1185,20 @@ class PhotographerController {
           commissionPercentage: comm || 0,
           avgRating: parseFloat((p.avgRating || 0).toFixed(1)),
           categories: p.categories || [],
-          isAssigned: assignedPhotographerId === p._id.toString() && bookingStatus === "accepted"
+          isAssigned: assignedPhotographerIds.has(p._id.toString())
         };
       });
 
-      const isLock = assignedPhotographerId !== null && bookingStatus === "accepted";
-      let finalData = result;
-      let finalTotal = total;
-
-      if (isLock) {
-        finalData = result.filter(p => p.isAssigned);
-        finalTotal = finalData.length;
-      }
+      // Relax isLock to false unless explicitly confirmed by admin (optional)
+      // For now, we allow seeing everyone so they can "Send Request" to more people.
+      const isLock = false; 
 
       res.status(200).json({
         success: true,
         isLock: isLock,
         bookingDate: bookingDate,
-        data: finalData,
-        meta: { total: finalTotal, page, limit }
+        data: result,
+        meta: { total: total, page, limit }
       });
     } catch (error) {
       console.error("Error fetching sorted photographers:", error);
@@ -1193,7 +1209,7 @@ class PhotographerController {
     // Sort photographers based on categories, expertise, and rating
     async getSortPhotographers(req, res) {
         try {
-            const { category, expertise, sortBy, rating, bookingId } = req.query; // sortBy can be 'rating', 'expertise', 'category'
+            const { category, expertise, sortBy, rating, bookingId, photographerType } = req.query; // sortBy can be 'rating', 'expertise', 'category'
             const minRating = parseFloat(rating) || 0;
             const page = Math.max(1, parseInt(req.query.page) || 1);
             const limit = Math.max(1, parseInt(req.query.limit) || 10);
@@ -1252,6 +1268,10 @@ class PhotographerController {
                 orFilters.push({ "professionalDetails.expertiseLevel": expertise.toUpperCase() });
             }
 
+            if (photographerType && photographerType.trim() !== "") {
+                orFilters.push({ "professionalDetails.photographerType": { $regex: new RegExp(photographerType, "i") } });
+            }
+
             if (rating !== undefined && rating !== null && rating.toString().trim() !== "") {
                 orFilters.push({ avgRating: { $lte: minRating } });
             }
@@ -1274,16 +1294,43 @@ class PhotographerController {
                 sortStage = { avgRating: -1, expertiseScore: -1, createdAt: -1 };
             }
 
-            // --- Priority Priority Sorting for Assigned Photographer ---
+            // --- Priority Sorting for Assigned Photographers ---
+            let assignedPhotographerIds = new Set();
+            let bookingStatus = null;
+
             if (bookingId) {
-                const booking = await ServiceBooking.findById(bookingId).select("photographer_id bookingStatus status");
-                if (booking && booking.bookingStatus === "accepted" && booking.status !== "canceled") {
-                    pipeline.push({
-                        $addFields: {
-                            assignedPriority: { $eq: ["$_id", booking.photographer_id] }
-                        }
-                    });
-                    sortStage = { assignedPriority: -1, ...sortStage };
+                const booking = await ServiceBooking.findOne({
+                    $or: [
+                        { _id: mongoose.Types.ObjectId.isValid(bookingId) ? bookingId : null },
+                        { bookingId: bookingId },
+                        { veroaBookingId: bookingId }
+                    ].filter(q => q._id !== null || q.bookingId !== undefined || q.veroaBookingId !== undefined)
+                }).select("photographer_id bookingStatus status hourlyPackages");
+
+                if (booking && booking.status !== "canceled") {
+                    bookingStatus = booking.bookingStatus;
+                    
+                    // 1. Primary
+                    if (booking.photographer_id) assignedPhotographerIds.add(booking.photographer_id.toString());
+                    
+                    // 2. Packages
+                    if (booking.hourlyPackages) {
+                        booking.hourlyPackages.forEach(pkg => {
+                            if (pkg.assignedPhotographers) pkg.assignedPhotographers.forEach(id => assignedPhotographerIds.add(id.toString()));
+                            if (pkg.assignedVideographers) pkg.assignedVideographers.forEach(id => assignedPhotographerIds.add(id.toString()));
+                            if (pkg.assignedEditors)       pkg.assignedEditors.forEach(id => assignedPhotographerIds.add(id.toString()));
+                            if (pkg.assignedLighting)      pkg.assignedLighting.forEach(id => assignedPhotographerIds.add(id.toString()));
+                        });
+                    }
+
+                    if (assignedPhotographerIds.size > 0 && bookingStatus === "accepted") {
+                        pipeline.push({
+                            $addFields: {
+                                assignedPriority: { $in: ["$_id", Array.from(assignedPhotographerIds).map(id => new mongoose.Types.ObjectId(id))] }
+                            }
+                        });
+                        sortStage = { assignedPriority: -1, ...sortStage };
+                    }
                 }
             }
 
@@ -1299,17 +1346,6 @@ class PhotographerController {
 
             const [results] = await Photographer.aggregate(pipeline);
 
-            // Fetch booking assignment details if bookingId is provided
-            let assignedPhotographerId = null;
-            let bookingStatus = null;
-            if (bookingId) {
-                const booking = await ServiceBooking.findById(bookingId).select("photographer_id bookingStatus status");
-                if (booking && booking.status !== "canceled") {
-                    assignedPhotographerId = booking.photographer_id?.toString();
-                    bookingStatus = booking.bookingStatus;
-                }
-            }
-
             const total = results.metadata[0]?.total || 0;
             const photographers = results.data.map(p => {
                 const transformed = this._transformPhotographerData(p, req);
@@ -1318,29 +1354,22 @@ class PhotographerController {
                     avgRating: parseFloat((p.avgRating || 0).toFixed(1)),
                     expertiseScore: p.expertiseScore || 0,
                     categoryCount: p.categoryCount || 0,
-                    isAssigned: assignedPhotographerId === p._id.toString() && bookingStatus === "accepted"
+                    isAssigned: assignedPhotographerIds.has(p._id.toString())
                 };
             });
 
-            const isLock = assignedPhotographerId !== null && bookingStatus === "accepted";
-            let finalPhotographers = photographers;
-            let finalTotal = total;
-
-            if (isLock) {
-                finalPhotographers = photographers.filter(p => p.isAssigned);
-                finalTotal = finalPhotographers.length;
-            }
-
+            const isLock = false; // Relaxed for better UX
+            
             res.status(200).json({
                 success: true,
                 isLock: isLock,
                 message: "Photographers filtered and sorted successfully",
-                data: finalPhotographers,
+                data: photographers,
                 meta: {
-                    total: finalTotal,
+                    total: total,
                     page,
                     limit,
-                    totalPages: Math.ceil(finalTotal / limit)
+                    totalPages: Math.ceil(total / limit)
                 }
             });
 

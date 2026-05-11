@@ -141,6 +141,11 @@ class BookingController {
                 }
             }
 
+            // Add serviceCategory filter if provided
+            if (req.query.serviceCategory) {
+                filter.serviceCategory = req.query.serviceCategory;
+            }
+
             // Legacy status filter (confirmed, pending, etc.)
             if (req.query.status) {
                 filter.status = req.query.status;
@@ -260,10 +265,10 @@ class BookingController {
                     clientName: booking.client_id?.username || "N/A",
                     clientAvatar: booking.client_id?.avatar || null,
                     client_id: booking.client_id, // Keep original client_id nested too for compatibility
-                    eventType: booking.service_id?.serviceName || "N/A",
+                    eventType: booking.service_id?.serviceName || booking.eventType || (booking.serviceCategory === 'hourly' ? 'Hourly Shoot' : (booking.serviceCategory === 'editing' ? 'Editing' : 'N/A')),
                     requirements: booking.notes || (booking.quoteId?.requirements?.length > 0 ? booking.quoteId.requirements.join(", ") : booking.quoteId?.photographyRequirements) || "No requirements",
-                    date: ist.date,
-                    time: ist.time,
+                    date: ist.date !== "N/A" ? ist.date : (booking.date || "N/A"),
+                    time: ist.time !== "N/A" ? ist.time : (booking.time || "N/A"),
                     fromDate: this.formatDMY(booking.startDate || booking.eventDate || booking.bookingDate),
                     toDate: this.formatDMY(booking.endDate || booking.startDate || booking.eventDate || booking.bookingDate),
                     city: booking.city,
@@ -277,7 +282,9 @@ class BookingController {
                     budget: displayAmount,
                     totalAmount: booking.totalAmount, // Optional
                     daysLeft: this.calculateDaysLeft(booking.startDate || booking.eventDate || booking.bookingDate),
-                    daysRemaining: this.calculateDaysLeft(booking.startDate || booking.eventDate || booking.bookingDate)
+                    daysRemaining: this.calculateDaysLeft(booking.startDate || booking.eventDate || booking.bookingDate),
+                    hours: booking.hours || booking.hourlyPackages?.[0]?.subCategoryName || 0,
+                    serviceCategory: booking.serviceCategory
                 };
             });
 
@@ -869,6 +876,7 @@ class BookingController {
                         {
                             photographer_id: updatedBooking.photographer_id,
                             total_amount: updatedBooking.totalAmount,
+                            photographer_share: updatedBooking.photographerAmount || 0,
                             shootType: updatedBooking.serviceCategory === "editing" ? "PhotoEditing" : (updatedBooking.serviceCategory === "hourly" ? "HourlyShoot" : "Service"),
                             status: "Pending",
                         },

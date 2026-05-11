@@ -95,6 +95,9 @@ router.get("/photographers/:id", (req, res, next) => PhotographerController.getP
 router.put("/photographers/:id", (req, res, next) => PhotographerController.updatePhotographer(req, res, next));
 router.delete("/photographers/:id", (req, res, next) => PhotographerController.deletePhotographer(req, res, next));
 
+// Get Hourly  And editing booking details for floating
+router.get("/booking/floating/:veroaBookingId", (req, res, next) => ServiceBookingController.getHourlyAndEditingBookingDetails(req, res, next));
+
 // --- Service Management ---
 router.post("/services", (req, res, next) => ServiceController.create(req, res, next));
 router.get("/services", (req, res, next) => ServiceController.list(req, res, next));

@@ -142,13 +142,13 @@ export const downloadPartnerInvoice = async (req, res) => {
                 {
                     description: `Service Charges - ${booking.service_id?.serviceName || booking.shootType || "Photography Service"}`,
                     sac: "998715", 
-                    amount: booking.totalAmount || 0,
+                    amount: booking.photographerAmount || 0,
                     discount: 0,
-                    taxableValue: booking.totalAmount || 0,
+                    taxableValue: booking.photographerAmount || 0,
                 }
             ],
             
-            total: booking.totalAmount || 0,
+            total: booking.photographerAmount || 0,
             taxableValueInWords: "",
         };
 

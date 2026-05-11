@@ -19,6 +19,7 @@ import Service from "../../models/Service.mjs";
 import HourlyShootService from "../../models/HourlyShootService.mjs";
 import Cart from "../../models/Cart.mjs";
 import DataLinks from "../../models/DataLinks.js";
+
 import { s3Service } from "../../lib/s3Service.js";
 
 const parseDDMMYYYY = (dateStr) => {
@@ -65,7 +66,49 @@ class ServiceBookingController {
         payload.startDate = "";
       }
 
+      // ─── Calculate Photographer Amount if needed ───
+      if (payload.photographer_id && payload.totalAmount && payload.photographerAmount === undefined) {
+          try {
+              const [photographer, settings] = await Promise.all([
+                  Photographer.findById(payload.photographer_id),
+                  PlatformSettings.findOne({ type: "commissions" })
+              ]);
+
+              if (photographer) {
+                  const global = settings || { initio: 0, elite: 0, pro: 0 };
+                  const level = photographer.professionalDetails?.expertiseLevel?.toUpperCase() || "INITIO";
+                  let commission = photographer.commissionPercentage;
+
+                  if (!commission) {
+                      if (level === "INITIO") commission = global.initio;
+                      else if (level === "ELITE") commission = global.elite;
+                      else if (level === "PRO") commission = global.pro;
+                  }
+
+                  payload.photographerAmount = Math.round(payload.totalAmount * (1 - (commission || 0) / 100));
+              }
+          } catch (err) {
+              console.error("[Commission] Calculation error in create:", err.message);
+          }
+      }
+
       const booking = await ServiceBooking.create(payload);
+
+      // ─── Create Payout Summary if photographer is assigned ───
+      if (booking.photographer_id) {
+          try {
+              await Payout.create({
+                  booking_id: booking._id,
+                  photographer_id: booking.photographer_id,
+                  total_amount: booking.totalAmount,
+                  photographer_share: booking.photographerAmount || 0,
+                  shootType: booking.serviceCategory === "editing" ? "PhotoEditing" : (booking.serviceCategory === "hourly" ? "HourlyShoot" : "Service"),
+                  status: "Pending",
+              });
+          } catch (payoutErr) {
+              console.error("[Payout] Error creating payout on create:", payoutErr.message);
+          }
+      }
 
       return res.status(201).json({
         success: true,
@@ -134,7 +177,7 @@ class ServiceBookingController {
         const ist = booking.ist_bookingDate || "N/A";
         const [d, t] = ist.includes(", ") ? ist.split(", ") : [ist, "N/A"];
         const dateVal = (d && d !== "N/A") ? d : (booking.startDate || (booking.bookingDate ? booking.bookingDate.toISOString().split("T")[0] : "N/A"));
-        
+
         // Construct Venue if address is missing
         const displayAddress = booking.address || booking.location || ""
 
@@ -294,7 +337,7 @@ class ServiceBookingController {
           {
             $or: [
               // Has both startDate and endDate - BOTH must be within range
-              { 
+              {
                 $and: [
                   { startDate: { $ne: null, $ne: "" } },
                   { endDate: { $ne: null, $ne: "" } },
@@ -303,7 +346,7 @@ class ServiceBookingController {
                 ]
               },
               // No endDate but has startDate - startDate must be within range
-              { 
+              {
                 $and: [
                   { endDate: { $in: [null, ""] } },
                   { startDate: { $ne: null, $ne: "" } },
@@ -311,7 +354,7 @@ class ServiceBookingController {
                 ]
               },
               // No endDate/startDate - bookingDate must be within range
-              { 
+              {
                 $and: [
                   { endDate: { $in: [null, ""] } },
                   { startDate: { $in: [null, ""] } },
@@ -327,14 +370,14 @@ class ServiceBookingController {
           {
             $or: [
               // Case 1: Has endDate (string) - must be >= today
-              { 
+              {
                 $and: [
                   { endDate: { $exists: true, $ne: null, $ne: "" } },
                   { endDate: { $gte: todayStr } }
                 ]
               },
               // Case 2: No endDate but has startDate (string) - must be >= today
-              { 
+              {
                 $and: [
                   { $or: [{ endDate: { $exists: false } }, { endDate: null }, { endDate: "" }] },
                   { startDate: { $exists: true, $ne: null, $ne: "" } },
@@ -342,7 +385,7 @@ class ServiceBookingController {
                 ]
               },
               // Case 3: No endDate/startDate, use bookingDate (Date) - must be >= today
-              { 
+              {
                 $and: [
                   { $or: [{ endDate: { $exists: false } }, { endDate: null }, { endDate: "" }] },
                   { $or: [{ startDate: { $exists: false } }, { startDate: null }, { startDate: "" }] },
@@ -368,7 +411,7 @@ class ServiceBookingController {
         const ist = booking.ist_bookingDate || "N/A";
         const [d, t] = ist.includes(", ") ? ist.split(", ") : [ist, "N/A"];
         const dateVal = (d && d !== "N/A") ? d : (booking.startDate || (booking.bookingDate ? booking.bookingDate.toISOString().split("T")[0] : "N/A"));
-        
+
         // Construct Venue if address is missing
         const displayAddress = booking.address || booking.location || ""
 
@@ -458,7 +501,7 @@ class ServiceBookingController {
           {
             $or: [
               // Has both startDate and endDate - BOTH must be within range
-              { 
+              {
                 $and: [
                   { startDate: { $ne: null, $ne: "" } },
                   { endDate: { $ne: null, $ne: "" } },
@@ -467,7 +510,7 @@ class ServiceBookingController {
                 ]
               },
               // No endDate but has startDate - startDate must be within range
-              { 
+              {
                 $and: [
                   { endDate: { $in: [null, ""] } },
                   { startDate: { $ne: null, $ne: "" } },
@@ -475,7 +518,7 @@ class ServiceBookingController {
                 ]
               },
               // No endDate/startDate - bookingDate must be within range
-              { 
+              {
                 $and: [
                   { endDate: { $in: [null, ""] } },
                   { startDate: { $in: [null, ""] } },
@@ -489,14 +532,14 @@ class ServiceBookingController {
         // 📅 DEFAULT VIEW: Finished bookings (already passed)
         filter.$or = [
           // Case 1: Has endDate (string) - must be < today
-          { 
+          {
             $and: [
               { endDate: { $exists: true, $ne: null, $ne: "" } },
               { endDate: { $lt: todayStr } }
             ]
           },
           // Case 2: No endDate but has startDate (string) - must be < today
-          { 
+          {
             $and: [
               { $or: [{ endDate: { $exists: false } }, { endDate: null }, { endDate: "" }] },
               { startDate: { $exists: true, $ne: null, $ne: "" } },
@@ -504,7 +547,7 @@ class ServiceBookingController {
             ]
           },
           // Case 3: No endDate/startDate, use bookingDate (Date) - must be < today
-          { 
+          {
             $and: [
               { $or: [{ endDate: { $exists: false } }, { endDate: null }, { endDate: "" }] },
               { $or: [{ startDate: { $exists: false } }, { startDate: null }, { startDate: "" }] },
@@ -602,13 +645,72 @@ class ServiceBookingController {
         });
       }
 
-      const bookingData = booking.toObject();
-      const cartItem = bookingData.cartId?.items?.[0] || {};
-      const editingData = bookingData.editingbookings?.[0] || bookingData.editingPackages?.[0] || {};
-      const hourlyData = bookingData.hourlyPackages?.[0] || {};
+      // ─── Aggregate Hourly Packages (Same logic as getHourlyBookings) ───────
+      const packagesMap = {};
       
-      bookingData.subCategoryName = cartItem.subCategoryName || editingData.subCategoryName || hourlyData.subCategoryName || "";
-      bookingData.subCategoryType = cartItem.subCategoryType || editingData.subCategoryType || editingData.category || hourlyData.subCategoryType || hourlyData.category || "";
+      // 1. New Structure (DB storage)
+      if (booking.hourlyPackages && booking.hourlyPackages.length > 0) {
+        booking.hourlyPackages.forEach((pkg, idx) => {
+          const cat = pkg.category ? (pkg.category.charAt(0).toUpperCase() + pkg.category.slice(1)) : "Standard";
+          const duration = pkg.hours || (booking.hours ? `${booking.hours} Hours` : "N/A");
+          packagesMap[`pkg-${idx}`] = {
+            hours: duration,
+            category: cat,
+            services: pkg.services || [],
+            assignedPhotographers: pkg.assignedPhotographers || [],
+            assignedVideographers: pkg.assignedVideographers || [],
+            assignedEditors: pkg.assignedEditors || [],
+            assignedLighting: pkg.assignedLighting || []
+          };
+        });
+      }
+      // 2. Fallback (Cart items)
+      else if (booking.cartId && booking.cartId.items) {
+        booking.cartId.items.forEach(item => {
+          let duration = "N/A";
+          const match = item.name.match(/\((.*?)\)/);
+          if (match) duration = match[1];
+          else if (booking.hours) duration = `${booking.hours} Hours`;
+          const cat = item.subCategoryType ? (item.subCategoryType.charAt(0).toUpperCase() + item.subCategoryType.slice(1)) : "Standard";
+          const key = `${duration}-${cat}`;
+          if (!packagesMap[key]) packagesMap[key] = { hours: duration, category: cat, services: [] };
+          packagesMap[key].services.push({
+            name: item.name.split(" (")[0].trim(),
+            qty: item.quantity,
+            price: item.price * item.quantity
+          });
+        });
+      }
+
+      let hourlyPackages = Object.values(packagesMap);
+
+      // 3. Name Lookup
+      const allIds = new Set();
+      hourlyPackages.forEach(p => {
+        (p.assignedPhotographers || []).forEach(id => allIds.add(id.toString()));
+        (p.assignedVideographers || []).forEach(id => allIds.add(id.toString()));
+        (p.assignedEditors || []).forEach(id => allIds.add(id.toString()));
+        (p.assignedLighting || []).forEach(id => allIds.add(id.toString()));
+      });
+
+      const globalNamesMap = {};
+      if (allIds.size > 0) {
+        const staff = await Photographer.find({ _id: { $in: Array.from(allIds) } }, "basicInfo.fullName").lean();
+        staff.forEach(s => globalNamesMap[s._id.toString()] = s.basicInfo?.fullName || "Unknown");
+      }
+
+      hourlyPackages.forEach(p => {
+        p.assignedPhotographerNames = (p.assignedPhotographers || []).map(id => globalNamesMap[id.toString()] || "Unknown");
+        p.assignedVideographerNames = (p.assignedVideographers || []).map(id => globalNamesMap[id.toString()] || "Unknown");
+        p.assignedEditorNames = (p.assignedEditors || []).map(id => globalNamesMap[id.toString()] || "Unknown");
+        p.assignedLightingNames = (p.assignedLighting || []).map(id => globalNamesMap[id.toString()] || "Unknown");
+      });
+
+      const bookingData = booking.toObject();
+      bookingData.hourlyPackages = hourlyPackages;
+      const cartItem = bookingData.cartId?.items?.[0] || {};
+      bookingData.subCategoryName = cartItem.subCategoryName || "";
+      bookingData.subCategoryType = cartItem.subCategoryType || "";
 
       return res.json({
         success: true,
@@ -645,8 +747,8 @@ class ServiceBookingController {
 
       // 🕒 Synchronize paymentStatus and related fields
       if (
-        payload.paymentStatus === "paid" || 
-        payload.paymentStatus === "fully paid" || 
+        payload.paymentStatus === "paid" ||
+        payload.paymentStatus === "fully paid" ||
         payload.full_Payment === true ||
         (payload.outStandingAmount !== undefined && Number(payload.outStandingAmount) === 0)
       ) {
@@ -656,8 +758,8 @@ class ServiceBookingController {
         payload.partial_Payment = false;
         payload.outStandingAmount = 0;
       } else if (
-        payload.paymentStatus === "partially paid" || 
-        payload.partial_Payment === true || 
+        payload.paymentStatus === "partially paid" ||
+        payload.partial_Payment === true ||
         (payload.outStandingAmount && Number(payload.outStandingAmount) > 0)
       ) {
         payload.paymentStatus = "partially paid";
@@ -667,15 +769,44 @@ class ServiceBookingController {
 
       // 🚫 If canceling, clear assignment
       if (payload.status === "canceled") {
-          payload.photographer_id = null;
-          payload.bookingStatus = "rejected";
-          payload.photographerIds = [];
-          payload.bookingOtp = null;
-          payload.cancelledBy = "admin";
+        payload.photographer_id = null;
+        payload.bookingStatus = "rejected";
+        payload.photographerIds = [];
+        payload.bookingOtp = null;
+        payload.cancelledBy = "admin";
       }
 
       // 📸 Snapshot the old booking BEFORE update (so we can detect changes)
       const oldBooking = await ServiceBooking.findById(id).lean();
+
+      // ─── Calculate Photographer Amount if needed ───
+      const photographerId = payload.photographer_id || oldBooking?.photographer_id;
+      const totalAmount = payload.totalAmount !== undefined ? payload.totalAmount : oldBooking?.totalAmount;
+
+      if (photographerId && totalAmount && payload.photographerAmount === undefined) {
+          try {
+              const [photographer, settings] = await Promise.all([
+                  Photographer.findById(photographerId),
+                  PlatformSettings.findOne({ type: "commissions" })
+              ]);
+
+              if (photographer) {
+                  const global = settings || { initio: 0, elite: 0, pro: 0 };
+                  const level = photographer.professionalDetails?.expertiseLevel?.toUpperCase() || "INITIO";
+                  let commission = photographer.commissionPercentage;
+
+                  if (!commission) {
+                      if (level === "INITIO") commission = global.initio;
+                      else if (level === "ELITE") commission = global.elite;
+                      else if (level === "PRO") commission = global.pro;
+                  }
+
+                  payload.photographerAmount = Math.round(totalAmount * (1 - (commission || 0) / 100));
+              }
+          } catch (err) {
+              console.error("[Commission] Calculation error:", err.message);
+          }
+      }
 
       const booking = await ServiceBooking.findByIdAndUpdate(id, payload, {
         new: true,
@@ -694,34 +825,34 @@ class ServiceBookingController {
         const assignedPhotographerId = oldBooking.photographer_id; // before cancel clears it
         const photographerIdToNotify = assignedPhotographerId || booking.photographer_id?._id;
 
-        const statusChanged      = payload.status        && oldBooking.status        !== payload.status;
+        const statusChanged = payload.status && oldBooking.status !== payload.status;
         const bookingStatusChanged = payload.bookingStatus && oldBooking.bookingStatus !== payload.bookingStatus;
 
         if (photographerIdToNotify && (statusChanged || bookingStatusChanged)) {
           const bookingRef = booking.veroaBookingId || booking._id.toString();
-          const eventName  = booking.service_id?.serviceName || "your booking";
+          const eventName = booking.service_id?.serviceName || "your booking";
 
           // Human-readable messages per status (Short & Professional)
           const STATUS_MESSAGES = {
-            confirmed  : `Confirmed: ${bookingRef} (${eventName})`,
-            completed  : `Completed: ${bookingRef} (${eventName})`,
-            canceled   : `Canceled: ${bookingRef} (${eventName})`,
-            pending    : `Pending: ${bookingRef} (${eventName})`,
+            confirmed: `Confirmed: ${bookingRef} (${eventName})`,
+            completed: `Completed: ${bookingRef} (${eventName})`,
+            canceled: `Canceled: ${bookingRef} (${eventName})`,
+            pending: `Pending: ${bookingRef} (${eventName})`,
           };
           const BOOKING_STATUS_MESSAGES = {
-            accepted   : `Assignment Active: ${bookingRef}`,
-            rejected   : `Assignment Rejected: ${bookingRef}`,
-            pending    : `Action Required: Confirm ${bookingRef}`,
+            accepted: `Assignment Active: ${bookingRef}`,
+            rejected: `Assignment Rejected: ${bookingRef}`,
+            pending: `Action Required: Confirm ${bookingRef}`,
           };
 
           const message =
-            (statusChanged      && STATUS_MESSAGES[payload.status])         ||
+            (statusChanged && STATUS_MESSAGES[payload.status]) ||
             (bookingStatusChanged && BOOKING_STATUS_MESSAGES[payload.bookingStatus]) ||
             `The status of booking ${bookingRef} (${eventName}) has been updated by the admin.`;
 
           Notification.create({
-            photographer_id     : new mongoose.Types.ObjectId(photographerIdToNotify.toString()),
-            notification_type   : "booking_status_update",
+            photographer_id: new mongoose.Types.ObjectId(photographerIdToNotify.toString()),
+            notification_type: "booking_status_update",
             notification_message: message,
           }).then(() => {
             emitNotificationCount(photographerIdToNotify.toString());
@@ -738,6 +869,7 @@ class ServiceBookingController {
             {
               photographer_id: booking.photographer_id,
               total_amount: booking.totalAmount,
+              photographer_share: booking.photographerAmount || 0,
               shootType: booking.serviceCategory === "editing" ? "PhotoEditing" : (booking.serviceCategory === "hourly" ? "HourlyShoot" : "Service"),
               status: "Pending",
             },
@@ -774,7 +906,7 @@ class ServiceBookingController {
 
       const booking = await ServiceBooking.findByIdAndUpdate(
         id,
-        { 
+        {
           status: "canceled",
           bookingStatus: "rejected", // Mark as rejected/canceled for the photographer
           photographer_id: null,      // Clear assignment
@@ -899,7 +1031,7 @@ class ServiceBookingController {
    */
   async assignPhotographer(req, res, next) {
     try {
-      const { photographerId, bookingId, photographerIds, _id } = req.body;
+      const { photographerId, bookingId, photographerIds, _id, packageIndex, roleSelections } = req.body;
       const finalBookingIdRaw = bookingId || _id || req.params.id;
       let finalBookingId = finalBookingIdRaw;
 
@@ -908,200 +1040,252 @@ class ServiceBookingController {
         const found = await ServiceBooking.findOne({ veroaBookingId: finalBookingId }).select("_id");
         if (found) finalBookingId = found._id;
       }
-      const finalPhotographerId = photographerId !== undefined ? photographerId : req.body.photographer_id;
 
-      const updateData = {};
-
-      // Handle the invitation list (broadcast replacement)
-      if (photographerIds !== undefined && photographerIds.length > 0) {
-        updateData.photographerIds = photographerIds;
-        // If broadcasting/inviting many, it is not yet "accepted" by any specific person
-        updateData.photographer_id = null;
-        updateData.bookingStatus = "pending";
-        updateData.status = "pending";
-        updateData.photographerAmount = 0;
+      const booking = await ServiceBooking.findById(finalBookingId).populate("cartId");
+      if (!booking) {
+        return res.status(404).json({ success: false, message: "Booking not found" });
       }
 
-      // Handle direct assignment
-      if (finalPhotographerId !== undefined) {
-        updateData.photographer_id = finalPhotographerId;
+      const updateData = {};
+      let isDirectAssign = false;
 
-        if (finalPhotographerId) {
-          // If assigning a specific person, clear other invitations
-          updateData.photographerIds = [];
-          // Direct assignment counts as already accepted
-          updateData.bookingStatus = "accepted";
-          updateData.status = "confirmed";
-          updateData.acceptedAt = new Date(); // To enforce the 48hr rule later
+      // ─── Planwise Assignment (Hourly Packages) ──────────────────────────
+      if (packageIndex !== undefined && roleSelections) {
+        // If hourlyPackages is empty, fallback to building it from cart items (Legacy migration)
+        if (!booking.hourlyPackages || booking.hourlyPackages.length === 0) {
+          const packagesMap = {};
+          if (booking.cartId && booking.cartId.items) {
+            booking.cartId.items.forEach(item => {
+              let duration = "N/A";
+              const match = item.name.match(/\((.*?)\)/);
+              if (match) duration = match[1];
+              else if (booking.hours) duration = `${booking.hours} Hours`;
 
-          const [booking, photographer, settings] = await Promise.all([
-            ServiceBooking.findById(finalBookingId),
-            Photographer.findById(finalPhotographerId),
-            PlatformSettings.findOne({ type: "commissions" })
-          ]);
-
-          if (booking && photographer) {
-            const global = settings || { initio: 0, elite: 0, pro: 0 };
-            const level = photographer.professionalDetails?.expertiseLevel || "INITIO";
-            let commission = photographer.commissionPercentage;
-
-            if (!commission) {
-              if (level === "INITIO") commission = global.initio;
-              else if (level === "ELITE") commission = global.elite;
-              else if (level === "PRO") commission = global.pro;
-            }
-            updateData.photographerAmount = Math.round(booking.totalAmount * (1 - (commission || 0) / 100));
-
-            updateData.photographerAmount = Math.round(booking.totalAmount * (1 - (commission || 0) / 100));
+              const cat = item.subCategoryType ? (item.subCategoryType.charAt(0).toUpperCase() + item.subCategoryType.slice(1)) : "Standard";
+              const key = `${duration}-${cat}`;
+              if (!packagesMap[key]) {
+                packagesMap[key] = { hours: duration, category: cat, services: [] };
+              }
+              const cleanName = item.name.split(" (")[0].trim();
+              packagesMap[key].services.push({
+                name: cleanName,
+                qty: item.quantity,
+                price: item.price * item.quantity
+              });
+            });
+            Object.values(packagesMap).forEach(pkg => {
+              pkg.subTotal = pkg.services.reduce((sum, s) => sum + (s.price || 0), 0);
+            });
+            booking.hourlyPackages = Object.values(packagesMap);
           }
-        } else {
-          // If clearing assignment, also clear the amount and reset statuses
-          updateData.photographerAmount = 0;
+        }
+
+        const pkg = booking.hourlyPackages && booking.hourlyPackages[packageIndex];
+        if (pkg) {
+          // 1. Normalize roleSelections keys to lowercase for consistent matching
+          const normalizedSelections = {};
+          if (roleSelections) {
+            Object.keys(roleSelections).forEach(k => {
+              normalizedSelections[k.toLowerCase()] = roleSelections[k];
+            });
+          }
+
+          // Determine if this is a "Direct Assign" or "Broadcast Request"
+          const { actionType } = req.body;
+          
+          if (actionType === 'assign') {
+            isDirectAssign = true;
+            // 2. Merge existing assignments with new selections for Direct Assignment
+            const mergeRole = (existing = [], incoming = []) => {
+              const set = new Set([...existing.map(id => id.toString()), ...incoming.map(id => id.toString())]);
+              return Array.from(set);
+            };
+
+            pkg.assignedPhotographers = mergeRole(pkg.assignedPhotographers || [], normalizedSelections.photographer || []);
+            pkg.assignedVideographers = mergeRole(pkg.assignedVideographers || [], normalizedSelections.videographer || []);
+            pkg.assignedEditors = mergeRole(pkg.assignedEditors || [], normalizedSelections.editor || []);
+            pkg.assignedLighting = mergeRole(pkg.assignedLighting || [], normalizedSelections.lightingsetup || normalizedSelections.lightingSetup || normalizedSelections.lighting || []);
+
+            // Consolidate all photographers from all packages for top-level photographerIds
+            const allPhotographers = new Set();
+            booking.hourlyPackages.forEach(p => {
+              if (p.assignedPhotographers) p.assignedPhotographers.forEach(id => allPhotographers.add(id.toString()));
+            });
+            updateData.photographerIds = Array.from(allPhotographers);
+          } 
+          else if (actionType === 'request') {
+            isDirectAssign = false;
+            // For Request/Broadcast, we put everyone in the top-level photographerIds
+            // but do NOT update the plan-wise assigned arrays.
+            const allSelectedIds = new Set();
+            Object.values(roleSelections).forEach(ids => {
+              if (Array.isArray(ids)) ids.forEach(id => allSelectedIds.add(id.toString()));
+            });
+            updateData.photographerIds = Array.from(allSelectedIds);
+            updateData.photographer_id = null; // Clear primary if we are requesting multiple
+          }
+
+          if (isDirectAssign) {
+            updateData.bookingStatus = "accepted";
+            updateData.status = "confirmed";
+            updateData.acceptedAt = new Date();
+            if (pkg.assignedPhotographers && pkg.assignedPhotographers.length > 0) {
+              updateData.photographer_id = pkg.assignedPhotographers[0];
+            }
+          } else {
+            // If already accepted, keep it accepted
+            if (booking.bookingStatus === "accepted") {
+              updateData.bookingStatus = "accepted";
+              updateData.status = "confirmed";
+            } else {
+              updateData.bookingStatus = "pending";
+              updateData.status = "pending";
+            }
+          }
+
+          updateData.hourlyPackages = booking.hourlyPackages;
+          booking.markModified('hourlyPackages');
+        }
+      }
+      // ─── Legacy/Generic Assignment ────────────────────────────────────────
+      else {
+        const finalPhotographerId = photographerId !== undefined ? photographerId : req.body.photographer_id;
+
+        if (photographerIds !== undefined && photographerIds.length > 0) {
+          updateData.photographerIds = photographerIds;
+          updateData.photographer_id = null;
           updateData.bookingStatus = "pending";
           updateData.status = "pending";
         }
+
+        if (finalPhotographerId !== undefined) {
+          updateData.photographer_id = finalPhotographerId;
+          if (finalPhotographerId) {
+            updateData.photographerIds = [];
+            updateData.bookingStatus = "accepted";
+            updateData.status = "confirmed";
+            updateData.acceptedAt = new Date();
+            isDirectAssign = true;
+          } else {
+            updateData.bookingStatus = "pending";
+            updateData.status = "pending";
+          }
+        }
       }
 
-      const booking = await ServiceBooking.findByIdAndUpdate(
+      // Calculate Photographer Amount if direct assigned
+      if (isDirectAssign && (updateData.photographer_id || updateData.photographerIds?.length > 0)) {
+        const primaryId = updateData.photographer_id || updateData.photographerIds[0];
+        const [photographer, settings] = await Promise.all([
+          Photographer.findById(primaryId),
+          PlatformSettings.findOne({ type: "commissions" })
+        ]);
+
+        if (photographer) {
+          const global = settings || { initio: 0, elite: 0, pro: 0 };
+          const level = photographer.professionalDetails?.expertiseLevel || "INITIO";
+          let commission = photographer.commissionPercentage;
+          if (!commission) {
+            if (level === "INITIO") commission = global.initio;
+            else if (level === "ELITE") commission = global.elite;
+            else if (level === "PRO") commission = global.pro;
+          }
+          updateData.photographerAmount = Math.round(booking.totalAmount * (1 - (commission || 0) / 100));
+        }
+      }
+
+      const updatedBooking = await ServiceBooking.findByIdAndUpdate(
         finalBookingId,
         updateData,
         { new: true }
       ).populate("service_id photographer_id");
 
-      if (!booking) {
-        return res.status(404).json({
-          success: false,
-          message: "Booking not found"
+      // ─── Send Notifications (non-blocking) ────────────────────────────────
+      const bookingRef = updatedBooking.veroaBookingId || updatedBooking._id.toString();
+      const eventName = updatedBooking.service_id?.serviceName || "your booking";
+      const isHourly = updatedBooking.serviceCategory === "hourly";
+      const hoursValue = isHourly 
+        ? (updatedBooking.hourlyPackages?.[0]?.subCategoryName || updatedBooking.hours || updatedBooking.hourlyPackages?.[0]?.hours || "")
+        : (updatedBooking.hours || "");
+      const hoursInfo = hoursValue ? ` for ${hoursValue}${typeof hoursValue === 'number' ? ' hours' : ''}` : "";
+
+      // Case 1: Direct assignment (Accepted)
+      if (updatedBooking.bookingStatus === "accepted") {
+        const targetIds = updatedBooking.photographer_id ? [updatedBooking.photographer_id] : (updatedBooking.photographerIds || []);
+        targetIds.forEach(pid => {
+          (async () => {
+            try {
+              await Notification.create({
+                photographer_id: new mongoose.Types.ObjectId(pid.toString()),
+                notification_type: "booking_assigned",
+                notification_message: `New booking ${bookingRef} (${eventName})${hoursInfo} has been assigned to you.`,
+                booking_id: updatedBooking._id,
+                screen: "BookingScreen"
+              });
+              emitNotificationCount(pid.toString());
+
+              const photographer = await Photographer.findById(pid).select("fcmToken basicInfo.fullName pushNotification");
+              if (photographer?.fcmToken && photographer.pushNotification !== false) {
+                const message = {
+                  notification: {
+                    title: "New Booking Assigned!",
+                    body: `You have been assigned to booking ${bookingRef} (${eventName})${hoursInfo}.`,
+                  },
+                  token: photographer.fcmToken,
+                  data: { bookingId: updatedBooking._id.toString(), type: "booking_assigned", screen: "BookingScreen" },
+                  android: { priority: "high", notification: { channelId: "veroa_updates" } }
+                };
+                await admin.messaging().send(message);
+              }
+            } catch (err) { console.error("[Notification] Direct assignment error:", err.message); }
+          })();
         });
       }
 
-      // ─── Send Notifications (non-blocking) ────────────────────────────────
-      const bookingRef = booking.veroaBookingId || booking._id.toString();
-      const eventName  = booking.service_id?.serviceName || "your booking";
+      // Case 2: Invitation (Pending)
+      if (updatedBooking.bookingStatus === "pending" && updatedBooking.photographerIds?.length > 0) {
+        updatedBooking.photographerIds.forEach(pid => {
+          (async () => {
+            try {
+              await Notification.create({
+                photographer_id: new mongoose.Types.ObjectId(pid.toString()),
+                notification_type: "booking_invite",
+                notification_message: `New booking invitation ${bookingRef} (${eventName})${hoursInfo} received.`,
+                booking_id: updatedBooking._id,
+                screen: "BookingScreen"
+              });
+              emitNotificationCount(pid.toString());
 
-      // Case 1: Direct assignment — notify the single assigned photographer
-      if (finalPhotographerId) {
-        (async () => {
-          try {
-            await Notification.create({
-              photographer_id : new mongoose.Types.ObjectId(finalPhotographerId),
-              notification_type   : "booking_assigned",
-              notification_message: `New booking ${bookingRef} (${eventName}) has been assigned to you.`,
-              booking_id: booking._id,
-              screen: "BookingScreen"
-            });
-            emitNotificationCount(finalPhotographerId.toString());
-
-            // Send FCM
-            const photographer = await Photographer.findById(finalPhotographerId).select("fcmToken basicInfo.fullName pushNotification");
-            if (photographer?.fcmToken && photographer.pushNotification !== false) {
-              console.log(`[FCM] Sending notification to ${photographer.basicInfo?.fullName} (Token: ${photographer.fcmToken.substring(0, 10)}...)`);
-              const message = {
-                notification: {
-                  title: "New Booking Assigned!",
-                  body: `You have been assigned to booking ${bookingRef} (${eventName}).`,
-                },
-                token: photographer.fcmToken,
-                data: { 
-                  bookingId: booking._id.toString(), 
-                  type: "booking_assigned",
-                  screen: "BookingScreen"
-                },
-                android: {
-                  priority: "high",
-                  notification: { channelId: "veroa_updates" }
-                },
-                apns: {
-                  payload: {
-                    aps: {
-                      sound: "default",
-                      badge: 1,
-                      "mutable-content": 1,
-                      "content-available": 1
-                    }
-                  }
-                }
-              };
-              const response = await admin.messaging().send(message);
-              console.log("[FCM] Direct assignment sent successfully:", response);
-            } else {
-              console.log(`[FCM] No token found for photographer ${photographer?.basicInfo?.fullName || finalPhotographerId}`);
-            }
-          } catch (err) {
-            console.error("[Notification] Direct assignment FCM error:", err.message);
-          }
-        })();
+              const photographer = await Photographer.findById(pid).select("fcmToken basicInfo.fullName pushNotification");
+              if (photographer?.fcmToken && photographer.pushNotification !== false) {
+                const message = {
+                  notification: {
+                    title: "New Booking Invitation",
+                    body: `New booking invitation ${bookingRef} (${eventName})${hoursInfo} received.`,
+                  },
+                  token: photographer.fcmToken,
+                  data: { bookingId: updatedBooking._id.toString(), type: "booking_invite", screen: "BookingScreen" },
+                  android: { priority: "high", notification: { channelId: "veroa_updates" } }
+                };
+                await admin.messaging().send(message);
+              }
+            } catch (err) { console.error("[Notification] Invitation error:", err.message); }
+          })();
+        });
       }
 
-      // Case 2: Broadcast invite — notify every invited photographer
-      if (photographerIds !== undefined && photographerIds.length > 0) {
-        (async () => {
-          try {
-            const inviteNotifications = photographerIds.map((pid) => ({
-              photographer_id : new mongoose.Types.ObjectId(pid),
-              notification_type   : "booking_invite",
-              notification_message: `New booking ${bookingRef} (${eventName}) has been invited to you.`,
-              booking_id: booking._id,
-              screen: "BookingScreen"
-            }));
-
-            await Notification.insertMany(inviteNotifications);
-            photographerIds.forEach(pid => emitNotificationCount(pid.toString()));
-
-            // Send FCM to all in broadcast
-            const photographers = await Photographer.find({ _id: { $in: photographerIds } }).select("fcmToken basicInfo.fullName pushNotification");
-            const messages = photographers
-              .filter(p => p.fcmToken && p.pushNotification !== false)
-              .map(p => ({
-                notification: {
-                  title: "New Booking Invitation!",
-                  body: `You have an invitation for booking ${bookingRef} (${eventName}).`,
-                },
-                token: p.fcmToken,
-                data: { 
-                  bookingId: booking._id.toString(), 
-                  type: "booking_invite",
-                  screen: "BookingScreen"
-                },
-                android: {
-                  priority: "high",
-                  notification: { channelId: "veroa_updates" }
-                },
-                apns: {
-                  payload: {
-                    aps: {
-                      sound: "default",
-                      badge: 1,
-                      "mutable-content": 1,
-                      "content-available": 1
-                    }
-                  }
-                }
-              }));
-
-            if (messages.length > 0) {
-              console.log(`[FCM] Sending broadcast to ${messages.length} photographers`);
-              const response = await admin.messaging().sendEach(messages);
-              console.log("[FCM] Broadcast sent successfully:", response.successCount, "successes,", response.failureCount, "failures");
-            } else {
-              console.log("[FCM] No tokens found for any invited photographers");
-            }
-          } catch (err) {
-            console.error("[Notification] Broadcast FCM error:", err.message);
-          }
-        })();
-      }
       // ─────────────────────────────────────────────────────────────────────
 
       // ─── Create or Update Payout Summary ───────────────────────────────
-      if (booking.photographer_id) {
+      if (updatedBooking.photographer_id || updatedBooking.photographerIds?.length > 0) {
         try {
+          const primaryId = updatedBooking.photographer_id || updatedBooking.photographerIds[0];
           await Payout.findOneAndUpdate(
-            { booking_id: booking._id },
+            { booking_id: updatedBooking._id },
             {
-              photographer_id: booking.photographer_id,
-              total_amount: booking.totalAmount,
-              shootType: booking.serviceCategory === "editing" ? "PhotoEditing" : (booking.serviceCategory === "hourly" ? "HourlyShoot" : "Service"),
+              photographer_id: primaryId,
+              total_amount: updatedBooking.totalAmount,
+              shootType: updatedBooking.serviceCategory === "editing" ? "PhotoEditing" : (updatedBooking.serviceCategory === "hourly" ? "HourlyShoot" : "Service"),
               status: "Pending",
             },
             { upsert: true, new: true }
@@ -1111,11 +1295,11 @@ class ServiceBookingController {
         }
       }
       // ─────────────────────────────────────────────────────────────────────
-      
+
       return res.json({
         success: true,
-        message: "Photographer assigned successfully",
-        data: booking
+        message: updatedBooking.bookingStatus === "accepted" ? "Photographers assigned directly" : "Photographers invited successfully",
+        data: updatedBooking
       });
     } catch (err) {
       return next(err);
@@ -1388,7 +1572,7 @@ class ServiceBookingController {
       today.setUTCHours(0, 0, 0, 0);
       const todayStr = today.toISOString().split("T")[0];
 
-      let filter = { 
+      let filter = {
         $or: [
           { serviceCategory: "hourly" },
           { eventType: { $regex: /photography|shoot/i } },
@@ -1401,15 +1585,19 @@ class ServiceBookingController {
           {
             $or: [
               { endDate: { $exists: true, $ne: null, $ne: "", $gte: todayStr } },
-              { $and: [
-                { $or: [{ endDate: { $exists: false } }, { endDate: null }, { endDate: "" }] },
-                { startDate: { $exists: true, $ne: null, $ne: "", $gte: todayStr } }
-              ]},
-              { $and: [
-                { $or: [{ endDate: { $exists: false } }, { endDate: null }, { endDate: "" }] },
-                { $or: [{ startDate: { $exists: false } }, { startDate: null }, { startDate: "" }] },
-                { date: { $exists: true, $ne: null, $ne: "", $gte: todayStr } }
-              ]}
+              {
+                $and: [
+                  { $or: [{ endDate: { $exists: false } }, { endDate: null }, { endDate: "" }] },
+                  { startDate: { $exists: true, $ne: null, $ne: "", $gte: todayStr } }
+                ]
+              },
+              {
+                $and: [
+                  { $or: [{ endDate: { $exists: false } }, { endDate: null }, { endDate: "" }] },
+                  { $or: [{ startDate: { $exists: false } }, { startDate: null }, { startDate: "" }] },
+                  { date: { $exists: true, $ne: null, $ne: "", $gte: todayStr } }
+                ]
+              }
             ]
           }
         ];
@@ -1418,15 +1606,19 @@ class ServiceBookingController {
           {
             $or: [
               { endDate: { $exists: true, $ne: null, $ne: "", $lt: todayStr } },
-              { $and: [
-                { $or: [{ endDate: { $exists: false } }, { endDate: null }, { endDate: "" }] },
-                { startDate: { $exists: true, $ne: null, $ne: "", $lt: todayStr } }
-              ]},
-              { $and: [
-                { $or: [{ endDate: { $exists: false } }, { endDate: null }, { endDate: "" }] },
-                { $or: [{ startDate: { $exists: false } }, { startDate: null }, { startDate: "" }] },
-                { date: { $exists: true, $ne: null, $ne: "", $lt: todayStr } }
-              ]}
+              {
+                $and: [
+                  { $or: [{ endDate: { $exists: false } }, { endDate: null }, { endDate: "" }] },
+                  { startDate: { $exists: true, $ne: null, $ne: "", $lt: todayStr } }
+                ]
+              },
+              {
+                $and: [
+                  { $or: [{ endDate: { $exists: false } }, { endDate: null }, { endDate: "" }] },
+                  { $or: [{ startDate: { $exists: false } }, { startDate: null }, { startDate: "" }] },
+                  { date: { $exists: true, $ne: null, $ne: "", $lt: todayStr } }
+                ]
+              }
             ]
           }
         ];
@@ -1467,6 +1659,45 @@ class ServiceBookingController {
       // Group bookings by cartId or veroaBookingId to avoid duplicates in the UI
       const groupedMap = new Map();
 
+      // 1. Pre-fetch names for ALL assigned staff across ALL bookings for performance
+      const allAssignedIdsAcrossBookings = new Set();
+      items.forEach(booking => {
+        // Helper to safely add IDs from raw or populated fields
+        const addId = (val) => {
+          if (!val) return;
+          const id = val._id || val;
+          if (id && typeof id.toString === 'function') {
+            const str = id.toString();
+            if (str && str !== '[object Object]') allAssignedIdsAcrossBookings.add(str);
+          }
+        };
+
+        // Top-level staff
+        addId(booking.photographer_id);
+        if (booking.photographerIds) booking.photographerIds.forEach(id => addId(id));
+        
+        // Plan-wise staff
+        if (booking.hourlyPackages) {
+          booking.hourlyPackages.forEach(p => {
+            (p.assignedPhotographers || []).forEach(id => addId(id));
+            (p.assignedVideographers || []).forEach(id => addId(id));
+            (p.assignedEditors || []).forEach(id => addId(id));
+            (p.assignedLighting || []).forEach(id => addId(id));
+          });
+        }
+      });
+
+      const globalNamesMap = {};
+      if (allAssignedIdsAcrossBookings.size > 0) {
+        const photographers = await Photographer.find(
+          { _id: { $in: Array.from(allAssignedIdsAcrossBookings) } },
+          "basicInfo.fullName"
+        ).lean();
+        photographers.forEach(p => {
+          globalNamesMap[p._id.toString()] = p.basicInfo?.fullName || "Unknown";
+        });
+      }
+
       items.forEach(booking => {
         // Use cart ID as the primary key for grouping if it exists, fallback to veroaBookingId
         const groupKey = booking.cartId?._id?.toString() || booking.veroaBookingId || booking._id.toString();
@@ -1483,22 +1714,26 @@ class ServiceBookingController {
         const eTime = booking.time || "N/A";
 
         const packagesMap = {};
-        
+
         // 1. Try to use hourlyPackages from the booking itself (New structure)
         if (booking.hourlyPackages && booking.hourlyPackages.length > 0) {
           booking.hourlyPackages.forEach((pkg, idx) => {
             const cat = pkg.category ? (pkg.category.charAt(0).toUpperCase() + pkg.category.slice(1)) : "Standard";
-            const duration = pkg.hours || (booking.hours ? `${booking.hours} Hours` : "N/A");
+            const duration = pkg.subCategoryName || pkg.hours || (booking.hours ? `${booking.hours} Hours` : "N/A");
             const key = `pkg-${idx}`;
             const services = pkg.services || [
-                { name: pkg.planName || "Hourly Plan", qty: 1, price: pkg.price || 0 }
-              ];
+              { name: pkg.planName || "Hourly Plan", qty: 1, price: pkg.price || 0 }
+            ];
             const subTotal = services.reduce((sum, s) => sum + (s.price || 0), 0);
             packagesMap[key] = {
               hours: duration,
               category: cat,
               services: services,
-              subTotal: subTotal
+              subTotal: subTotal,
+              assignedPhotographers: pkg.assignedPhotographers || [],
+              assignedVideographers: pkg.assignedVideographers || [],
+              assignedEditors: pkg.assignedEditors || [],
+              assignedLighting: pkg.assignedLighting || []
             };
           });
         }
@@ -1530,6 +1765,16 @@ class ServiceBookingController {
         }
 
         let hourlyPackages = Object.values(packagesMap);
+
+        // Map pre-fetched names to each package
+        hourlyPackages.forEach(p => {
+          p.assignedPhotographerNames = (p.assignedPhotographers || []).map(id => globalNamesMap[id.toString()] || "Unknown");
+          p.assignedVideographerNames = (p.assignedVideographers || []).map(id => globalNamesMap[id.toString()] || "Unknown");
+          p.assignedEditorNames = (p.assignedEditors || []).map(id => globalNamesMap[id.toString()] || "Unknown");
+          p.assignedLightingNames = (p.assignedLighting || []).map(id => globalNamesMap[id.toString()] || "Unknown");
+        });
+
+
         if (hourlyPackages.length === 0) {
           hourlyPackages = [{
             hours: booking.hours ? `${booking.hours} Hours` : "N/A",
@@ -1548,7 +1793,19 @@ class ServiceBookingController {
           clientName: booking.client_id?.username || "Unknown",
           eventAddress: eventAddress || booking.address || "N/A",
           photographer_id: booking.photographer_id?._id || null,
-          assignedPhotographer: booking.photographer_id?.basicInfo?.fullName || "",
+          assignedPhotographer: (() => {
+            const primary = booking.photographer_id?.basicInfo?.fullName;
+            if (primary) return primary;
+            // Collect all unique names across all package roles
+            const allNames = new Set();
+            hourlyPackages.forEach(p => {
+              (p.assignedPhotographerNames || []).forEach(n => allNames.add(n));
+              (p.assignedVideographerNames || []).forEach(n => allNames.add(n));
+              (p.assignedEditorNames || []).forEach(n => allNames.add(n));
+              (p.assignedLightingNames || []).forEach(n => allNames.add(n));
+            });
+            return Array.from(allNames).join(", ") || "";
+          })(),
           galleryUpload: booking.galleryStatus === "Photos Uploaded",
           galleryStatus: booking.galleryStatus || "pending",
           bookingStatus: booking.status || "pending",
@@ -1589,17 +1846,17 @@ class ServiceBookingController {
       const finalBookings = await Promise.all(Array.from(groupedMap.values())
         .sort((a, b) => new Date(b._createdAt || 0) - new Date(a._createdAt || 0))
         .map(async b => {
-           const mediaKeys = (b.media || []).filter(m => m && !m.startsWith("http"));
-           const mediaUrls = (b.media || []).filter(m => m && m.startsWith("http"));
-           
-           const signedView = mediaKeys.length > 0 ? await s3Service.getBatchSignedUrls(mediaKeys, 36000, 'inline') : [];
-           const signedDownload = mediaKeys.length > 0 ? await s3Service.getBatchSignedUrls(mediaKeys, 36000, 'attachment') : [];
-           
-           return { 
-             ...b, 
-             media: [...mediaUrls, ...signedView],
-             downloadMedia: [...mediaUrls, ...signedDownload] 
-           };
+          const mediaKeys = (b.media || []).filter(m => m && !m.startsWith("http"));
+          const mediaUrls = (b.media || []).filter(m => m && m.startsWith("http"));
+
+          const signedView = mediaKeys.length > 0 ? await s3Service.getBatchSignedUrls(mediaKeys, 36000, 'inline') : [];
+          const signedDownload = mediaKeys.length > 0 ? await s3Service.getBatchSignedUrls(mediaKeys, 36000, 'attachment') : [];
+
+          return {
+            ...b,
+            media: [...mediaUrls, ...signedView],
+            downloadMedia: [...mediaUrls, ...signedDownload]
+          };
         })
       );
 
@@ -1645,15 +1902,19 @@ class ServiceBookingController {
           {
             $or: [
               { endDate: { $exists: true, $ne: null, $ne: "", $gte: todayStr } },
-              { $and: [
-                { $or: [{ endDate: { $exists: false } }, { endDate: null }, { endDate: "" }] },
-                { startDate: { $exists: true, $ne: null, $ne: "", $gte: todayStr } }
-              ]},
-              { $and: [
-                { $or: [{ endDate: { $exists: false } }, { endDate: null }, { endDate: "" }] },
-                { $or: [{ startDate: { $exists: false } }, { startDate: null }, { startDate: "" }] },
-                { date: { $exists: true, $ne: null, $ne: "", $gte: todayStr } }
-              ]}
+              {
+                $and: [
+                  { $or: [{ endDate: { $exists: false } }, { endDate: null }, { endDate: "" }] },
+                  { startDate: { $exists: true, $ne: null, $ne: "", $gte: todayStr } }
+                ]
+              },
+              {
+                $and: [
+                  { $or: [{ endDate: { $exists: false } }, { endDate: null }, { endDate: "" }] },
+                  { $or: [{ startDate: { $exists: false } }, { startDate: null }, { startDate: "" }] },
+                  { date: { $exists: true, $ne: null, $ne: "", $gte: todayStr } }
+                ]
+              }
             ]
           }
         ];
@@ -1662,15 +1923,19 @@ class ServiceBookingController {
           {
             $or: [
               { endDate: { $exists: true, $ne: null, $ne: "", $lt: todayStr } },
-              { $and: [
-                { $or: [{ endDate: { $exists: false } }, { endDate: null }, { endDate: "" }] },
-                { startDate: { $exists: true, $ne: null, $ne: "", $lt: todayStr } }
-              ]},
-              { $and: [
-                { $or: [{ endDate: { $exists: false } }, { endDate: null }, { endDate: "" }] },
-                { $or: [{ startDate: { $exists: false } }, { startDate: null }, { startDate: "" }] },
-                { date: { $exists: true, $ne: null, $ne: "", $lt: todayStr } }
-              ]}
+              {
+                $and: [
+                  { $or: [{ endDate: { $exists: false } }, { endDate: null }, { endDate: "" }] },
+                  { startDate: { $exists: true, $ne: null, $ne: "", $lt: todayStr } }
+                ]
+              },
+              {
+                $and: [
+                  { $or: [{ endDate: { $exists: false } }, { endDate: null }, { endDate: "" }] },
+                  { $or: [{ startDate: { $exists: false } }, { startDate: null }, { startDate: "" }] },
+                  { date: { $exists: true, $ne: null, $ne: "", $lt: todayStr } }
+                ]
+              }
             ]
           }
         ];
@@ -1714,7 +1979,7 @@ class ServiceBookingController {
       // Fetch data links for these bookings
       const bookingVeroaIds = items.map(b => b.veroaBookingId).filter(Boolean);
       const allLinks = await DataLinks.find({ veroaBookingId: { $in: bookingVeroaIds } }).lean();
-      
+
       const linksMap = allLinks.reduce((acc, link) => {
         if (!acc[link.veroaBookingId]) acc[link.veroaBookingId] = [];
         acc[link.veroaBookingId].push(link.dataLink);
@@ -1732,7 +1997,7 @@ class ServiceBookingController {
         const eventAddress = addressParts.join(", ") + (booking.postalCode ? ` - ${booking.postalCode}` : "");
 
         let rawPkgs = booking.editingPackages || booking.editingbookings || [];
-        
+
         // If we have video counts but no explicit package array, generate them
         if ((!Array.isArray(rawPkgs) || rawPkgs.length === 0)) {
           if (booking.standardEditingVideos > 0) {
@@ -1765,33 +2030,33 @@ class ServiceBookingController {
             _id: "fallback"
           }];
         }
-        
+
         const videoPackages = await Promise.all(rawPkgs.map(async pkg => {
           const bookingLinks = linksMap[booking.veroaBookingId] || [];
-          
+
           // Separate keys from full URLs in the media array
           const mediaKeys = (booking.media || []).filter(m => m && !m.startsWith("http"));
           const mediaUrls = (booking.media || []).filter(m => m && m.startsWith("http"));
-          
+
           // Generate signed URLs for keys
-          const signedViewUrls = mediaKeys.length > 0 
-            ? await s3Service.getBatchSignedUrls(mediaKeys, 36000, 'inline') 
+          const signedViewUrls = mediaKeys.length > 0
+            ? await s3Service.getBatchSignedUrls(mediaKeys, 36000, 'inline')
             : [];
-          
-          const signedDownloadUrls = mediaKeys.length > 0 
-            ? await s3Service.getBatchSignedUrls(mediaKeys, 36000, 'attachment') 
+
+          const signedDownloadUrls = mediaKeys.length > 0
+            ? await s3Service.getBatchSignedUrls(mediaKeys, 36000, 'attachment')
             : [];
-          
+
           const combinedViewMedia = [...mediaUrls, ...signedViewUrls, ...bookingLinks];
           const combinedDownloadMedia = [...mediaUrls, ...signedDownloadUrls, ...bookingLinks];
-          
+
           let vCount = Math.max(parseInt(pkg.numberOfVideos) || 0, combinedViewMedia.length) || 1;
-          
+
           // Generate videos list as expected by UI
           const videos = Array.from({ length: vCount }, (_, i) => ({
             videoId: `${pkg._id || pkg.planId || 'pkg'}-v${i + 1}`,
             videoNumber: i + 1,
-            viewUrl: combinedViewMedia[i] || "", 
+            viewUrl: combinedViewMedia[i] || "",
             downloadUrl: combinedDownloadMedia[i] || ""
           }));
 
@@ -1841,6 +2106,28 @@ class ServiceBookingController {
       });
     } catch (error) {
       next(error);
+    }
+  }
+
+  async getHourlyAndEditingBookingDetails(req, res) {
+
+    const { veroaBookingId } = req.params;
+
+    try {
+      const booking = await ServiceBooking.findOne({ veroaBookingId: veroaBookingId }).select('cartId');
+      console.log("Booking veroa", booking)
+      if (!booking) {
+        return res.status(404).json({ success: false, message: "Items not found" });
+      }
+
+      const cart = await Cart.findOne({ _id: booking.cartId }).select('items');
+      console.log("cart", cart)
+      if (!cart) {
+        return res.status(404).json({ success: false, message: "Items not found" });
+      }
+      return res.status(200).json({ success: true, data: booking });
+    } catch (error) {
+
     }
   }
 }
