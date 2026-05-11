@@ -364,7 +364,7 @@ export const uploadController = {
 
     getUrlsListArray: async (req, res) => {
         try {
-            const { page = 1, limit = 20 } = req.query;
+            const { page = 1, limit = 20, category } = req.query;
             const bookingId = req.params.bookingId;
 
             if (!bookingId) {
@@ -400,13 +400,31 @@ export const uploadController = {
             const resolvedBookingId = booking._id;
 
             const query = { 
-                $or: [
-                    { bookingid: resolvedBookingId },
-                    { bookingid: booking.veroaBookingId },
-                    { veroaBookingId: resolvedBookingId },
-                    { veroaBookingId: booking.veroaBookingId }
+                $and: [
+                    {
+                        $or: [
+                            { bookingid: resolvedBookingId },
+                            { bookingid: booking.veroaBookingId },
+                            { veroaBookingId: resolvedBookingId },
+                            { veroaBookingId: booking.veroaBookingId }
+                        ]
+                    }
                 ]
             };
+
+            if (category) {
+                if (category.toLowerCase() === "standard") {
+                    query.$and.push({
+                        $or: [
+                            { category: { $regex: new RegExp(`^${category}$`, "i") } },
+                            { category: { $exists: false } },
+                            { category: null }
+                        ]
+                    });
+                } else {
+                    query.$and.push({ category: { $regex: new RegExp(`^${category}$`, "i") } });
+                }
+            }
 
             // Fetch total count and active cloud plan in parallel
             const [total, activeCloudPlan] = await Promise.all([
@@ -582,7 +600,7 @@ export const uploadController = {
     downloadSingleFile: async (req, res) => {
         try {
             const key = (req.body && req.body.key) || req.query.key;
-            const bookingId = (req.body && req.body.bookingId) || req.query.bookingId;
+            const bookingId = (req.body && req.body.bookingId) || req.query.bookingId || (req.body && req.body.bookingid) || req.query.bookingid;
             if (!key) {
                 return res.status(400).json({ error: "Missing required fields." });
             }
@@ -596,20 +614,26 @@ export const uploadController = {
                 return res.status(404).json({ error: "Booking not found." });
             }
 
-            const resolvedBookingId = booking._id;
-            const resolvedVeroaId = booking.veroaBookingId;
+            const resolvedBookingId = booking._id.toString();
+            const resolvedVeroaId = booking.veroaBookingId ? booking.veroaBookingId.toString() : null;
 
-            const isFileExist = await DataLinks.findOne({
+            const query = {
                 $or: [
                     { bookingid: resolvedBookingId },
-                    { bookingid: resolvedVeroaId },
-                    { veroaBookingId: resolvedBookingId },
-                    { veroaBookingId: resolvedVeroaId }
+                    { veroaBookingId: resolvedBookingId }
                 ],
                 key: key
-            });
+            };
+
+            if (resolvedVeroaId) {
+                query.$or.push({ bookingid: resolvedVeroaId });
+                query.$or.push({ veroaBookingId: resolvedVeroaId });
+            }
+
+            const isFileExist = await DataLinks.findOne(query);
             if (!isFileExist) {
-                return res.status(404).json({ error: "File not found in S3." });
+                console.warn(`File download failed: Key ${key} not found for booking ${bookingId}`);
+                return res.status(404).json({ error: "File not found in database for this booking." });
             }
             const data = await s3Service.getFileStream(key);
             if (!data) {
@@ -629,30 +653,14 @@ export const uploadController = {
 
 
     downloadMultipleFiles: async (req, res) => {
-        try {
-            const { keys, bookingid } = req.body;
-            if (!keys || keys.length === 0 || !bookingid) {
-                return res.status(400).json({ error: "Missing required fields" })
-            }
-
-            const data = await s3Service.getFileStreamMultiple(keys);
-            if (!data) {
-                return res.status(404).json({ error: "File not found in S3." });
-            }
-            res.setHeader("Content-Type", data.ContentType);
-            res.setHeader("Content-Length", data.ContentLength);
-            res.setHeader("Content-Disposition", `attachment; filename="${key.split('/').pop()}"`);
-            data.Body.pipe(res);
-        } catch (error) {
-            console.error("Download file error:", error);
-            res.status(500).json({ error: error.message });
-        }
+        // Reuse downloadZiponFourtyPlus logic as it handles batch zip correctly
+        return uploadController.downloadZiponFourtyPlus(req, res);
     },
 
 
     downloadZip: async (req, res) => {
         try {
-            const bookingid = (req.body && req.body.bookingid) || req.query.bookingid;
+            const bookingid = (req.body && req.body.bookingid) || req.query.bookingid || (req.body && req.body.bookingId) || req.query.bookingId;
             const clientId = (req.body && req.body.clientId) || req.query.clientId;
             const photographerId = (req.body && req.body.photographerId) || req.query.photographerId;
             
@@ -697,7 +705,9 @@ export const uploadController = {
 
             const category = (req.body && req.body.category) || req.query.category;
             const galleryType = (req.body && req.body.galleryType) || req.query.galleryType;
-            if (category) query.category = category;
+            if (category) {
+                query.category = { $regex: new RegExp(`^${category}$`, "i") };
+            }
             
             if (galleryType === 'sent') {
                 // Sent files have no photographerId or it's null (uploaded by client)

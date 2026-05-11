@@ -90,53 +90,80 @@ class BookingController {
 
             let filter = {};
 
+            // ─── Base Assignment Filter (Common for all statuses) ───
+            const myIdStr = myId.toString();
+            const assignmentFilter = {
+                $or: [
+                    { photographer_id: photographerId },
+                    { photographer_id: myIdStr },
+                    { photographerIds: { $in: [photographerId, myIdStr] } },
+                    { "hourlyPackages.assignedPhotographers": { $in: [photographerId, myIdStr] } },
+                    { "hourlyPackages.assignedVideographers": { $in: [photographerId, myIdStr] } },
+                    { "hourlyPackages.assignedEditors": { $in: [photographerId, myIdStr] } },
+                    { "hourlyPackages.assignedLighting": { $in: [photographerId, myIdStr] } },
+                    { "hourlyPackages.invitedPhotographers": { $in: [photographerId, myIdStr] } },
+                    { "hourlyPackages.invitedVideographers": { $in: [photographerId, myIdStr] } },
+                    { "editingPackages.assignedPhotographers": { $in: [photographerId, myIdStr] } },
+                    { "editingPackages.assignedVideographers": { $in: [photographerId, myIdStr] } },
+                    { "editingPackages.assignedEditors": { $in: [photographerId, myIdStr] } },
+                    { "editingPackages.assignedLighting": { $in: [photographerId, myIdStr] } },
+                    { "editingPackages.invitedEditors": { $in: [photographerId, myIdStr] } },
+                    { "editingPackages.invitedPhotographers": { $in: [photographerId, myIdStr] } }
+                ]
+            };
+
             if (statusToFilter === "pending") {
-                // Shows bookings where I am invited via photographerIds OR specifically assigned to me as pending
                 filter = {
-                    $or: [
-                        { photographerIds: { $in: [photographerId] } },
-                        { photographer_id: photographerId, bookingStatus: "pending" }
+                    $and: [
+                        assignmentFilter,
+                        { bookingStatus: "pending" }
                     ]
                 };
             } else if (statusToFilter === "accepted") {
-                // Shows bookings specifically assigned to me and explicitly accepted/confirmed
-                // Includes TODAY and FUTURE dates
                 const now = new Date();
                 const todayStr = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' }).format(now);
                 const todayStartIST = new Date(`${todayStr}T00:00:00.000+05:30`);
 
                 filter = {
-                    photographer_id: photographerId,
-                    bookingStatus: "accepted",
-                    status: { $nin: ["completed", "canceled"] },
-                    // Removed payment restriction to show all accepted work
-                    $or: [
-                        { bookingDate: { $gte: todayStartIST } },
-                        { startDate: { $gte: todayStr } }
+                    $and: [
+                        assignmentFilter,
+                        { 
+                            bookingStatus: "accepted",
+                            status: { $nin: ["completed", "canceled"] },
+                            $or: [
+                                { bookingDate: { $gte: todayStartIST } },
+                                { startDate: { $gte: todayStr } }
+                            ]
+                        }
                     ]
                 };
             } else {
-                // For other statuses (completed, rejected), strictly my assigned bookings
-                filter.photographer_id = photographerId;
+                filter = {
+                    $and: [
+                        assignmentFilter
+                    ]
+                };
                 if (statusToFilter) {
                     const statuses = statusToFilter.split(",").filter(s => s);
                     if (statuses.includes("completed")) {
                         const todayStr = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' }).format(new Date());
                         const todayStartIST = new Date(`${todayStr}T00:00:00.000+05:30`);
 
-                        // Match completed OR past dates, but never canceled
-                        filter.status = { $ne: "canceled" };
-                        filter.$or = [
-                            { status: "completed" },
-                            { bookingDate: { $lt: todayStartIST } },
-                            { startDate: { $lt: todayStr } }
-                        ];
+                        filter.$and.push({
+                            status: { $ne: "canceled" },
+                            bookingStatus: "accepted", // Only work that was actually accepted belongs in history
+                            $or: [
+                                { status: "completed" },
+                                { bookingDate: { $lt: todayStartIST } },
+                                { startDate: { $lt: todayStr } }
+                            ]
+                        });
                         const otherStatuses = statuses.filter(s => s !== "completed");
                         if (otherStatuses.length > 0) {
-                            filter.bookingStatus = { $in: otherStatuses };
+                            filter.$and.push({ bookingStatus: { $in: otherStatuses } });
                         }
                     } else {
-                        filter.bookingStatus = statuses.length > 1 ? { $in: statuses } : statuses[0];
+                        filter.$and.push({ bookingStatus: statuses.length > 1 ? { $in: statuses } : statuses[0] });
                     }
                 }
             }
@@ -250,14 +277,41 @@ class BookingController {
 
                 // If it's already assigned and has a stored amount, use it.
                 // Otherwise calculate it on the fly for this viewing photographer.
+                // ALWAYS show ONLY the photographer's share (commission payout)
+                // If photographerAmount is already stored and seems correct, use it.
+                // Otherwise, calculate it based on this photographer's commission rate.
                 let displayAmount = booking.photographerAmount;
-                const isInvited = booking.photographerIds && booking.photographerIds.length > 0;
-                if (!displayAmount || (isInvited && !booking.photographer_id)) {
-                    displayAmount = Math.round(booking.totalAmount * (1 - (myComm || 0) / 100));
+                const calculatedShare = Math.round(booking.totalAmount * (1 - (myComm || 0) / 100));
+
+                // If stored amount is missing OR it's equal to total amount (meaning total budget was stored instead of share),
+                // then use the calculated share.
+                if (!displayAmount || displayAmount === booking.totalAmount) {
+                    displayAmount = calculatedShare;
                 }
 
                 // Construct Venue if address is missing
                 const displayAddress = booking.address || booking.location || ""
+
+                // For hourly/editing bookings, identify the specific plan assigned to THIS photographer
+                let assignedHours = booking.hours || 0;
+                const isHourly = booking.serviceCategory === 'hourly';
+                const isEditing = booking.serviceCategory === 'editing';
+                const targetPkgs = isHourly ? booking.hourlyPackages : (isEditing ? booking.editingPackages : []);
+
+                if (targetPkgs?.length > 0) {
+                    const myIdStr = photographerId.toString();
+                    const myPackage = targetPkgs.find(pkg => 
+                        pkg.assignedPhotographers?.some(id => id.toString() === myIdStr) ||
+                        pkg.assignedVideographers?.some(id => id.toString() === myIdStr) ||
+                        pkg.assignedEditors?.some(id => id.toString() === myIdStr) ||
+                        pkg.assignedLighting?.some(id => id.toString() === myIdStr) ||
+                        pkg.invitedPhotographers?.some(id => id.toString() === myIdStr) ||
+                        pkg.invitedVideographers?.some(id => id.toString() === myIdStr)
+                    );
+                    if (myPackage) {
+                        assignedHours = myPackage.hours || myPackage.subCategoryName || myPackage.category || assignedHours;
+                    }
+                }
 
                 return {
                     _id: booking._id,
@@ -275,7 +329,7 @@ class BookingController {
                     lat: booking.lat || null,
                     lng: booking.lng || null,
                     address: displayAddress,
-                    status: booking.status,
+                    status: booking.bookingStatus === "accepted" ? "accepted" : (booking.status || "pending"),
                     bookingStatus: booking.bookingStatus,
                     galleryStatus: booking.galleryStatus || "Upload Pending",
                     photographerAmount: displayAmount,
@@ -283,8 +337,10 @@ class BookingController {
                     totalAmount: booking.totalAmount, // Optional
                     daysLeft: this.calculateDaysLeft(booking.startDate || booking.eventDate || booking.bookingDate),
                     daysRemaining: this.calculateDaysLeft(booking.startDate || booking.eventDate || booking.bookingDate),
-                    hours: booking.hours || booking.hourlyPackages?.[0]?.subCategoryName || 0,
-                    serviceCategory: booking.serviceCategory
+                    hours: assignedHours,
+                    serviceCategory: booking.serviceCategory,
+                    hourlyPackages: booking.hourlyPackages || [],
+                    editingPackages: booking.editingPackages || []
                 };
             });
 
@@ -312,12 +368,29 @@ class BookingController {
             }
             const photographerId = new mongoose.Types.ObjectId(myId);
 
+            const myIdStr = myId.toString();
             const filter = {
-                photographer_id: photographerId,
-                bookingStatus: { $ne: "pending" }
+                $and: [
+                    {
+                        $or: [
+                            { photographer_id: photographerId },
+                            { photographer_id: myIdStr },
+                            { photographerIds: { $in: [photographerId, myIdStr] } },
+                            { "hourlyPackages.assignedPhotographers": { $in: [photographerId, myIdStr] } },
+                            { "hourlyPackages.assignedVideographers": { $in: [photographerId, myIdStr] } },
+                            { "hourlyPackages.assignedEditors": { $in: [photographerId, myIdStr] } },
+                            { "hourlyPackages.assignedLighting": { $in: [photographerId, myIdStr] } },
+                            { "editingPackages.assignedPhotographers": { $in: [photographerId, myIdStr] } },
+                            { "editingPackages.assignedVideographers": { $in: [photographerId, myIdStr] } },
+                            { "editingPackages.assignedEditors": { $in: [photographerId, myIdStr] } },
+                            { "editingPackages.assignedLighting": { $in: [photographerId, myIdStr] } }
+                        ]
+                    },
+                    { bookingStatus: { $ne: "pending" } }
+                ]
             };
 
-            const [bookings, total] = await Promise.all([
+            const [bookings, total, me, settings] = await Promise.all([
                 ServiceBooking.find(filter)
                     .select("-gallery -images")
                     .populate("client_id", "username email mobileNumber avatar city")
@@ -328,10 +401,38 @@ class BookingController {
                     .skip(skip)
                     .limit(limit),
                 ServiceBooking.countDocuments(filter),
+                Photographer.findById(myId),
+                PlatformSettings.findOne({ type: "commissions" })
             ]);
+            const global = settings || { initio: 0, elite: 0, pro: 0 };
+            const myLevel = me?.professionalDetails?.expertiseLevel || "INITIO";
+            let myComm = me?.commissionPercentage;
+            if (!myComm) {
+                if (myLevel === "INITIO") myComm = global.initio;
+                else if (myLevel === "ELITE") myComm = global.elite;
+                else if (myLevel === "PRO") myComm = global.pro;
+            }
 
             const formattedBookings = bookings.map(booking => {
                 const ist = this.formatIST(booking.bookingDate, booking.startDate || booking.eventDate);
+
+                // For hourly bookings, identify the specific plan hours assigned to THIS photographer
+                let assignedHours = booking.hours || 0;
+                if (booking.serviceCategory === 'hourly' && booking.hourlyPackages?.length > 0) {
+                    const myIdStr = photographerId.toString();
+                    const myPackage = booking.hourlyPackages.find(pkg => 
+                        pkg.assignedPhotographers?.some(id => id.toString() === myIdStr) ||
+                        pkg.assignedVideographers?.some(id => id.toString() === myIdStr) ||
+                        pkg.assignedEditors?.some(id => id.toString() === myIdStr) ||
+                        pkg.assignedLighting?.some(id => id.toString() === myIdStr) ||
+                        pkg.invitedPhotographers?.some(id => id.toString() === myIdStr) ||
+                        pkg.invitedVideographers?.some(id => id.toString() === myIdStr)
+                    );
+                    if (myPackage) {
+                        assignedHours = myPackage.hours || myPackage.subCategoryName || assignedHours;
+                    }
+                }
+
                 return {
                     _id: booking._id,
                     bookingId: booking.veroaBookingId,
@@ -345,14 +446,23 @@ class BookingController {
                     toDate: this.formatDMY(booking.endDate || booking.startDate || booking.eventDate || booking.bookingDate),
                     city: booking.city,
                     address: booking.address || booking.location || "",
-                    status: booking.status,
+                    status: booking.bookingStatus === "accepted" ? "accepted" : (booking.status || "pending"),
                     bookingStatus: booking.bookingStatus,
                     galleryStatus: booking.galleryStatus || "Upload Pending",
-                    photographerAmount: booking.photographerAmount || 0,
-                    budget: booking.photographerAmount || 0,
+                    // ALWAYS show ONLY the photographer's share (commission payout)
+                    photographerAmount: (booking.photographerAmount && booking.photographerAmount !== booking.totalAmount) 
+                        ? booking.photographerAmount 
+                        : Math.round(booking.totalAmount * (1 - (myComm || 0) / 100)),
+                    budget: (booking.photographerAmount && booking.photographerAmount !== booking.totalAmount) 
+                        ? booking.photographerAmount 
+                        : Math.round(booking.totalAmount * (1 - (myComm || 0) / 100)),
                     totalAmount: booking.totalAmount,
                     daysLeft: this.calculateDaysLeft(booking.startDate || booking.eventDate || booking.bookingDate),
-                    daysRemaining: this.calculateDaysLeft(booking.startDate || booking.eventDate || booking.bookingDate)
+                    daysRemaining: this.calculateDaysLeft(booking.startDate || booking.eventDate || booking.bookingDate),
+                    hours: assignedHours,
+                    serviceCategory: booking.serviceCategory,
+                    hourlyPackages: booking.hourlyPackages || [],
+                    editingPackages: booking.editingPackages || []
                 };
             });
 

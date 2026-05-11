@@ -407,6 +407,25 @@ class ServiceBookingController {
         ServiceBooking.countDocuments(filter),
       ]);
 
+      // ─── Resolve Names for Hourly Packages ───
+      const allStaffIds = new Set();
+      items.forEach(booking => {
+        if (booking.hourlyPackages) {
+          booking.hourlyPackages.forEach(pkg => {
+            (pkg.assignedPhotographers || []).forEach(id => allStaffIds.add(id.toString()));
+            (pkg.assignedVideographers || []).forEach(id => allStaffIds.add(id.toString()));
+            (pkg.assignedEditors || []).forEach(id => allStaffIds.add(id.toString()));
+            (pkg.assignedLighting || []).forEach(id => allStaffIds.add(id.toString()));
+          });
+        }
+      });
+
+      const staffNamesMap = {};
+      if (allStaffIds.size > 0) {
+        const staffDocs = await Photographer.find({ _id: { $in: Array.from(allStaffIds) } }, "basicInfo.fullName").lean();
+        staffDocs.forEach(s => staffNamesMap[s._id.toString()] = s.basicInfo?.fullName || "Unknown");
+      }
+
       const formattedItems = items.map(booking => {
         const ist = booking.ist_bookingDate || "N/A";
         const [d, t] = ist.includes(", ") ? ist.split(", ") : [ist, "N/A"];
@@ -414,6 +433,38 @@ class ServiceBookingController {
 
         // Construct Venue if address is missing
         const displayAddress = booking.address || booking.location || ""
+
+        // Process hourly packages for this booking
+        let hourlyPackages = [];
+        if (booking.hourlyPackages && booking.hourlyPackages.length > 0) {
+          hourlyPackages = booking.hourlyPackages.map(pkg => ({
+            ...pkg,
+            category: pkg.category ? (pkg.category.charAt(0).toUpperCase() + pkg.category.slice(1)) : "Standard",
+            hours: pkg.hours || (booking.hours ? `${booking.hours} Hours` : "N/A"),
+            assignedPhotographerNames: (pkg.assignedPhotographers || []).map(id => staffNamesMap[id.toString()] || "Unknown"),
+            assignedVideographerNames: (pkg.assignedVideographers || []).map(id => staffNamesMap[id.toString()] || "Unknown"),
+            assignedEditorNames: (pkg.assignedEditors || []).map(id => staffNamesMap[id.toString()] || "Unknown"),
+            assignedLightingNames: (pkg.assignedLighting || []).map(id => staffNamesMap[id.toString()] || "Unknown")
+          }));
+        } else if (booking.cartId && booking.cartId.items) {
+          // Fallback to cart items if hourlyPackages not generated yet
+          const packagesMap = {};
+          booking.cartId.items.forEach(item => {
+            let duration = "N/A";
+            const match = item.name.match(/\((.*?)\)/);
+            if (match) duration = match[1];
+            else if (booking.hours) duration = `${booking.hours} Hours`;
+            const cat = item.subCategoryType ? (item.subCategoryType.charAt(0).toUpperCase() + item.subCategoryType.slice(1)) : "Standard";
+            const key = `${duration}-${cat}`;
+            if (!packagesMap[key]) packagesMap[key] = { hours: duration, category: cat, services: [] };
+            packagesMap[key].services.push({
+              name: item.name.split(" (")[0].trim(),
+              qty: item.quantity,
+              price: item.price * item.quantity
+            });
+          });
+          hourlyPackages = Object.values(packagesMap);
+        }
 
         return {
           bookingId: booking._id,
@@ -444,6 +495,7 @@ class ServiceBookingController {
           galleryStatus: booking.galleryStatus || "Upload Pending",
           subCategoryName: (booking.cartId?.items?.[0]?.subCategoryName || booking.editingbookings?.[0]?.subCategoryName || booking.editingPackages?.[0]?.subCategoryName || booking.hourlyPackages?.[0]?.subCategoryName || ""),
           subCategoryType: (booking.cartId?.items?.[0]?.subCategoryType || booking.editingbookings?.[0]?.subCategoryType || booking.editingbookings?.[0]?.category || booking.editingPackages?.[0]?.subCategoryType || booking.editingPackages?.[0]?.category || booking.hourlyPackages?.[0]?.subCategoryType || booking.hourlyPackages?.[0]?.category || ""),
+          hourlyPackages: hourlyPackages
         };
       });
 
@@ -1031,7 +1083,7 @@ class ServiceBookingController {
    */
   async assignPhotographer(req, res, next) {
     try {
-      const { photographerId, bookingId, photographerIds, _id, packageIndex, roleSelections } = req.body;
+      const { photographerId, bookingId, photographerIds, _id, roleSelections } = req.body;
       const finalBookingIdRaw = bookingId || _id || req.params.id;
       let finalBookingId = finalBookingIdRaw;
 
@@ -1049,38 +1101,80 @@ class ServiceBookingController {
       const updateData = {};
       let isDirectAssign = false;
 
-      // ─── Planwise Assignment (Hourly Packages) ──────────────────────────
-      if (packageIndex !== undefined && roleSelections) {
-        // If hourlyPackages is empty, fallback to building it from cart items (Legacy migration)
-        if (!booking.hourlyPackages || booking.hourlyPackages.length === 0) {
-          const packagesMap = {};
-          if (booking.cartId && booking.cartId.items) {
-            booking.cartId.items.forEach(item => {
-              let duration = "N/A";
-              const match = item.name.match(/\((.*?)\)/);
-              if (match) duration = match[1];
-              else if (booking.hours) duration = `${booking.hours} Hours`;
+      // ─── Planwise Assignment (Hourly/Editing Packages) ──────────────────────────
+      const { packageIndex: reqIndex, packageId, planType } = req.body;
+      let packageIndex = reqIndex;
 
-              const cat = item.subCategoryType ? (item.subCategoryType.charAt(0).toUpperCase() + item.subCategoryType.slice(1)) : "Standard";
-              const key = `${duration}-${cat}`;
-              if (!packagesMap[key]) {
-                packagesMap[key] = { hours: duration, category: cat, services: [] };
-              }
-              const cleanName = item.name.split(" (")[0].trim();
-              packagesMap[key].services.push({
-                name: cleanName,
-                qty: item.quantity,
-                price: item.price * item.quantity
+      if (packageIndex !== undefined && roleSelections) {
+        const isEditing = booking.serviceCategory === "editing";
+        let targetField = isEditing ? "editingPackages" : "hourlyPackages";
+
+        // If packageIndex is not provided but packageId is, try to find it
+        if (packageIndex === undefined && packageId) {
+            const pkgs = booking[targetField] || [];
+            const idx = pkgs.findIndex(p => 
+                (p.packageId?.toString() === packageId.toString()) || 
+                (p._id?.toString() === packageId.toString()) ||
+                (p.planId?.toString() === packageId.toString()) ||
+                (p.category?.toLowerCase() === planType?.toLowerCase())
+            );
+            if (idx !== -1) packageIndex = idx;
+        }
+
+        // Migration/Initialization: If target array is empty, build it from cart items
+        if (!booking[targetField] || booking[targetField].length === 0) {
+          if (booking.cartId && booking.cartId.items) {
+            if (isEditing) {
+              // ─── Build Editing Packages ───
+              const editingItems = booking.cartId.items.filter(item => 
+                (item.subCategoryName || "").toLowerCase() === "editing" ||
+                (item.category || "").toLowerCase() === "editing"
+              );
+              booking.editingPackages = editingItems.map(item => ({
+                planId: item.planId,
+                planName: item.name,
+                category: item.subCategoryType || (item.name.toLowerCase().includes("premium") ? "premium" : "standard"),
+                price: item.price,
+                numberOfVideos: item.quantity,
+                assignedPhotographers: [],
+                assignedVideographers: [],
+                assignedEditors: [],
+                assignedLighting: []
+              }));
+            } else {
+              // ─── Build Hourly Packages ───
+              const packagesMap = {};
+              booking.cartId.items.forEach(item => {
+                let duration = "N/A";
+                const match = item.name.match(/\((.*?)\)/);
+                if (match) duration = match[1];
+                else if (booking.hours) duration = `${booking.hours} Hours`;
+
+                const cat = item.subCategoryType ? (item.subCategoryType.charAt(0).toUpperCase() + item.subCategoryType.slice(1)) : "Standard";
+                const key = `${duration}-${cat}`;
+                if (!packagesMap[key]) {
+                  packagesMap[key] = { hours: duration, category: cat, services: [] };
+                }
+                const cleanName = item.name.split(" (")[0].trim();
+                packagesMap[key].services.push({
+                  name: cleanName,
+                  qty: item.quantity,
+                  price: item.price * item.quantity
+                });
               });
-            });
-            Object.values(packagesMap).forEach(pkg => {
-              pkg.subTotal = pkg.services.reduce((sum, s) => sum + (s.price || 0), 0);
-            });
-            booking.hourlyPackages = Object.values(packagesMap);
+              Object.values(packagesMap).forEach(pkg => {
+                pkg.subTotal = pkg.services.reduce((sum, s) => sum + (s.price || 0), 0);
+                pkg.assignedPhotographers = [];
+                pkg.assignedVideographers = [];
+                pkg.assignedEditors = [];
+                pkg.assignedLighting = [];
+              });
+              booking.hourlyPackages = Object.values(packagesMap);
+            }
           }
         }
 
-        const pkg = booking.hourlyPackages && booking.hourlyPackages[packageIndex];
+        const pkg = booking[targetField] && booking[targetField][packageIndex];
         if (pkg) {
           // 1. Normalize roleSelections keys to lowercase for consistent matching
           const normalizedSelections = {};
@@ -1098,7 +1192,7 @@ class ServiceBookingController {
             // 2. Merge existing assignments with new selections for Direct Assignment
             const mergeRole = (existing = [], incoming = []) => {
               const set = new Set([...existing.map(id => id.toString()), ...incoming.map(id => id.toString())]);
-              return Array.from(set);
+              return Array.from(set).map(id => new mongoose.Types.ObjectId(id));
             };
 
             pkg.assignedPhotographers = mergeRole(pkg.assignedPhotographers || [], normalizedSelections.photographer || []);
@@ -1115,14 +1209,26 @@ class ServiceBookingController {
           } 
           else if (actionType === 'request') {
             isDirectAssign = false;
-            // For Request/Broadcast, we put everyone in the top-level photographerIds
-            // but do NOT update the plan-wise assigned arrays.
-            const allSelectedIds = new Set();
+            // For Request/Broadcast, we MERGE everyone in the top-level photographerIds
+            // to avoid removing existing assigned/invited photographers.
+            const allSelectedIds = new Set(booking.photographerIds?.map(id => id.toString()) || []);
             Object.values(roleSelections).forEach(ids => {
               if (Array.isArray(ids)) ids.forEach(id => allSelectedIds.add(id.toString()));
             });
-            updateData.photographerIds = Array.from(allSelectedIds);
-            updateData.photographer_id = null; // Clear primary if we are requesting multiple
+            updateData.photographerIds = Array.from(allSelectedIds).map(id => new mongoose.Types.ObjectId(id));
+
+            // Also record invitations at the plan level so the photographer knows WHICH plan they are invited for
+            const roleIds = (normalizedSelections.editor || normalizedSelections.photographer || []).map(id => new mongoose.Types.ObjectId(id));
+            if (isEditing) {
+              pkg.invitedEditors = Array.from(new Set([...(pkg.invitedEditors || []).map(id => id.toString()), ...roleIds.map(id => id.toString())])).map(id => new mongoose.Types.ObjectId(id));
+            } else {
+              pkg.invitedPhotographers = Array.from(new Set([...(pkg.invitedPhotographers || []).map(id => id.toString()), ...roleIds.map(id => id.toString())])).map(id => new mongoose.Types.ObjectId(id));
+            }
+            
+            // Do NOT clear photographer_id if it's already set (somebody has already accepted)
+            if (booking.photographer_id) {
+              updateData.photographer_id = booking.photographer_id;
+            }
           }
 
           if (isDirectAssign) {
@@ -1133,8 +1239,22 @@ class ServiceBookingController {
               updateData.photographer_id = pkg.assignedPhotographers[0];
             }
           } else {
-            // If already accepted, keep it accepted
-            if (booking.bookingStatus === "accepted") {
+            // If already accepted by anyone OR someone is already assigned, keep it accepted
+            const hasAssigned = booking.photographer_id || 
+              (booking.hourlyPackages?.some(p => 
+                (p.assignedPhotographers?.length > 0) || 
+                (p.assignedVideographers?.length > 0) || 
+                (p.assignedEditors?.length > 0) || 
+                (p.assignedLighting?.length > 0)
+              )) ||
+              (booking.editingPackages?.some(p => 
+                (p.assignedPhotographers?.length > 0) || 
+                (p.assignedVideographers?.length > 0) || 
+                (p.assignedEditors?.length > 0) || 
+                (p.assignedLighting?.length > 0)
+              ));
+
+            if (booking.bookingStatus === "accepted" || hasAssigned) {
               updateData.bookingStatus = "accepted";
               updateData.status = "confirmed";
             } else {
@@ -1143,8 +1263,8 @@ class ServiceBookingController {
             }
           }
 
-          updateData.hourlyPackages = booking.hourlyPackages;
-          booking.markModified('hourlyPackages');
+          updateData[targetField] = booking[targetField];
+          booking.markModified(targetField);
         }
       }
       // ─── Legacy/Generic Assignment ────────────────────────────────────────
@@ -2083,6 +2203,11 @@ class ServiceBookingController {
           bookingStatus: booking.status || "pending",
           videoPackages: videoPackages,
           totalAmount: booking.totalAmount || calculatedTotal || 0,
+          eventType: booking.service_id?.serviceName || booking.eventType || "Editing",
+          location: booking.location || eventAddress || "N/A",
+          startDate: booking.startDate || booking.date || booking.eventDate,
+          endDate: booking.endDate || booking.startDate || booking.date || booking.eventDate,
+          address: eventAddress,
           media: await (async () => {
             const keys = (booking.media || []).filter(m => m && !m.startsWith("http"));
             const urls = (booking.media || []).filter(m => m && m.startsWith("http"));
