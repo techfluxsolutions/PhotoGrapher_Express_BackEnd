@@ -123,6 +123,8 @@ const allowedOrigins = [
   "https://dev.veroastudioz.com",
   "https://crew.veroastudioz.com",
   "https://dev-api.veroastudioz.com",
+  "https://v2.veroastudioz.com",
+  "https://v2-api.veroastudioz.com",
   "https://veroastudioz.com",
   "https://superadmin-9xk2lmq7zap3rt8.veroastudioz.com",
   "https://photographer-admin.vercel.app",
@@ -151,6 +153,9 @@ app.use(
       "Accept",
       "X-Requested-With",
       "Origin",
+      "Sec-Ch-Ua",
+      "Sec-Ch-Ua-Mobile",
+      "Sec-Ch-Ua-Platform",
     ],
   })
 );
