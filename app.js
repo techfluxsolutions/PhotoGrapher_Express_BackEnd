@@ -50,13 +50,58 @@ initSocket(server);
 app.use(morgan("combined", { stream: { write: (message) => logger.info(message.trim()) } }));
 
 // ==========================================
-// 2) SECURITY MIDDLEWARE
+// 2) SECURITY & CORS
 // ==========================================
+const allowedOrigins = [
+  "http://localhost:3000",
+  "http://localhost:3001",
+  "http://localhost:3002",
+  "http://localhost:5173",
+  "https://dev.veroastudioz.com",
+  "https://crew.veroastudioz.com",
+  "https://dev-api.veroastudioz.com",
+  "https://v2.veroastudioz.com",
+  "https://v2-api.veroastudioz.com",
+  "https://veroastudioz.com",
+  "https://superadmin-9xk2lmq7zap3rt8.veroastudioz.com",
+  "https://photographer-admin.vercel.app",
+  "https://photo-grapher-user-website.vercel.app",
+  "https://user-photographer.techfluxsolutions.com",
+  "https://admin-photographer.techfluxsolutions.com",
+  "https://photographer-veroa.vercel.app"
+];
+
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        console.error("CORS blocked origin:", origin);
+        callback(new Error("Not allowed by CORS"));
+      }
+    },
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: [
+      "Content-Type",
+      "Authorization",
+      "Accept",
+      "X-Requested-With",
+      "Origin",
+      "Sec-Ch-Ua",
+      "Sec-Ch-Ua-Mobile",
+      "Sec-Ch-Ua-Platform",
+    ],
+  })
+);
+
 // Set security HTTP headers
 app.use(helmet({
   crossOriginResourcePolicy: { policy: "cross-origin" } // Required if serving assets across origins
 }));
 photographerVerificationCron();
+
 // Limit requests from same API (prevent brute force / DDoS)
 const limiter = rateLimit({
   max: 1500, // Generous limit for APIs
@@ -114,51 +159,6 @@ app.use((req, res, next) => {
 app.use(cookieParser());
 app.use("/uploads", express.static(path.resolve("uploads")));
 app.use("/assests", express.static(path.resolve("assests")));
-
-const allowedOrigins = [
-  "http://localhost:3000",
-  "http://localhost:3001",
-  "http://localhost:3002",
-  "http://localhost:5173",
-  "https://dev.veroastudioz.com",
-  "https://crew.veroastudioz.com",
-  "https://dev-api.veroastudioz.com",
-  "https://v2.veroastudioz.com",
-  "https://v2-api.veroastudioz.com",
-  "https://veroastudioz.com",
-  "https://superadmin-9xk2lmq7zap3rt8.veroastudioz.com",
-  "https://photographer-admin.vercel.app",
-  "https://photo-grapher-user-website.vercel.app",
-  "https://user-photographer.techfluxsolutions.com",
-  "https://admin-photographer.techfluxsolutions.com",
-  "https://photographer-veroa.vercel.app"
-];
-
-app.use(
-  cors({
-    origin: function (origin, callback) {
-      if (!origin) return callback(null, true);
-      if (allowedOrigins.includes(origin)) {
-        return callback(null, true);
-      } else {
-        console.log("CORS blocked origin:", origin);
-        return callback(new Error("Not allowed by CORS"));
-      }
-    },
-    credentials: true,
-    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-    allowedHeaders: [
-      "Content-Type",
-      "Authorization",
-      "Accept",
-      "X-Requested-With",
-      "Origin",
-      "Sec-Ch-Ua",
-      "Sec-Ch-Ua-Mobile",
-      "Sec-Ch-Ua-Platform",
-    ],
-  })
-);
 
 // --- System Monitoring Route --
 // Health check endpoint for uptime monitoring
