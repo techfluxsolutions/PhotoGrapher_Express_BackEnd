@@ -413,10 +413,12 @@ export const uploadController = {
             };
 
             if (category) {
-                if (category.toLowerCase() === "standard") {
+                const lowerCat = category.toLowerCase();
+                if (lowerCat === "standard" || lowerCat === "user media") {
                     query.$and.push({
                         $or: [
-                            { category: { $regex: new RegExp(`^${category}$`, "i") } },
+                            { category: { $regex: new RegExp(`^User Media$`, "i") } },
+                            { category: { $regex: new RegExp(`^Standard$`, "i") } },
                             { category: { $exists: false } },
                             { category: null }
                         ]

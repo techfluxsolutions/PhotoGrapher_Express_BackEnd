@@ -127,6 +127,18 @@ class SidebarIconController {
                     activeIcon: "/assests/sidebar/subscribers-active.png",
                     inactiveIcon: "/assests/sidebar/subscribers-inactive.png",
                     order: 15
+                },
+                {
+                    name: "Gallery Plan",
+                    activeIcon: "/assests/sidebar/galleryPlan-active.png",
+                    inactiveIcon: "/assests/sidebar/galleryPlan-inactive.png",
+                    order: 16
+                },
+                {
+                    name: "Promocode",
+                    activeIcon: "/assests/sidebar/promocode-active.png",
+                    inactiveIcon: "/assests/sidebar/promocode-inactive.png",
+                    order: 17
                 }
             ];
 

@@ -96,27 +96,44 @@ class BookingController {
                 $or: [
                     { photographer_id: photographerId },
                     { photographer_id: myIdStr },
-                    { photographerIds: { $in: [photographerId, myIdStr] } },
                     { "hourlyPackages.assignedPhotographers": { $in: [photographerId, myIdStr] } },
                     { "hourlyPackages.assignedVideographers": { $in: [photographerId, myIdStr] } },
                     { "hourlyPackages.assignedEditors": { $in: [photographerId, myIdStr] } },
                     { "hourlyPackages.assignedLighting": { $in: [photographerId, myIdStr] } },
-                    { "hourlyPackages.invitedPhotographers": { $in: [photographerId, myIdStr] } },
-                    { "hourlyPackages.invitedVideographers": { $in: [photographerId, myIdStr] } },
                     { "editingPackages.assignedPhotographers": { $in: [photographerId, myIdStr] } },
                     { "editingPackages.assignedVideographers": { $in: [photographerId, myIdStr] } },
                     { "editingPackages.assignedEditors": { $in: [photographerId, myIdStr] } },
-                    { "editingPackages.assignedLighting": { $in: [photographerId, myIdStr] } },
-                    { "editingPackages.invitedEditors": { $in: [photographerId, myIdStr] } },
-                    { "editingPackages.invitedPhotographers": { $in: [photographerId, myIdStr] } }
+                    { "editingPackages.assignedLighting": { $in: [photographerId, myIdStr] } }
                 ]
             };
 
             if (statusToFilter === "pending") {
                 filter = {
                     $and: [
-                        assignmentFilter,
-                        { bookingStatus: "pending" }
+                        {
+                            $or: [
+                                { photographerIds: { $in: [photographerId, myIdStr] } },
+                                { "hourlyPackages.invitedPhotographers": { $in: [photographerId, myIdStr] } },
+                                { "hourlyPackages.invitedVideographers": { $in: [photographerId, myIdStr] } },
+                                { "editingPackages.invitedEditors": { $in: [photographerId, myIdStr] } },
+                                { "editingPackages.invitedPhotographers": { $in: [photographerId, myIdStr] } }
+                            ]
+                        },
+                        {
+                            // EXCLUDE if already assigned to any role in this booking
+                            $nor: [
+                                { photographer_id: photographerId },
+                                { photographer_id: myIdStr },
+                                { "hourlyPackages.assignedPhotographers": { $in: [photographerId, myIdStr] } },
+                                { "hourlyPackages.assignedVideographers": { $in: [photographerId, myIdStr] } },
+                                { "hourlyPackages.assignedEditors": { $in: [photographerId, myIdStr] } },
+                                { "hourlyPackages.assignedLighting": { $in: [photographerId, myIdStr] } },
+                                { "editingPackages.assignedPhotographers": { $in: [photographerId, myIdStr] } },
+                                { "editingPackages.assignedVideographers": { $in: [photographerId, myIdStr] } },
+                                { "editingPackages.assignedEditors": { $in: [photographerId, myIdStr] } },
+                                { "editingPackages.assignedLighting": { $in: [photographerId, myIdStr] } }
+                            ]
+                        }
                     ]
                 };
             } else if (statusToFilter === "accepted") {
@@ -373,9 +390,7 @@ class BookingController {
                 $and: [
                     {
                         $or: [
-                            { photographer_id: photographerId },
                             { photographer_id: myIdStr },
-                            { photographerIds: { $in: [photographerId, myIdStr] } },
                             { "hourlyPackages.assignedPhotographers": { $in: [photographerId, myIdStr] } },
                             { "hourlyPackages.assignedVideographers": { $in: [photographerId, myIdStr] } },
                             { "hourlyPackages.assignedEditors": { $in: [photographerId, myIdStr] } },
