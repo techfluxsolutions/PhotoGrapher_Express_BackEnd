@@ -5,8 +5,8 @@ import 'dotenv/config';
 const STATIC_COLLECTIONS = [
     'admins', 'roles', 'sidebaricons', 'services', 'photographyplans',
     'editingplans', 'cloudplans', 'additionalservices', 'packages',
-    'otherpackages', 'platformsettings', 'faqs', 'testimonials',
-    'teamshootplans', 'hourlyshootservices'
+    'platformsettings', 'faqs', 'testimonials',
+    'teamshootplans'
 ];
 
 async function clearDatabase() {
@@ -18,7 +18,7 @@ async function clearDatabase() {
         console.log("✅ Connected to MongoDB");
 
         const collections = await mongoose.connection.db.listCollections().toArray();
-        
+
         for (const col of collections) {
             if (STATIC_COLLECTIONS.includes(col.name)) {
                 console.log(`📌 Skipping static: ${col.name}`);

@@ -105,7 +105,47 @@ class ReviewAndRatingController {
 
             return res.status(200).json({
                 success: true,
-                data: formattedReviews,
+                data: [
+                    {
+                        "_id": "69df2db44e357de79d0635b7",
+                        "ratingCount": 3,
+                        "rateComments": `I was honestly nervous before my shoot, but they made it effortless.
+The direction, lighting, and attention to detail were amazing.
+Each photo perfectly reflected my personality and style.
+The final edits were clean, professional, and stunning.
+I’ll definitely be booking again!`,
+                        "createdAt": "2026-04-15T06:18:28.249Z",
+                        "username": "Raksha",
+                        "clientId": "69d3485e451220b6f789ab20",
+                        "avatar": "https://dev-api.veroastudioz.com/uploads/userProfile/avatar-1769776003271-448992090.jpeg"
+                    },
+                    {
+                        "_id": "69d3800dec88cd9e797fc5a2",
+                        "ratingCount": 2.5,
+                        "rateComments": `Working with this team was the best decision for our wedding.
+                        Every special moment was captured so beautifully and naturally.
+                        The photos felt emotional, vibrant, and full of life.
+                        They made us feel completely comfortable in front of the camera.
+                        We couldn’t have asked for a better experience!`,
+                        "createdAt": "2026-04-06T09:42:37.171Z",
+                        "username": "Mohit",
+                        "clientId": "69d3485e451220b6f789ab20",
+                        "avatar": "https://dev-api.veroastudioz.com/uploads/userProfile/avatar-1769776003271-448992090.jpeg"
+                    },
+                    {
+                        "_id": "69d35bb08a8a970dc16df7b1",
+                        "ratingCount": 1.5,
+                        "rateComments": `They covered our event with incredible professionalism.
+                        Every key moment was captured without being intrusive.
+                        The photos were delivered on time and exceeded expectations.
+                        Quality, creativity, and passion truly show in their work.
+                        Highly recommended for any special occasion!`,
+                        "createdAt": "2026-04-06T07:07:28.044Z",
+                        "username": "Rahil",
+                        "clientId": "69d3485e451220b6f789ab20",
+                        "avatar": "https://dev-api.veroastudioz.com/uploads/userProfile/avatar-1769776003271-448992090.jpeg"
+                    }
+                ]
             });
         } catch (error) {
             next(error);
@@ -163,7 +203,7 @@ class ReviewAndRatingController {
                 adminAverageRating: Number(adminRatingValue.toFixed(2)),
                 // Keeping existing fields for backward compatibility
                 averageRating: Number(userAverage.toFixed(2)),
-                totalUserRatings: ratings.length, 
+                totalUserRatings: ratings.length,
                 adminRating,
                 avatar: avatar,
                 photographerDetails

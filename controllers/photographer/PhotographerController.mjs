@@ -874,6 +874,15 @@ class PhotographerController {
                 return res.status(200).json({ success: false, message: "Photographer not found" });
             }
 
+            // If the photographer is unverified (pending), delete them permanently
+            if (photographer.status === "pending") {
+                await Photographer.findByIdAndDelete(id);
+                return res.status(200).json({ 
+                    success: true, 
+                    message: "Unverified photographer deleted permanently" 
+                });
+            }
+
             // Message and Notification content
             const successMessage = "Photographer account successfully moved to unverified status. Data preserved.";
             const staticOtpNumbers = ["9322046187", "9325983803", "9096698947"];
