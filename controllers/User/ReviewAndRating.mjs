@@ -108,7 +108,7 @@ class ReviewAndRatingController {
                 data: [
                     {
                         "_id": "69df2db44e357de79d0635b7",
-                        "ratingCount": 3,
+                        "ratingCount": 4.5,
                         "rateComments": `I was honestly nervous before my shoot, but they made it effortless.
 The direction, lighting, and attention to detail were amazing.
 Each photo perfectly reflected my personality and style.
@@ -121,7 +121,7 @@ I’ll definitely be booking again!`,
                     },
                     {
                         "_id": "69d3800dec88cd9e797fc5a2",
-                        "ratingCount": 2.5,
+                        "ratingCount": 4,
                         "rateComments": `Working with this team was the best decision for our wedding.
                         Every special moment was captured so beautifully and naturally.
                         The photos felt emotional, vibrant, and full of life.
@@ -134,7 +134,7 @@ I’ll definitely be booking again!`,
                     },
                     {
                         "_id": "69d35bb08a8a970dc16df7b1",
-                        "ratingCount": 1.5,
+                        "ratingCount": 5,
                         "rateComments": `They covered our event with incredible professionalism.
                         Every key moment was captured without being intrusive.
                         The photos were delivered on time and exceeded expectations.
