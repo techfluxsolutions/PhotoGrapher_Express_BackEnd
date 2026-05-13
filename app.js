@@ -58,17 +58,15 @@ const allowedOrigins = [
   "http://localhost:3002",
   "http://localhost:5173",
   "https://dev.veroastudioz.com",
-  "https://crew.veroastudioz.com",
-  "https://dev-api.veroastudioz.com",
-  "https://v2.veroastudioz.com",
-  "https://v2-api.veroastudioz.com",
   "https://veroastudioz.com",
   "https://superadmin-9xk2lmq7zap3rt8.veroastudioz.com",
   "https://photographer-admin.vercel.app",
   "https://photo-grapher-user-website.vercel.app",
   "https://user-photographer.techfluxsolutions.com",
   "https://admin-photographer.techfluxsolutions.com",
-  "https://photographer-veroa.vercel.app"
+  "https://photographer-veroa.vercel.app",
+  "https://crew.veroastudioz.com",
+  "https://crew.veroastudioz.com"
 ];
 
 app.use(
