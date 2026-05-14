@@ -145,6 +145,7 @@ router.post("/uploads/complete", (req, res, next) => UploadController.completeUp
 
 // s3 
 
+router.post("/validate-files", uploadController.validateFiles);
 router.post("/start", uploadController.startUpload);
 router.post("/get-part-url", uploadController.getPartUploadUrl);
 router.post("/chunk", chunkUpload.single("chunk"), uploadController.uploadChunk);

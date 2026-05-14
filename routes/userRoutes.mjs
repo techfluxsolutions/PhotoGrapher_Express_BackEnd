@@ -222,6 +222,13 @@ router.post("/delete-media", (req, res, next) => uploadController.deleteSingleFi
 router.get("/datalinks", (req, res, next) => DataLinksController.getAll(req, res, next));
 router.get("/datalinks/:id", (req, res, next) => DataLinksController.getById(req, res, next));
 
+// --- Tickets ---
+router.post("/tickets", (req, res, next) => TicketController.create(req, res, next));
+router.get("/tickets", (req, res, next) => TicketController.getAll(req, res, next));
+router.get("/tickets/:id", (req, res, next) => TicketController.getById(req, res, next));
+router.put("/tickets/:id", (req, res, next) => TicketController.update(req, res, next));
+router.delete("/tickets/:id", (req, res, next) => TicketController.delete(req, res, next));
+
 // --- Cart ---
 router.post("/cart", (req, res, next) => CartController.addToCart(req, res, next));
 router.get("/getcart", (req, res, next) => CartController.getMyCart(req, res, next));

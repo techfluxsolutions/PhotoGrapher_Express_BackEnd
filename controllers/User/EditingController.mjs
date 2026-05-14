@@ -364,7 +364,7 @@ class EditingController {
                 bookingid,
                 clientId: userId,
                 veroaBookingId,
-                isPublished: true, // User uploads should be visible in gallery
+                isPublished: false, // Ensure work starts as private until published
                 category: category || 'standard'
             });
 

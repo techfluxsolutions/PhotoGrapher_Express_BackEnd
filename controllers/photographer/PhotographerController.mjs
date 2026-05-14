@@ -269,10 +269,10 @@ class PhotographerController {
     // Add Unverified Photographer (Status: Pending)
     async addUnverifiedPhotographer(req, res) {
         try {
-            const { name, email, phone, experience, city, startUpDate, signUpDate, photographerType } = req.body;
+            const { name, displayName, email, phone, experience, city, startUpDate, signUpDate, photographerType } = req.body;
 
             // 1. Mandatory Validations
-            const required = { name, email, phone, experience, city };
+            const required = { name, displayName, email, phone, experience, city };
             const missing = Object.keys(required).filter(k => !required[k]);
 
             if (missing.length > 0) {
@@ -313,6 +313,7 @@ class PhotographerController {
                 mobileNumber: phone,
                 basicInfo: {
                     fullName: name,
+                    displayName: displayName,
                     email: email,
                     phone: phone
                 },
@@ -334,6 +335,7 @@ class PhotographerController {
                 photographer: {
                     _id: newPhotographer._id,
                     name: newPhotographer.basicInfo.fullName,
+                    displayName: newPhotographer.basicInfo.displayName,
                     email: newPhotographer.email,
                     phone: newPhotographer.mobileNumber,
                     experience: newPhotographer.professionalDetails.yearsOfExperience,
@@ -356,10 +358,10 @@ class PhotographerController {
     async updateUnverifiedPhotographer(req, res) {
         try {
             const { id } = req.params;
-            const { name, email, phone, experience, city, startUpDate, signUpDate, photographerType } = req.body;
+            const { name, displayName, email, phone, experience, city, startUpDate, signUpDate, photographerType } = req.body;
 
             // 1. Mandatory Validations (If provided they cannot be empty)
-            const requiredFields = ['name', 'email', 'phone', 'experience', 'city'];
+            const requiredFields = ['name', 'displayName', 'email', 'phone', 'experience', 'city'];
             for (const field of requiredFields) {
                 if (req.body[field] === "") {
                     return res.status(200).json({ success: false, message: `${field} cannot be empty.` });
@@ -403,6 +405,7 @@ class PhotographerController {
 
             // Update fields manually as per the schema structure for unverified (pending) photographers
             if (name) photographer.basicInfo.fullName = name;
+            if (displayName) photographer.basicInfo.displayName = displayName;
             if (email) {
                 photographer.email = email;
                 photographer.basicInfo.email = email;
@@ -426,6 +429,7 @@ class PhotographerController {
                 photographer: {
                     _id: photographer._id,
                     name: photographer.basicInfo.fullName,
+                    displayName: photographer.basicInfo.displayName,
                     email: photographer.email,
                     phone: photographer.mobileNumber,
                     experience: photographer.professionalDetails.yearsOfExperience,
