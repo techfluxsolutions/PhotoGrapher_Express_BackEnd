@@ -7,6 +7,40 @@ import Gallery from "../models/Gallery.mjs";
 import archiver from "archiver";
 import mongoose from "mongoose";
 export const uploadController = {
+    // 0. Pre-validate files (before upload starts)
+    validateFiles: async (req, res) => {
+        try {
+            const { files } = req.body; // Array of { fileName, fileType }
+            
+            if (!files || !Array.isArray(files)) {
+                return res.status(400).json({ error: "files array is required." });
+            }
+
+            const rejections = [];
+            for (const file of files) {
+                const ext = file.fileName.split('.').pop().toLowerCase();
+                const isImage = file.fileType.startsWith('image/') || ["jpg", "jpeg", "png", "webp", "gif", "bmp"].includes(ext);
+                
+                if (isImage && !["jpg", "jpeg"].includes(ext)) {
+                    rejections.push(`For Images Only JPEG and JPG formats are allowed`);
+                }
+            }
+
+            if (rejections.length > 0) {
+                return res.status(400).json({
+                    success: false,
+                    error: rejections[0], // Return the first one as main error
+                    rejections
+                });
+            }
+
+            res.status(200).json({ success: true });
+        } catch (error) {
+            console.error("Validation error:", error);
+            res.status(500).json({ error: error.message });
+        }
+    },
+
     // 1. Init multipart upload
     /**
      * Start Upload - Intelligent Strategy Selection
@@ -20,6 +54,17 @@ export const uploadController = {
 
             if (!fileName || !fileType) {
                 return res.status(400).json({ error: "fileName and fileType are required." });
+            }
+
+            // Backend validation for file types (Init phase)
+            const ext = fileName.split('.').pop().toLowerCase();
+            const isImage = fileType.startsWith('image/') || ["jpg", "jpeg", "png", "webp", "gif", "bmp"].includes(ext);
+            const isVideo = fileType.startsWith('video/') || ["mp4", "mov", "webm", "mkv", "avi", "wmv", "flv"].includes(ext);
+
+            if (isImage && !["jpg", "jpeg"].includes(ext)) {
+                return res.status(400).json({
+                    error: `For Images Only JPEG and JPG formats are allowed`
+                });
             }
 
             let key;
@@ -180,6 +225,17 @@ export const uploadController = {
                 });
             }
 
+            // Backend validation for file types
+            const ext = key.split('.').pop().toLowerCase();
+            const isImage = ["jpg", "jpeg", "png", "webp", "gif", "bmp"].includes(ext); // Common images
+            const isVideo = ["mp4", "mov", "webm", "mkv", "avi", "wmv", "flv"].includes(ext);
+
+            if (isImage && !["jpg", "jpeg"].includes(ext)) {
+                return res.status(400).json({
+                    error: `For Images Only JPEG and JPG formats are allowed`
+                });
+            }
+
             let fileUrl;
             if (uploadId) {
                 // Multipart Completion
@@ -201,6 +257,7 @@ export const uploadController = {
                 clientId,
                 photographerId,
                 veroaBookingId,
+                isPublished: false, // Ensure photographers' work starts as private
                 category: category || "standard"
             });
 
@@ -412,6 +469,12 @@ export const uploadController = {
                 ]
             };
 
+            // ✅ Only staff (admin/photographer) can see unpublished photos
+            const isStaff = req.user && (req.user.userType === "admin" || req.user.userType === "photographer");
+            if (!isStaff) {
+                query.$and.push({ isPublished: true });
+            }
+
             if (category) {
                 const lowerCat = category.toLowerCase();
                 if (lowerCat === "standard" || lowerCat === "user media") {
@@ -428,14 +491,17 @@ export const uploadController = {
                 }
             }
 
-            // Fetch total count and active cloud plan in parallel
-            const [total, activeCloudPlan] = await Promise.all([
+            // Fetch total count, active cloud plan, and gallery status in parallel
+            const [total, activeCloudPlan, galleryRecord] = await Promise.all([
                 DataLinks.countDocuments(query),
                 CloudPayment.findOne({
                     booking_id: resolvedBookingId,
                     payment_status: "paid"
-                }).sort({ expiry_date: -1 })
+                }).sort({ expiry_date: -1 }),
+                Gallery.findOne({ booking_id: resolvedBookingId }).lean()
             ]);
+
+            const isPublished = galleryRecord?.isShared || false;
 
             let isblur = false;
             let remainingDays = 0;
@@ -491,6 +557,7 @@ export const uploadController = {
                     data: [],
                     isblur,
                     remainingDays,
+                    isPublished,
                     full_payment: isFullyPaid,
                     reverse_charge_mechanism: "*Reverse Charge mechanism not applicable",
                     pagination: {
@@ -529,6 +596,7 @@ export const uploadController = {
                 message: "Images fetched successfully",
                 isblur,
                 remainingDays,
+                isPublished,
                 full_payment: isFullyPaid,
                 reverse_charge_mechanism: "*Reverse Charge mechanism not applicable",
                 data,
