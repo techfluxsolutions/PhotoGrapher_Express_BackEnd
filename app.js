@@ -64,6 +64,9 @@ const allowedOrigins = [
   "https://photo-grapher-user-website.vercel.app",
   "https://user-photographer.techfluxsolutions.com",
   "https://admin-photographer.techfluxsolutions.com",
+  "https://photographer.techfluxsolutions.com",
+  "https://www.photographer.techfluxsolutions.com",
+  "https://api-photographer.techfluxsolutions.com",
   "https://photographer-veroa.vercel.app",
   "https://crew.veroastudioz.com",
   "https://crew.veroastudioz.com"
