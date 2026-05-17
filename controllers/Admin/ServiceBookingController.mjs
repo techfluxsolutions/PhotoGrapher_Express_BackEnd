@@ -1174,9 +1174,18 @@ class ServiceBookingController {
           }
         }
 
-        const pkg = booking[targetField] && booking[targetField][packageIndex];
-        if (pkg) {
-          // 1. Normalize roleSelections keys to lowercase for consistent matching
+        // Identify target packages (single index OR all matching planType for Editing)
+        let targetPackages = [];
+        if (isEditing && planType) {
+            targetPackages = (booking[targetField] || []).filter(p => 
+                (p.planCategory || p.category || (p.planName?.toLowerCase().includes("premium") ? "premium" : "standard")).toLowerCase() === planType.toLowerCase()
+            );
+        } else if (packageIndex !== undefined && booking[targetField] && booking[targetField][packageIndex]) {
+            targetPackages = [booking[targetField][packageIndex]];
+        }
+
+        if (targetPackages.length > 0) {
+          // 1. Normalize roleSelections keys to lowercase
           const normalizedSelections = {};
           if (roleSelections) {
             Object.keys(roleSelections).forEach(k => {
@@ -1184,51 +1193,31 @@ class ServiceBookingController {
             });
           }
 
-          // Determine if this is a "Direct Assign" or "Broadcast Request"
+          // Force all assignments to be Requests/Invitations
           const { actionType } = req.body;
-          
-          if (actionType === 'assign') {
-            isDirectAssign = true;
-            // 2. Merge existing assignments with new selections for Direct Assignment
-            const mergeRole = (existing = [], incoming = []) => {
-              const set = new Set([...existing.map(id => id.toString()), ...incoming.map(id => id.toString())]);
-              return Array.from(set).map(id => new mongoose.Types.ObjectId(id));
-            };
+          isDirectAssign = false; 
 
-            pkg.assignedPhotographers = mergeRole(pkg.assignedPhotographers || [], normalizedSelections.photographer || []);
-            pkg.assignedVideographers = mergeRole(pkg.assignedVideographers || [], normalizedSelections.videographer || []);
-            pkg.assignedEditors = mergeRole(pkg.assignedEditors || [], normalizedSelections.editor || []);
-            pkg.assignedLighting = mergeRole(pkg.assignedLighting || [], normalizedSelections.lightingsetup || normalizedSelections.lightingSetup || normalizedSelections.lighting || []);
+          // Update ALL identified target packages
+          targetPackages.forEach(pkg => {
+              // Record invitations at the plan level
+              const roleIds = (normalizedSelections.editor || normalizedSelections.photographer || []).map(id => new mongoose.Types.ObjectId(id));
+              if (isEditing) {
+                pkg.invitedEditors = Array.from(new Set([...(pkg.invitedEditors || []).map(id => id.toString()), ...roleIds.map(id => id.toString())])).map(id => new mongoose.Types.ObjectId(id));
+              } else {
+                pkg.invitedPhotographers = Array.from(new Set([...(pkg.invitedPhotographers || []).map(id => id.toString()), ...roleIds.map(id => id.toString())])).map(id => new mongoose.Types.ObjectId(id));
+              }
+          });
 
-            // Consolidate all photographers from all packages for top-level photographerIds
-            const allPhotographers = new Set();
-            booking.hourlyPackages.forEach(p => {
-              if (p.assignedPhotographers) p.assignedPhotographers.forEach(id => allPhotographers.add(id.toString()));
-            });
-            updateData.photographerIds = Array.from(allPhotographers);
-          } 
-          else if (actionType === 'request') {
-            isDirectAssign = false;
-            // For Request/Broadcast, we MERGE everyone in the top-level photographerIds
-            // to avoid removing existing assigned/invited photographers.
-            const allSelectedIds = new Set(booking.photographerIds?.map(id => id.toString()) || []);
-            Object.values(roleSelections).forEach(ids => {
-              if (Array.isArray(ids)) ids.forEach(id => allSelectedIds.add(id.toString()));
-            });
-            updateData.photographerIds = Array.from(allSelectedIds).map(id => new mongoose.Types.ObjectId(id));
+          // For both Assign and Request, we MERGE everyone in the top-level photographerIds
+          const allSelectedIds = new Set(booking.photographerIds?.map(id => id.toString()) || []);
+          Object.values(roleSelections).forEach(ids => {
+            if (Array.isArray(ids)) ids.forEach(id => allSelectedIds.add(id.toString()));
+          });
+          updateData.photographerIds = Array.from(allSelectedIds).map(id => new mongoose.Types.ObjectId(id));
 
-            // Also record invitations at the plan level so the photographer knows WHICH plan they are invited for
-            const roleIds = (normalizedSelections.editor || normalizedSelections.photographer || []).map(id => new mongoose.Types.ObjectId(id));
-            if (isEditing) {
-              pkg.invitedEditors = Array.from(new Set([...(pkg.invitedEditors || []).map(id => id.toString()), ...roleIds.map(id => id.toString())])).map(id => new mongoose.Types.ObjectId(id));
-            } else {
-              pkg.invitedPhotographers = Array.from(new Set([...(pkg.invitedPhotographers || []).map(id => id.toString()), ...roleIds.map(id => id.toString())])).map(id => new mongoose.Types.ObjectId(id));
-            }
-            
-            // Do NOT clear photographer_id if it's already set (somebody has already accepted)
-            if (booking.photographer_id) {
-              updateData.photographer_id = booking.photographer_id;
-            }
+          // Keep existing photographer_id if anyone has already accepted
+          if (booking.photographer_id) {
+            updateData.photographer_id = booking.photographer_id;
           }
 
           if (isDirectAssign) {
@@ -1271,25 +1260,18 @@ class ServiceBookingController {
       else {
         const finalPhotographerId = photographerId !== undefined ? photographerId : req.body.photographer_id;
 
-        if (photographerIds !== undefined && photographerIds.length > 0) {
-          updateData.photographerIds = photographerIds;
-          updateData.photographer_id = null;
+        if (finalPhotographerId || (photographerIds !== undefined && photographerIds.length > 0)) {
+          const allInvited = new Set(booking.photographerIds?.map(id => id.toString()) || []);
+          if (finalPhotographerId) allInvited.add(finalPhotographerId.toString());
+          if (Array.isArray(photographerIds)) photographerIds.forEach(id => allInvited.add(id.toString()));
+
+          updateData.photographerIds = Array.from(allInvited).map(id => new mongoose.Types.ObjectId(id));
+          // Do not clear photographer_id if already set
+          if (!booking.photographer_id) updateData.photographer_id = null;
+          
           updateData.bookingStatus = "pending";
           updateData.status = "pending";
-        }
-
-        if (finalPhotographerId !== undefined) {
-          updateData.photographer_id = finalPhotographerId;
-          if (finalPhotographerId) {
-            updateData.photographerIds = [];
-            updateData.bookingStatus = "accepted";
-            updateData.status = "confirmed";
-            updateData.acceptedAt = new Date();
-            isDirectAssign = true;
-          } else {
-            updateData.bookingStatus = "pending";
-            updateData.status = "pending";
-          }
+          isDirectAssign = false;
         }
       }
 
@@ -2096,15 +2078,50 @@ class ServiceBookingController {
         }
       }
 
+      // Fetch editor names to build a map
+      const allEditorIds = new Set();
+      items.forEach(booking => {
+        const rawPkgs = booking.editingPackages || booking.editingbookings || [];
+        rawPkgs.forEach(p => {
+          if (p.assignedEditors) {
+            p.assignedEditors.forEach(id => {
+              if (id) allEditorIds.add(id.toString());
+            });
+          }
+        });
+      });
+
+      const globalNamesMap = {};
+      if (allEditorIds.size > 0) {
+        const staff = await Photographer.find({ _id: { $in: Array.from(allEditorIds) } }, "basicInfo.fullName").lean();
+        staff.forEach(s => {
+          globalNamesMap[s._id.toString()] = s.basicInfo?.fullName || "Unknown";
+        });
+      }
+
       // Fetch data links for these bookings
       const bookingVeroaIds = items.map(b => b.veroaBookingId).filter(Boolean);
       const allLinks = await DataLinks.find({ veroaBookingId: { $in: bookingVeroaIds } }).lean();
 
-      const linksMap = allLinks.reduce((acc, link) => {
-        if (!acc[link.veroaBookingId]) acc[link.veroaBookingId] = [];
-        acc[link.veroaBookingId].push(link.dataLink);
-        return acc;
-      }, {});
+      // Group keys and links by veroaBookingId and category
+      const linksMap = {};
+      const keysMap = {};
+
+      allLinks.forEach(link => {
+        const vId = link.veroaBookingId;
+        const cat = (link.category || 'standard').toLowerCase();
+        const mapKey = `${vId}_${cat}`;
+
+        if (!linksMap[mapKey]) linksMap[mapKey] = [];
+        if (!keysMap[mapKey]) keysMap[mapKey] = [];
+
+        if (link.key) {
+          keysMap[mapKey].push(link.key);
+        }
+        if (link.dataLink) {
+          linksMap[mapKey].push(link.dataLink);
+        }
+      });
 
       const formattedBookings = await Promise.all(items.map(async booking => {
         const addressParts = [
@@ -2152,32 +2169,36 @@ class ServiceBookingController {
         }
 
         const videoPackages = await Promise.all(rawPkgs.map(async pkg => {
-          const bookingLinks = linksMap[booking.veroaBookingId] || [];
+          const pkgCategory = (pkg.planCategory || pkg.category || (pkg.planName?.toLowerCase().includes("premium") ? "Premium" : "Standard")).toLowerCase();
+          const mapKey = `${booking.veroaBookingId}_${pkgCategory}`;
 
-          // Separate keys from full URLs in the media array
-          const mediaKeys = (booking.media || []).filter(m => m && !m.startsWith("http"));
-          const mediaUrls = (booking.media || []).filter(m => m && m.startsWith("http"));
+          const pkgKeys = keysMap[mapKey] || [];
+          const pkgLinks = linksMap[mapKey] || [];
 
-          // Generate signed URLs for keys
-          const signedViewUrls = mediaKeys.length > 0
-            ? await s3Service.getBatchSignedUrls(mediaKeys, 36000, 'inline')
+          // Generate signed URLs specifically for the keys belonging to this category
+          const signedViewUrls = pkgKeys.length > 0
+            ? await s3Service.getBatchSignedUrls(pkgKeys, 36000, 'inline')
             : [];
 
-          const signedDownloadUrls = mediaKeys.length > 0
-            ? await s3Service.getBatchSignedUrls(mediaKeys, 36000, 'attachment')
+          const signedDownloadUrls = pkgKeys.length > 0
+            ? await s3Service.getBatchSignedUrls(pkgKeys, 36000, 'attachment')
             : [];
 
-          const combinedViewMedia = [...mediaUrls, ...signedViewUrls, ...bookingLinks];
-          const combinedDownloadMedia = [...mediaUrls, ...signedDownloadUrls, ...bookingLinks];
+          const combinedViewMedia = [...pkgLinks, ...signedViewUrls];
+          const combinedDownloadMedia = [...pkgLinks, ...signedDownloadUrls];
 
-          let vCount = Math.max(parseInt(pkg.numberOfVideos) || 0, combinedViewMedia.length) || 1;
+          // Deduplicate urls to be absolutely safe
+          const uniqueViewMedia = Array.from(new Set(combinedViewMedia)).filter(Boolean);
+          const uniqueDownloadMedia = Array.from(new Set(combinedDownloadMedia)).filter(Boolean);
+
+          let vCount = Math.max(parseInt(pkg.numberOfVideos) || 0, uniqueViewMedia.length) || 1;
 
           // Generate videos list as expected by UI
           const videos = Array.from({ length: vCount }, (_, i) => ({
             videoId: `${pkg._id || pkg.planId || 'pkg'}-v${i + 1}`,
             videoNumber: i + 1,
-            viewUrl: combinedViewMedia[i] || "",
-            downloadUrl: combinedDownloadMedia[i] || ""
+            viewUrl: uniqueViewMedia[i] || "",
+            downloadUrl: uniqueDownloadMedia[i] || ""
           }));
 
           return {
@@ -2186,7 +2207,16 @@ class ServiceBookingController {
             price: parseFloat(pkg.price) || 0,
             videosCount: parseInt(pkg.numberOfVideos) || vCount,
             videos: videos,
-            planName: pkg.planName || "Editing Plan"
+            planName: pkg.planName || "Editing Plan",
+            assignedEditors: pkg.assignedEditors || [],
+            assignedEditorNames: (pkg.assignedEditors || []).map(id => globalNamesMap[id.toString()] || "Unknown"),
+            invitedEditors: pkg.invitedEditors || [],
+            assignedPhotographers: pkg.assignedPhotographers || [],
+            invitedPhotographers: pkg.invitedPhotographers || [],
+            assignedVideographers: pkg.assignedVideographers || [],
+            invitedVideographers: pkg.invitedVideographers || [],
+            assignedLighting: pkg.assignedLighting || [],
+            invitedLighting: pkg.invitedLighting || []
           };
         }));
 

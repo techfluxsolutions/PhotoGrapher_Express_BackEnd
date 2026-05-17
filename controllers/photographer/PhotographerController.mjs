@@ -1151,7 +1151,7 @@ class PhotographerController {
       }
 
       let sortedPhotographers = photographersAgg;
-      if (assignedPhotographerIds.size > 0 && bookingStatus === "accepted") {
+      if (assignedPhotographerIds.size > 0) {
         sortedPhotographers = photographersAgg.sort((a, b) => {
           const isAssignedA = assignedPhotographerIds.has(a._id.toString());
           const isAssignedB = assignedPhotographerIds.has(b._id.toString());
@@ -1336,7 +1336,7 @@ class PhotographerController {
                         });
                     }
 
-                    if (assignedPhotographerIds.size > 0 && bookingStatus === "accepted") {
+                    if (assignedPhotographerIds.size > 0) {
                         pipeline.push({
                             $addFields: {
                                 assignedPriority: { $in: ["$_id", Array.from(assignedPhotographerIds).map(id => new mongoose.Types.ObjectId(id))] }

@@ -421,7 +421,7 @@ export const uploadController = {
 
     getUrlsListArray: async (req, res) => {
         try {
-            const { page = 1, limit = 20, category } = req.query;
+            const { page = 1, limit = 20, category, source } = req.query;
             const bookingId = req.params.bookingId;
 
             if (!bookingId) {
@@ -441,7 +441,8 @@ export const uploadController = {
                 : { veroaBookingId: bookingId };
 
             const booking = await ServiceBooking.findOne(bookingFilter)
-                .select("paymentStatus full_Payment firstPhotoUploadedAt fullyPaidAt createdAt veroaBookingId")
+                .select("paymentStatus full_Payment firstPhotoUploadedAt fullyPaidAt createdAt veroaBookingId serviceCategory service_id")
+                .populate("service_id", "serviceName")
                 .lean();
 
             if (!booking) {
@@ -470,24 +471,53 @@ export const uploadController = {
             };
 
             // ✅ Only staff (admin/photographer) can see unpublished photos
+            // Clients can see published photos and ALWAYS see their own uploaded raw files.
+            // For editing bookings, clients can ALWAYS see all uploaded results in real-time.
             const isStaff = req.user && (req.user.userType === "admin" || req.user.userType === "photographer");
-            if (!isStaff) {
-                query.$and.push({ isPublished: true });
+            const isEditingBooking = booking && (
+                booking.serviceCategory === 'editing' || 
+                (booking.service_id?.serviceName || "").toLowerCase().includes("editing")
+            );
+
+            if (!isStaff && !isEditingBooking) {
+                query.$and.push({
+                    $or: [
+                        { isPublished: true },
+                        { photographerId: null },
+                        { photographerId: { $exists: false } }
+                    ]
+                });
             }
 
             if (category) {
                 const lowerCat = category.toLowerCase();
-                if (lowerCat === "standard" || lowerCat === "user media") {
-                    query.$and.push({
-                        $or: [
-                            { category: { $regex: new RegExp(`^User Media$`, "i") } },
-                            { category: { $regex: new RegExp(`^Standard$`, "i") } },
-                            { category: { $exists: false } },
-                            { category: null }
-                        ]
-                    });
+                if (lowerCat === "standard" || lowerCat === "user media" || lowerCat === "photographer media") {
+                    const standardOrs = [
+                        { category: { $regex: new RegExp(`^Standard$`, "i") } },
+                        { category: { $regex: new RegExp(`^User Media$`, "i") } },
+                        { category: { $regex: new RegExp(`^Photographer Media$`, "i") } },
+                        { category: { $exists: false } },
+                        { category: null }
+                    ];
+                    query.$and.push({ $or: standardOrs });
                 } else {
                     query.$and.push({ category: { $regex: new RegExp(`^${category}$`, "i") } });
+                }
+            }
+
+            if (source) {
+                const lowerSource = source.toLowerCase();
+                if (lowerSource === "photographer") {
+                    query.$and.push({ 
+                        photographerId: { $ne: null } 
+                    });
+                } else if (lowerSource === "user") {
+                    query.$and.push({ 
+                        $or: [
+                            { photographerId: null },
+                            { photographerId: { $exists: false } }
+                        ]
+                    });
                 }
             }
 
@@ -753,38 +783,52 @@ export const uploadController = {
             const resolvedBookingId = booking._id;
             const resolvedVeroaId = booking.veroaBookingId;
 
-            // Find files for this booking
-            const query = {
-                $or: [
-                    { bookingid: resolvedBookingId },
-                    { bookingid: resolvedVeroaId },
-                    { veroaBookingId: resolvedBookingId },
-                    { veroaBookingId: resolvedVeroaId }
+            // 2. Identify target files using the exact same logic as getArrayImages
+            const query = { 
+                $and: [
+                    {
+                        $or: [
+                            { bookingid: resolvedBookingId },
+                            { bookingid: booking.veroaBookingId },
+                            { veroaBookingId: resolvedBookingId },
+                            { veroaBookingId: booking.veroaBookingId }
+                        ]
+                    }
                 ]
             };
 
-            // If clientId or photographerId are provided, we can optionally add them to filter 
-            if (clientId) {
-                const cId = typeof clientId === 'object' ? clientId._id : clientId;
-                if (mongoose.Types.ObjectId.isValid(cId)) query.clientId = cId;
-            }
-            if (photographerId) {
-                const pId = typeof photographerId === 'object' ? photographerId._id : photographerId;
-                if (mongoose.Types.ObjectId.isValid(pId)) query.photographerId = pId;
+            const category = (req.body && req.body.category) || req.query.category;
+            const source = (req.body && req.body.source) || req.query.source;
+
+            if (category) {
+                const lowerCat = category.toLowerCase();
+                // Special handling for Standard category aliases
+                if (lowerCat === "standard" || lowerCat === "user media" || lowerCat === "photographer media") {
+                    const standardOrs = [
+                        { category: { $regex: new RegExp(`^Standard$`, "i") } },
+                        { category: { $regex: new RegExp(`^User Media$`, "i") } },
+                        { category: { $regex: new RegExp(`^Photographer Media$`, "i") } },
+                        { category: { $exists: false } },
+                        { category: null }
+                    ];
+                    query.$and.push({ $or: standardOrs });
+                } else {
+                    query.$and.push({ category: { $regex: new RegExp(`^${category}$`, "i") } });
+                }
             }
 
-            const category = (req.body && req.body.category) || req.query.category;
-            const galleryType = (req.body && req.body.galleryType) || req.query.galleryType;
-            if (category) {
-                query.category = { $regex: new RegExp(`^${category}$`, "i") };
-            }
-            
-            if (galleryType === 'sent') {
-                // Sent files have no photographerId or it's null (uploaded by client)
-                query.photographerId = { $in: [null, undefined] }; 
-            } else if (galleryType === 'received') {
-                // Received files have a photographerId (uploaded by photographer)
-                query.photographerId = { $ne: null };
+            if (source) {
+                const lowerSource = source.toLowerCase();
+                if (lowerSource === "photographer") {
+                    query.$and.push({ photographerId: { $ne: null } });
+                } else if (lowerSource === "user") {
+                    query.$and.push({
+                        $or: [
+                            { photographerId: null },
+                            { photographerId: { $exists: false } }
+                        ]
+                    });
+                }
             }
 
             const files = await DataLinks.find(query).select('key').lean();

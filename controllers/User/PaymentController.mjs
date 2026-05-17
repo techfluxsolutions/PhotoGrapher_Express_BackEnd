@@ -550,15 +550,21 @@ class PaymentController {
             }
           }
 
-          // Create Payout Summary
-          await Payout.create({
-            shootType: item.category === "editing" ? "PhotoEditing" : "HourlyShoot",
-            photographer_id: item.photographer_id || "657a8b9c0d1e2f3a4b5c6d7e", // Placeholder
-            booking_id: booking._id,
-            total_amount: booking.totalAmount,
-            status: "Pending",
-            payout_status: "pending"
-          });
+          // Create Payout Summary if photographer is pre-selected
+          if (item.photographer_id) {
+            try {
+              await Payout.create({
+                shootType: item.category === "editing" ? "PhotoEditing" : "HourlyShoot",
+                photographer_id: item.photographer_id,
+                booking_id: booking._id,
+                total_amount: booking.totalAmount,
+                status: "Pending",
+                payout_status: "pending"
+              });
+            } catch (payoutErr) {
+              console.error("[Payout] Error creating payout on checkout:", payoutErr.message);
+            }
+          }
 
           createdBookings.push(booking);
         }

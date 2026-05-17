@@ -364,7 +364,7 @@ class EditingController {
                 bookingid,
                 clientId: userId,
                 veroaBookingId,
-                isPublished: false, // Ensure work starts as private until published
+                isPublished: true, // User raw uploads are active and visible by default
                 category: category || 'standard'
             });
 

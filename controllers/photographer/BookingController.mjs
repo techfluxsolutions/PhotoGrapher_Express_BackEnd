@@ -145,7 +145,7 @@ class BookingController {
                     $and: [
                         assignmentFilter,
                         { 
-                            bookingStatus: "accepted",
+                            bookingStatus: { $in: ["accepted", "pending"] },
                             status: { $nin: ["completed", "canceled"] },
                             $or: [
                                 { bookingDate: { $gte: todayStartIST } },
@@ -168,7 +168,7 @@ class BookingController {
 
                         filter.$and.push({
                             status: { $ne: "canceled" },
-                            bookingStatus: "accepted", // Only work that was actually accepted belongs in history
+                            bookingStatus: { $in: ["accepted", "pending"] }, // Only work that was actually accepted belongs in history
                             $or: [
                                 { status: "completed" },
                                 { bookingDate: { $lt: todayStartIST } },
@@ -330,6 +330,32 @@ class BookingController {
                     }
                 }
 
+                // Calculate the photographer/editor's specific booking status
+                let myStatus = booking.bookingStatus || "pending";
+                if ((isHourly || isEditing) && targetPkgs?.length > 0) {
+                    const myIdStr = photographerId.toString();
+                    
+                    const isAssignedToAnyPkg = targetPkgs.some(pkg => 
+                        pkg.assignedPhotographers?.some(id => id.toString() === myIdStr) ||
+                        pkg.assignedVideographers?.some(id => id.toString() === myIdStr) ||
+                        pkg.assignedEditors?.some(id => id.toString() === myIdStr) ||
+                        pkg.assignedLighting?.some(id => id.toString() === myIdStr)
+                    );
+
+                    const isInvitedToAnyPkg = targetPkgs.some(pkg => 
+                        pkg.invitedPhotographers?.some(id => id.toString() === myIdStr) ||
+                        pkg.invitedVideographers?.some(id => id.toString() === myIdStr) ||
+                        pkg.invitedEditors?.some(id => id.toString() === myIdStr) ||
+                        pkg.invitedLighting?.some(id => id.toString() === myIdStr)
+                    );
+
+                    if (isAssignedToAnyPkg) {
+                        myStatus = "accepted";
+                    } else if (isInvitedToAnyPkg) {
+                        myStatus = "pending";
+                    }
+                }
+
                 return {
                     _id: booking._id,
                     bookingId: booking.veroaBookingId,
@@ -346,8 +372,8 @@ class BookingController {
                     lat: booking.lat || null,
                     lng: booking.lng || null,
                     address: displayAddress,
-                    status: booking.bookingStatus === "accepted" ? "accepted" : (booking.status || "pending"),
-                    bookingStatus: booking.bookingStatus,
+                    status: myStatus === "accepted" ? "accepted" : (booking.status || "pending"),
+                    bookingStatus: myStatus,
                     galleryStatus: booking.galleryStatus || "Upload Pending",
                     photographerAmount: displayAmount,
                     budget: displayAmount,
@@ -387,21 +413,42 @@ class BookingController {
 
             const myIdStr = myId.toString();
             const filter = {
-                $and: [
+                $or: [
                     {
-                        $or: [
-                            { photographer_id: myIdStr },
-                            { "hourlyPackages.assignedPhotographers": { $in: [photographerId, myIdStr] } },
-                            { "hourlyPackages.assignedVideographers": { $in: [photographerId, myIdStr] } },
-                            { "hourlyPackages.assignedEditors": { $in: [photographerId, myIdStr] } },
-                            { "hourlyPackages.assignedLighting": { $in: [photographerId, myIdStr] } },
-                            { "editingPackages.assignedPhotographers": { $in: [photographerId, myIdStr] } },
-                            { "editingPackages.assignedVideographers": { $in: [photographerId, myIdStr] } },
-                            { "editingPackages.assignedEditors": { $in: [photographerId, myIdStr] } },
-                            { "editingPackages.assignedLighting": { $in: [photographerId, myIdStr] } }
+                        $and: [
+                            {
+                                $or: [
+                                    { photographer_id: myIdStr },
+                                    { "hourlyPackages.assignedPhotographers": { $in: [photographerId, myIdStr] } },
+                                    { "hourlyPackages.assignedVideographers": { $in: [photographerId, myIdStr] } },
+                                    { "hourlyPackages.assignedEditors": { $in: [photographerId, myIdStr] } },
+                                    { "hourlyPackages.assignedLighting": { $in: [photographerId, myIdStr] } },
+                                    { "editingPackages.assignedPhotographers": { $in: [photographerId, myIdStr] } },
+                                    { "editingPackages.assignedVideographers": { $in: [photographerId, myIdStr] } },
+                                    { "editingPackages.assignedEditors": { $in: [photographerId, myIdStr] } },
+                                    { "editingPackages.assignedLighting": { $in: [photographerId, myIdStr] } }
+                                ]
+                            },
+                            { bookingStatus: { $ne: "pending" } }
                         ]
                     },
-                    { bookingStatus: { $ne: "pending" } }
+                    {
+                        $and: [
+                            {
+                                $or: [
+                                    { "hourlyPackages.assignedPhotographers": { $in: [photographerId, myIdStr] } },
+                                    { "hourlyPackages.assignedVideographers": { $in: [photographerId, myIdStr] } },
+                                    { "hourlyPackages.assignedEditors": { $in: [photographerId, myIdStr] } },
+                                    { "hourlyPackages.assignedLighting": { $in: [photographerId, myIdStr] } },
+                                    { "editingPackages.assignedPhotographers": { $in: [photographerId, myIdStr] } },
+                                    { "editingPackages.assignedVideographers": { $in: [photographerId, myIdStr] } },
+                                    { "editingPackages.assignedEditors": { $in: [photographerId, myIdStr] } },
+                                    { "editingPackages.assignedLighting": { $in: [photographerId, myIdStr] } }
+                                ]
+                            },
+                            { bookingStatus: "pending" }
+                        ]
+                    }
                 ]
             };
 
@@ -504,7 +551,21 @@ class BookingController {
                 _id: id,
                 $or: [
                     { photographer_id: myId },
-                    { photographerIds: { $in: [myId] } }
+                    { photographerIds: { $in: [myId] } },
+                    // Hourly shoot assignments & invites
+                    { "hourlyPackages.assignedPhotographers": myId },
+                    { "hourlyPackages.assignedVideographers": myId },
+                    { "hourlyPackages.assignedEditors": myId },
+                    { "hourlyPackages.assignedLighting": myId },
+                    { "hourlyPackages.invitedPhotographers": myId },
+                    { "hourlyPackages.invitedVideographers": myId },
+                    // Editing assignments & invites
+                    { "editingPackages.assignedPhotographers": myId },
+                    { "editingPackages.assignedVideographers": myId },
+                    { "editingPackages.assignedEditors": myId },
+                    { "editingPackages.assignedLighting": myId },
+                    { "editingPackages.invitedEditors": myId },
+                    { "editingPackages.invitedPhotographers": myId }
                 ]
             };
 
@@ -908,14 +969,133 @@ class BookingController {
             }
 
             // Check if user has any relation to this booking
-            const isAssigned = targetBooking.photographer_id?.toString() === myId.toString();
-            const isInvited = targetBooking.photographerIds?.some(pid => pid.toString() === myId.toString());
+            const myIdStr = myId.toString();
+            let isAssignedTopLevel = targetBooking.photographer_id?.toString() === myIdStr;
+            let isInvitedTopLevel = targetBooking.photographerIds?.some(pid => pid.toString() === myIdStr);
+            
+            let isAssigned = isAssignedTopLevel;
+            let isInvited = isInvitedTopLevel;
+
+            let isModifiedPackages = false;
+            let updatedHourly = targetBooking.hourlyPackages ? JSON.parse(JSON.stringify(targetBooking.hourlyPackages)) : [];
+            let updatedEditing = targetBooking.editingPackages ? JSON.parse(JSON.stringify(targetBooking.editingPackages)) : [];
+
+            const getRequiredQty = (pkg, role) => {
+                if (!pkg.services || !Array.isArray(pkg.services)) return 1;
+                let keywords = [];
+                if (role === 'assignedPhotographers') keywords = ['photographer', 'photography'];
+                else if (role === 'assignedVideographers') keywords = ['videographer', 'videography'];
+                else if (role === 'assignedEditors') keywords = ['editing', 'editor'];
+                else if (role === 'assignedLighting') keywords = ['lighting', 'light'];
+
+                const service = pkg.services.find(s => {
+                    const name = (s.name || '').toLowerCase();
+                    return keywords.some(keyword => name.includes(keyword));
+                });
+                return service ? (service.qty || 1) : 1;
+            };
+
+            if (bookingStatus === "accepted" || bookingStatus === "rejected") {
+                if (bookingStatus === "accepted") {
+                    // Pre-check if all package roles they are invited to are already full!
+                    let hasAnyInvite = false;
+                    let hasAtLeastOneFreeSlot = false;
+
+                    const checkFullSlots = (packages) => {
+                        packages.forEach(pkg => {
+                            const verifyRole = (assignedList, invitedList, roleAssignedStr) => {
+                                if (invitedList && invitedList.some(id => id.toString() === myIdStr)) {
+                                    hasAnyInvite = true;
+                                    const requiredQty = getRequiredQty(pkg, roleAssignedStr);
+                                    const assignedCount = assignedList ? assignedList.length : 0;
+                                    if (assignedCount < requiredQty) {
+                                        hasAtLeastOneFreeSlot = true;
+                                    }
+                                }
+                            };
+                            verifyRole(pkg.assignedPhotographers, pkg.invitedPhotographers, 'assignedPhotographers');
+                            verifyRole(pkg.assignedVideographers, pkg.invitedVideographers, 'assignedVideographers');
+                            verifyRole(pkg.assignedEditors, pkg.invitedEditors, 'assignedEditors');
+                            verifyRole(pkg.assignedLighting, pkg.invitedLighting, 'assignedLighting');
+                        });
+                    };
+
+                    checkFullSlots(updatedHourly);
+                    checkFullSlots(updatedEditing);
+
+                    if (hasAnyInvite && !hasAtLeastOneFreeSlot) {
+                        return sendErrorResponse(res, { message: "This booking role has already been fully staffed." }, 400);
+                    }
+                }
+
+                const processPackages = (packages) => {
+                    packages.forEach(pkg => {
+                        const checkRole = (assignedList, invitedList, roleAssignedStr, roleInvitedStr) => {
+                            if (assignedList && assignedList.some(id => id.toString() === myIdStr)) {
+                                isAssigned = true;
+                            }
+                            if (invitedList && invitedList.some(id => id.toString() === myIdStr)) {
+                                isInvited = true;
+                                if (bookingStatus === "accepted") {
+                                    // ONLY assign them if the slot is NOT full yet!
+                                    const requiredQty = getRequiredQty(pkg, roleAssignedStr);
+                                    const assignedCount = assignedList ? assignedList.length : 0;
+
+                                    pkg[roleInvitedStr] = invitedList.filter(id => id.toString() !== myIdStr);
+                                    
+                                    if (assignedCount < requiredQty) {
+                                        if (!pkg[roleAssignedStr]) pkg[roleAssignedStr] = [];
+                                        pkg[roleAssignedStr].push(myId);
+                                    }
+                                    isModifiedPackages = true;
+                                } else if (bookingStatus === "rejected") {
+                                    pkg[roleInvitedStr] = invitedList.filter(id => id.toString() !== myIdStr);
+                                    isModifiedPackages = true;
+                                }
+                            }
+                            if (bookingStatus === "rejected" && assignedList && assignedList.some(id => id.toString() === myIdStr)) {
+                                pkg[roleAssignedStr] = assignedList.filter(id => id.toString() !== myIdStr);
+                                isModifiedPackages = true;
+                            }
+                        };
+                        
+                        checkRole(pkg.assignedPhotographers, pkg.invitedPhotographers, 'assignedPhotographers', 'invitedPhotographers');
+                        checkRole(pkg.assignedVideographers, pkg.invitedVideographers, 'assignedVideographers', 'invitedVideographers');
+                        checkRole(pkg.assignedEditors, pkg.invitedEditors, 'assignedEditors', 'invitedEditors');
+                        checkRole(pkg.assignedLighting, pkg.invitedLighting, 'assignedLighting', 'invitedLighting');
+                    });
+                };
+
+                processPackages(updatedHourly);
+                processPackages(updatedEditing);
+            } else {
+                 // Just check for relation without modifying
+                const processPackagesCheckOnly = (packages) => {
+                    packages.forEach(pkg => {
+                        const checkRole = (assignedList, invitedList) => {
+                            if (assignedList && assignedList.some(id => id.toString() === myIdStr)) isAssigned = true;
+                            if (invitedList && invitedList.some(id => id.toString() === myIdStr)) isInvited = true;
+                        };
+                        checkRole(pkg.assignedPhotographers, pkg.invitedPhotographers);
+                        checkRole(pkg.assignedVideographers, pkg.invitedVideographers);
+                        checkRole(pkg.assignedEditors, pkg.invitedEditors);
+                        checkRole(pkg.assignedLighting, pkg.invitedLighting);
+                    });
+                };
+                processPackagesCheckOnly(updatedHourly);
+                processPackagesCheckOnly(updatedEditing);
+            }
 
             if (!isAssigned && !isInvited) {
                 return sendErrorResponse(res, { message: "Unauthorized: You are not assigned or invited to this booking" }, 403);
             }
 
             const updateData = {};
+            if (isModifiedPackages) {
+                updateData.hourlyPackages = updatedHourly;
+                updateData.editingPackages = updatedEditing;
+            }
+
             if (bookingStatus && !["accepted", "rejected", "pending"].includes(bookingStatus)) {
                 return sendErrorResponse(res, { message: "Invalid booking status" }, 400);
             }
@@ -931,19 +1111,105 @@ class BookingController {
                 updateData.galleryStatus = galleryStatus;
             }
 
+            const isPackageBased = targetBooking.serviceCategory === 'hourly' || targetBooking.serviceCategory === 'editing';
+
             if (bookingStatus === "accepted") {
                 // To claim: must be invited OR be formally assigned
-                if (targetBooking.photographer_id && !isAssigned) {
+                if (targetBooking.photographer_id && !isAssigned && !isPackageBased) {
                     return sendErrorResponse(res, {
                         message: "This booking has already been accepted by another photographer."
                     }, 409);
                 }
 
-                updateData.bookingStatus = "accepted";
-                updateData.status = "confirmed";
+                const isBookingFullyStaffed = (booking) => {
+                    const isPackageBased = booking.serviceCategory === 'hourly' || booking.serviceCategory === 'editing';
+                    if (!isPackageBased) {
+                        return !!booking.photographer_id;
+                    }
+
+                    if (booking.hourlyPackages && booking.hourlyPackages.length > 0) {
+                        for (const pkg of booking.hourlyPackages) {
+                            if (pkg.services && Array.isArray(pkg.services)) {
+                                for (const s of pkg.services) {
+                                    const name = (s.name || '').toLowerCase();
+                                    let assignedCount = 0;
+                                    if (name.includes('photographer') || name.includes('photography')) {
+                                        assignedCount = pkg.assignedPhotographers ? pkg.assignedPhotographers.length : 0;
+                                    } else if (name.includes('videographer') || name.includes('videography')) {
+                                        assignedCount = pkg.assignedVideographers ? pkg.assignedVideographers.length : 0;
+                                    } else if (name.includes('editing') || name.includes('editor')) {
+                                        assignedCount = pkg.assignedEditors ? pkg.assignedEditors.length : 0;
+                                    } else if (name.includes('lighting') || name.includes('light')) {
+                                        assignedCount = pkg.assignedLighting ? pkg.assignedLighting.length : 0;
+                                    } else {
+                                        assignedCount = pkg.assignedPhotographers ? pkg.assignedPhotographers.length : 0;
+                                    }
+                                    if (assignedCount < (s.qty || 1)) {
+                                        return false;
+                                    }
+                                }
+                            } else {
+                                const assignedCount = pkg.assignedPhotographers ? pkg.assignedPhotographers.length : 0;
+                                if (assignedCount < 1) return false;
+                            }
+                        }
+                    }
+
+                    if (booking.editingPackages && booking.editingPackages.length > 0) {
+                        for (const pkg of booking.editingPackages) {
+                            if (pkg.services && Array.isArray(pkg.services)) {
+                                for (const s of pkg.services) {
+                                    const name = (s.name || '').toLowerCase();
+                                    let assignedCount = 0;
+                                    if (name.includes('photographer') || name.includes('photography')) {
+                                        assignedCount = pkg.assignedPhotographers ? pkg.assignedPhotographers.length : 0;
+                                    } else if (name.includes('videographer') || name.includes('videography')) {
+                                        assignedCount = pkg.assignedVideographers ? pkg.assignedVideographers.length : 0;
+                                    } else if (name.includes('editing') || name.includes('editor')) {
+                                        assignedCount = pkg.assignedEditors ? pkg.assignedEditors.length : 0;
+                                    } else if (name.includes('lighting') || name.includes('light')) {
+                                        assignedCount = pkg.assignedLighting ? pkg.assignedLighting.length : 0;
+                                    } else {
+                                        assignedCount = pkg.assignedPhotographers ? pkg.assignedPhotographers.length : 0;
+                                    }
+                                    if (assignedCount < (s.qty || 1)) {
+                                        return false;
+                                    }
+                                }
+                            } else {
+                                const assignedCount = pkg.assignedPhotographers ? pkg.assignedPhotographers.length : 0;
+                                if (assignedCount < 1) return false;
+                            }
+                        }
+                    }
+
+                    return true;
+                };
+
+                const tempBooking = {
+                    serviceCategory: targetBooking.serviceCategory,
+                    photographer_id: targetBooking.photographer_id || myId,
+                    hourlyPackages: updatedHourly,
+                    editingPackages: updatedEditing
+                };
+
+                if (isBookingFullyStaffed(tempBooking)) {
+                    updateData.bookingStatus = "accepted";
+                    updateData.status = "confirmed";
+                } else {
+                    updateData.bookingStatus = "pending";
+                    updateData.status = "pending";
+                }
+
                 updateData.acceptedAt = new Date();
-                updateData.photographer_id = myId;
-                updateData.photographerIds = []; // Clear invitations once claimed
+                if (!targetBooking.photographer_id) {
+                    updateData.photographer_id = myId;
+                }
+                
+                if (isInvitedTopLevel) {
+                     updateData.photographerIds = targetBooking.photographerIds.filter(pid => pid.toString() !== myIdStr);
+                }
+                
                 console.log("Photographer accepting booking:", { id, updateData });
 
                 // Determine commission and net payout
@@ -976,16 +1242,29 @@ class BookingController {
                             }, 403);
                         }
                     }
-                    updateData.bookingStatus = "rejected";
-                    updateData.status = "canceled";
-                    updateData.photographer_id = null; // Remove as assigned photographer
-                    updateData.bookingOtp = null;      // Clear OTP
-                    updateData.cancelledBy = "photographer";
-                    updateData.cancelReason = req.body.cancelReason || req.body.cancellationReason || "Rejected by photographer";
+                    
+                    if (isAssignedTopLevel && !isPackageBased) {
+                        updateData.bookingStatus = "rejected";
+                        updateData.status = "canceled";
+                        updateData.photographer_id = null; // Remove as assigned photographer
+                        updateData.bookingOtp = null;      // Clear OTP
+                        updateData.cancelledBy = "photographer";
+                        updateData.cancelReason = req.body.cancelReason || req.body.cancellationReason || "Rejected by photographer";
+                    } else if (isAssignedTopLevel && isPackageBased) {
+                        // If it's a team shoot, just remove me from the top level assignment but keep the booking alive
+                        updateData.photographer_id = null;
+                    }
                 } else if (isInvited) {
                     // Just rejecting an invitation - remove me from the list so it disappears from my pending list
-                    await ServiceBooking.findByIdAndUpdate(id, { $pull: { photographerIds: myId } });
-                    return sendSuccessResponse(res, null, "Invitation rejected successfully");
+                    if (isInvitedTopLevel) {
+                         updateData.photographerIds = targetBooking.photographerIds.filter(pid => pid.toString() !== myIdStr);
+                    }
+                }
+                
+                // If rejecting an invitation in a package based booking, we already modified isModifiedPackages
+                if (!isModifiedPackages && !isAssignedTopLevel && isInvitedTopLevel) {
+                     await ServiceBooking.findByIdAndUpdate(id, updateData);
+                     return sendSuccessResponse(res, null, "Invitation rejected successfully");
                 }
             } else if (bookingStatus === "pending") {
                 updateData.bookingStatus = "pending";
@@ -1038,8 +1317,18 @@ class BookingController {
             const booking = await ServiceBooking.findById(req.params.bookingId);
             if (!booking) return res.status(404).json({ success: false, message: "Booking not found" });
 
+            const isAssigned = 
+                booking.photographer_id?.toString() === req.user.id ||
+                booking.photographerIds?.includes(req.user.id) ||
+                booking.hourlyPackages?.some(pkg => 
+                    pkg.assignedPhotographers?.some(id => id.toString() === req.user.id) ||
+                    pkg.assignedVideographers?.some(id => id.toString() === req.user.id) ||
+                    pkg.assignedEditors?.some(id => id.toString() === req.user.id) ||
+                    pkg.assignedLighting?.some(id => id.toString() === req.user.id)
+                );
+
             // Check authorization
-            if (booking.photographer_id?.toString() !== req.user.id && !booking.photographerIds?.includes(req.user.id)) {
+            if (!isAssigned) {
                 return res.status(403).json({ success: false, message: "Unauthorized to view this invoice" });
             }
 
@@ -1054,8 +1343,17 @@ class BookingController {
             const booking = await ServiceBooking.findById(req.params.bookingId);
             if (!booking) return res.status(404).json({ success: false, message: "Booking not found" });
 
+            const isAssigned = 
+                booking.photographer_id?.toString() === req.user.id ||
+                booking.hourlyPackages?.some(pkg => 
+                    pkg.assignedPhotographers?.some(id => id.toString() === req.user.id) ||
+                    pkg.assignedVideographers?.some(id => id.toString() === req.user.id) ||
+                    pkg.assignedEditors?.some(id => id.toString() === req.user.id) ||
+                    pkg.assignedLighting?.some(id => id.toString() === req.user.id)
+                );
+
             // Check authorization
-            if (booking.photographer_id?.toString() !== req.user.id) {
+            if (!isAssigned) {
                 return res.status(403).json({ success: false, message: "Unauthorized: Only the assigned photographer can download their receipt" });
             }
 
