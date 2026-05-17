@@ -101,17 +101,6 @@ export const uploadController = {
                 });
             }
 
-            // Backend validation for file types (Init phase)
-            const ext = fileName.split('.').pop().toLowerCase();
-            const isImage = fileType.startsWith('image/') || ["jpg", "jpeg", "png", "webp", "gif", "bmp"].includes(ext);
-            const isVideo = fileType.startsWith('video/') || ["mp4", "mov", "webm", "mkv", "avi", "wmv", "flv"].includes(ext);
-
-            if (isImage && !["jpg", "jpeg"].includes(ext)) {
-                return res.status(400).json({
-                    error: `For Images Only JPEG and JPG formats are allowed`
-                });
-            }
-
             let key;
             if (relativePath) {
                 key = `uploads/${veroaBookingId}/${relativePath}`;
@@ -267,17 +256,6 @@ export const uploadController = {
             if (!key || !parts || !Array.isArray(parts)) {
                 return res.status(400).json({
                     error: "key and parts array are required."
-                });
-            }
-
-            // Backend validation for file types
-            const ext = key.split('.').pop().toLowerCase();
-            const isImage = ["jpg", "jpeg", "png", "webp", "gif", "bmp"].includes(ext); // Common images
-            const isVideo = ["mp4", "mov", "webm", "mkv", "avi", "wmv", "flv"].includes(ext);
-
-            if (isImage && !["jpg", "jpeg"].includes(ext)) {
-                return res.status(400).json({
-                    error: `For Images Only JPEG and JPG formats are allowed`
                 });
             }
 
@@ -586,11 +564,7 @@ export const uploadController = {
                     payment_status: "paid"
                 }).sort({ expiry_date: -1 }),
                 Gallery.findOne({ booking_id: resolvedBookingId }).lean()
-                }).sort({ expiry_date: -1 }),
-                Gallery.findOne({ booking_id: resolvedBookingId }).lean()
             ]);
-
-            const isPublished = galleryRecord?.isShared || false;
 
             const isPublished = galleryRecord?.isShared || false;
 
@@ -649,7 +623,6 @@ export const uploadController = {
                     isblur,
                     remainingDays,
                     isPublished,
-                    isPublished,
                     full_payment: isFullyPaid,
                     reverse_charge_mechanism: "*Reverse Charge mechanism not applicable",
                     pagination: {
@@ -688,7 +661,6 @@ export const uploadController = {
                 message: "Images fetched successfully",
                 isblur,
                 remainingDays,
-                isPublished,
                 isPublished,
                 full_payment: isFullyPaid,
                 reverse_charge_mechanism: "*Reverse Charge mechanism not applicable",
