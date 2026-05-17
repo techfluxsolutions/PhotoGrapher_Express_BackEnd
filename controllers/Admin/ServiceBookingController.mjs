@@ -1200,11 +1200,32 @@ class ServiceBookingController {
           // Update ALL identified target packages
           targetPackages.forEach(pkg => {
               // Record invitations at the plan level
-              const roleIds = (normalizedSelections.editor || normalizedSelections.photographer || []).map(id => new mongoose.Types.ObjectId(id));
               if (isEditing) {
-                pkg.invitedEditors = Array.from(new Set([...(pkg.invitedEditors || []).map(id => id.toString()), ...roleIds.map(id => id.toString())])).map(id => new mongoose.Types.ObjectId(id));
+                const editorIds = (normalizedSelections.editor || []).map(id => new mongoose.Types.ObjectId(id));
+                if (editorIds.length > 0) {
+                  pkg.invitedEditors = Array.from(new Set([...(pkg.invitedEditors || []).map(id => id.toString()), ...editorIds.map(id => id.toString())])).map(id => new mongoose.Types.ObjectId(id));
+                }
+                const photoIds = (normalizedSelections.photographer || []).map(id => new mongoose.Types.ObjectId(id));
+                if (photoIds.length > 0) {
+                  pkg.invitedPhotographers = Array.from(new Set([...(pkg.invitedPhotographers || []).map(id => id.toString()), ...photoIds.map(id => id.toString())])).map(id => new mongoose.Types.ObjectId(id));
+                }
               } else {
-                pkg.invitedPhotographers = Array.from(new Set([...(pkg.invitedPhotographers || []).map(id => id.toString()), ...roleIds.map(id => id.toString())])).map(id => new mongoose.Types.ObjectId(id));
+                const photoIds = (normalizedSelections.photographer || []).map(id => new mongoose.Types.ObjectId(id));
+                if (photoIds.length > 0) {
+                  pkg.invitedPhotographers = Array.from(new Set([...(pkg.invitedPhotographers || []).map(id => id.toString()), ...photoIds.map(id => id.toString())])).map(id => new mongoose.Types.ObjectId(id));
+                }
+                const videoIds = (normalizedSelections.videographer || []).map(id => new mongoose.Types.ObjectId(id));
+                if (videoIds.length > 0) {
+                  pkg.invitedVideographers = Array.from(new Set([...(pkg.invitedVideographers || []).map(id => id.toString()), ...videoIds.map(id => id.toString())])).map(id => new mongoose.Types.ObjectId(id));
+                }
+                const editorIds = (normalizedSelections.editor || []).map(id => new mongoose.Types.ObjectId(id));
+                if (editorIds.length > 0) {
+                  pkg.invitedEditors = Array.from(new Set([...(pkg.invitedEditors || []).map(id => id.toString()), ...editorIds.map(id => id.toString())])).map(id => new mongoose.Types.ObjectId(id));
+                }
+                const lightingIds = (normalizedSelections.lightingsetup || normalizedSelections.lighting || []).map(id => new mongoose.Types.ObjectId(id));
+                if (lightingIds.length > 0) {
+                  pkg.invitedLighting = Array.from(new Set([...(pkg.invitedLighting || []).map(id => id.toString()), ...lightingIds.map(id => id.toString())])).map(id => new mongoose.Types.ObjectId(id));
+                }
               }
           });
 

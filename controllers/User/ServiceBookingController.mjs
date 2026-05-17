@@ -213,13 +213,35 @@ class ServiceBookingController {
       bookingObj.editingbookings = enrichedEditing;
 
       const enrichedHourly = [];
+      const allStaffIds = new Set();
       for (const item of rawHourly) {
+        (item.assignedPhotographers || []).forEach(id => allStaffIds.add(id.toString()));
+        (item.assignedVideographers || []).forEach(id => allStaffIds.add(id.toString()));
+        (item.assignedEditors || []).forEach(id => allStaffIds.add(id.toString()));
+        (item.assignedLightingSetups || item.assignedLighting || []).forEach(id => allStaffIds.add(id.toString()));
+      }
+
+      const staffList = allStaffIds.size > 0 
+        ? await Photographer.find({ _id: { $in: Array.from(allStaffIds) } }).lean()
+        : [];
+      
+      const staffNamesMap = {};
+      staffList.forEach(s => {
+        staffNamesMap[s._id.toString()] = s.basicInfo?.fullName || s.name || s.username || "Unknown";
+      });
+
+      for (const item of rawHourly) {
+        const enrichedItem = { ...item };
         if (item.planId) {
           const plan = await TeamShootPlan.findById(item.planId).lean();
-          enrichedHourly.push({ ...item, planId: plan || item.planId });
-        } else {
-          enrichedHourly.push(item);
+          enrichedItem.planId = plan || item.planId;
         }
+        enrichedItem.assignedPhotographerNames = (item.assignedPhotographers || []).map(id => staffNamesMap[id.toString()] || "Unknown");
+        enrichedItem.assignedVideographerNames = (item.assignedVideographers || []).map(id => staffNamesMap[id.toString()] || "Unknown");
+        enrichedItem.assignedEditorNames = (item.assignedEditors || []).map(id => staffNamesMap[id.toString()] || "Unknown");
+        enrichedItem.assignedLightingNames = (item.assignedLightingSetups || item.assignedLighting || []).map(id => staffNamesMap[id.toString()] || "Unknown");
+        
+        enrichedHourly.push(enrichedItem);
       }
       bookingObj.hourlyPackages = enrichedHourly;
 

@@ -110,9 +110,15 @@ class BookingController {
             if (statusToFilter === "pending") {
                 filter = {
                     $and: [
+                        { status: { $nin: ["completed", "canceled"] } },
                         {
                             $or: [
-                                { photographerIds: { $in: [photographerId, myIdStr] } },
+                                {
+                                    $and: [
+                                        { photographerIds: { $in: [photographerId, myIdStr] } },
+                                        { bookingStatus: "pending" }
+                                    ]
+                                },
                                 { "hourlyPackages.invitedPhotographers": { $in: [photographerId, myIdStr] } },
                                 { "hourlyPackages.invitedVideographers": { $in: [photographerId, myIdStr] } },
                                 { "editingPackages.invitedEditors": { $in: [photographerId, myIdStr] } },

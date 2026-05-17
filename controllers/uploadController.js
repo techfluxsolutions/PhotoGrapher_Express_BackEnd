@@ -456,7 +456,7 @@ export const uploadController = {
 
     getUrlsListArray: async (req, res) => {
         try {
-            const { page = 1, limit = 20, category, source } = req.query;
+            const { page = 1, limit = 20, category, source, photographerId } = req.query;
             const bookingId = req.params.bookingId;
 
             if (!bookingId) {
@@ -514,7 +514,7 @@ export const uploadController = {
                 (booking.service_id?.serviceName || "").toLowerCase().includes("editing")
             );
 
-            if (!isStaff && !isEditingBooking) {
+            if (!isStaff) {
                 query.$and.push({
                     $or: [
                         { isPublished: true },
@@ -556,6 +556,10 @@ export const uploadController = {
                 }
             }
 
+            if (photographerId && photographerId !== "null" && photographerId !== "undefined" && photographerId !== "") {
+                query.$and.push({ photographerId: photographerId });
+            }
+
             // Fetch total count, active cloud plan, and gallery status in parallel
             const [total, activeCloudPlan, galleryRecord] = await Promise.all([
                 DataLinks.countDocuments(query),
@@ -572,10 +576,18 @@ export const uploadController = {
             let remainingDays = 0;
             let isFullyPaid = false;
 
+            const isHourlyBooking = booking && (
+                booking.serviceCategory === 'hourly' || 
+                (booking.service_id?.serviceName || "").toLowerCase().includes("hourly")
+            );
+
             if (booking) {
                 isFullyPaid = booking.paymentStatus === "fully paid" || booking.full_Payment === true;
 
-                if (isFullyPaid) {
+                if (isHourlyBooking || isEditingBooking) {
+                    isblur = false;
+                    remainingDays = 0;
+                } else if (isFullyPaid) {
                     let expiryDate = null;
 
                     if (activeCloudPlan && activeCloudPlan.expiry_date) {
