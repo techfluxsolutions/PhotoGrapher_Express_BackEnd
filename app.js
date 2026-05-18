@@ -99,7 +99,7 @@ app.use(
 
 // Set security HTTP headers
 app.use(helmet({
-  crossOriginResourcePolicy: { policy: "cross-origin" } // Required if serving assets across origins
+  crossOriginResourcePolicy: { policy: "cross-origin" } // Required if serving assets across origin
 }));
 photographerVerificationCron();
 
