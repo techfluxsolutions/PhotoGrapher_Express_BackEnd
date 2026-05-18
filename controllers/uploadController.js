@@ -283,6 +283,7 @@ export const uploadController = {
             // Extract folder path
             const folderPath = key.substring(0, key.lastIndexOf("/"));
 
+            const isUser = !photographerId || (req.user && req.user.userType === "client");
             const savedDatalink = await DataLinks.create({
                 dataLink: fileUrl,
                 key: key,
@@ -291,8 +292,7 @@ export const uploadController = {
                 clientId,
                 photographerId,
                 veroaBookingId,
-                isPublished: false, // Ensure photographers' work starts as private
-                isPublished: false, // Ensure photographers' work starts as private
+                isPublished: isUser ? true : false,
                 category: category || "standard"
             });
 
@@ -515,13 +515,19 @@ export const uploadController = {
             );
 
             if (!isStaff) {
-                query.$and.push({
-                    $or: [
-                        { isPublished: true },
-                        { photographerId: null },
-                        { photographerId: { $exists: false } }
-                    ]
-                });
+                const clientFilter = req.user && req.user.id ? { clientId: new mongoose.Types.ObjectId(req.user.id) } : null;
+                const clientFilterStr = req.user && req.user.id ? { clientId: req.user.id } : null;
+                
+                const orConditions = [
+                    { isPublished: true },
+                    { photographerId: null },
+                    { photographerId: { $exists: false } }
+                ];
+                
+                if (clientFilter) orConditions.push(clientFilter);
+                if (clientFilterStr) orConditions.push(clientFilterStr);
+                
+                query.$and.push({ $or: orConditions });
             }
 
             if (category) {
@@ -557,7 +563,10 @@ export const uploadController = {
             }
 
             if (photographerId && photographerId !== "null" && photographerId !== "undefined" && photographerId !== "") {
-                query.$and.push({ photographerId: photographerId });
+                const lowerSource = source ? source.toLowerCase() : "";
+                if (lowerSource !== "user") {
+                    query.$and.push({ photographerId: photographerId });
+                }
             }
 
             // Fetch total count, active cloud plan, and gallery status in parallel
