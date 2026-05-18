@@ -515,19 +515,19 @@ export const uploadController = {
             );
 
             if (!isStaff) {
-                const clientFilter = req.user && req.user.id ? { clientId: new mongoose.Types.ObjectId(req.user.id) } : null;
-                const clientFilterStr = req.user && req.user.id ? { clientId: req.user.id } : null;
-                
-                const orConditions = [
-                    { isPublished: true },
-                    { photographerId: null },
-                    { photographerId: { $exists: false } }
+                const clientConditions = [
+                    {
+                        photographerId: { $ne: null, $exists: true },
+                        isPublished: true
+                    },
+                    {
+                        $or: [
+                            { photographerId: null },
+                            { photographerId: { $exists: false } }
+                        ]
+                    }
                 ];
-                
-                if (clientFilter) orConditions.push(clientFilter);
-                if (clientFilterStr) orConditions.push(clientFilterStr);
-                
-                query.$and.push({ $or: orConditions });
+                query.$and.push({ $or: clientConditions });
             }
 
             if (category) {
